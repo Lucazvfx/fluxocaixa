@@ -199,6 +199,35 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 @media(max-width:900px){.g2,.g3,.g13,.fgrid,.sstrip,.tc-grid{grid-template-columns:1fr 1fr}main,header{padding-left:20px;padding-right:20px}.rhero-tipo{font-size:3rem}.rhero-em{display:none}.tstrip{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.g2,.g3,.sstrip,.tc-grid{grid-template-columns:1fr}}
+
+/* ── CICLO COMPLETO ── */
+.sc-sn{font-family:var(--fn);font-weight:700;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap}
+.sc-sn:hover{border-color:var(--am);color:var(--am)}
+.sc-sn.act{background:var(--am);border-color:var(--am);color:#000}
+.sc-spanel{display:none}.sc-spanel.act{display:block;animation:rise .3s cubic-bezier(.22,1,.36,1)}
+.brow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.brow-l{font-family:var(--fm);font-size:.58rem;color:var(--mu);width:120px;flex-shrink:0;text-align:right}
+.brow-t{flex:1;height:26px;background:var(--c2);border-radius:4px;overflow:hidden;border:1px solid var(--b)}
+.brow-f{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 1s cubic-bezier(.34,1.4,.64,1)}
+.brow-f span{font-family:var(--fm);font-size:.57rem;color:rgba(0,0,0,.8);font-weight:600;white-space:nowrap}
+.flow-wrap{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.flow-step{background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:12px 16px;text-align:center;min-width:80px}
+.flow-arr{color:var(--mu);font-size:1rem;padding:0 2px;align-self:center}
+.flow-n{font-family:var(--fn);font-weight:800;font-size:1.4rem;line-height:1}
+.flow-l{font-family:var(--fm);font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-top:3px}
+.lvl-badge{font-family:var(--fm);font-size:.54rem;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:4px}
+.lvl-badge.baixo{background:rgba(248,113,113,.15);color:var(--rd);border:1px solid rgba(248,113,113,.25)}
+.lvl-badge.medio{background:rgba(251,191,36,.15);color:var(--am);border:1px solid rgba(251,191,36,.25)}
+.lvl-badge.alto{background:rgba(74,222,128,.15);color:var(--g);border:1px solid rgba(74,222,128,.25)}
+.cetbl{width:100%;border-collapse:collapse}
+.cetbl th{font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:8px 12px;text-align:left;border-bottom:1px solid var(--b)}
+.cetbl td{padding:7px 12px;font-size:.84rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.cetbl input[type=number]{background:var(--c2);border:1px solid var(--b2);border-radius:6px;padding:5px 8px;color:var(--tx);font-family:var(--fm);font-size:.78rem;width:85px;text-align:center;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.cetbl input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.cetbl input[type=number]:focus{border-color:var(--g)}
+.res-box{border-radius:var(--r);padding:20px 24px;margin-top:16px;border:1px solid;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.res-box.pos{border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06)}
+.res-box.neg{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
 </style>
 </head>
 <body>
@@ -314,36 +343,227 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 
 <!-- ═══ CENÁRIOS ═══ -->
 <div class="panel" id="panel-cenarios">
-  <div class="ptitle">Simular <em>Cenários</em></div>
-  <p class="psub">Projete o desempenho do rebanho ao longo de 5 anos com diferentes estratégias de manejo.</p>
-  <div class="g2" style="margin-bottom:20px">
-    <div>
-      <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione o cenário</div>
-      <div id="sc-list">
-        <div class="sc-card sc-opt sel" onclick="selSc('otimista',this)"><div class="sc-name">Otimista</div><div class="sc-desc">IATF, suplementação, genética melhorada. Alta produtividade.</div></div>
-        <div class="sc-card sc-cres" onclick="selSc('crescimento',this)"><div class="sc-name">Crescimento Gradual</div><div class="sc-desc">Expansão sustentável com reinvestimento de resultados.</div></div>
-        <div class="sc-card sc-spec" onclick="selSc('especulativo',this)"><div class="sc-name">Alta Venda</div><div class="sc-desc">Maximiza venda aproveitando preço favorável.</div></div>
-        <div class="sc-card sc-cons" onclick="selSc('conservador',this)"><div class="sc-name"> Conservador — Manutenção</div><div class="sc-desc">Estabilidade mínima em cenário de baixa de preços.</div></div>
+  <div class="ptitle">Ciclo Completo — <em>Análise Detalhada</em></div>
+  <p class="psub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
+
+  <!-- Sub-nav -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
+    <button class="sc-sn act" onclick="showScSub('dash',this)">Dashboard</button>
+    <button class="sc-sn" onclick="showScSub('params',this)">Parâmetros</button>
+    <button class="sc-sn" onclick="showScSub('rebanho',this)">Rebanho</button>
+    <button class="sc-sn" onclick="showScSub('rep',this)">Reprodução</button>
+    <button class="sc-sn" onclick="showScSub('vendas',this)">Vendas</button>
+    <button class="sc-sn" onclick="showScSub('fin',this)">Financeiro</button>
+    <button class="sc-sn" onclick="showScSub('5anos',this)">Projeção 5 Anos</button>
+  </div>
+
+  <!-- KPI sempre visível -->
+  <div id="s-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
+    <div class="pjc"><div class="pjc-l">Total Rebanho</div><div class="pjc-v cg" id="s-kpi-reb">—</div></div>
+    <div class="pjc"><div class="pjc-l">Bezerros/Ano</div><div class="pjc-v cg" id="s-kpi-bez">—</div></div>
+    <div class="pjc"><div class="pjc-l">Total Vendido</div><div class="pjc-v ca" id="s-kpi-vnd">—</div></div>
+    <div class="pjc"><div class="pjc-l">Resultado</div><div class="pjc-v" id="s-kpi-res">—</div></div>
+  </div>
+
+  <!-- ── Dashboard ── -->
+  <div class="sc-spanel act" id="scp-dash">
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd"></div>Composição do Rebanho</div></div>
+        <div class="cb" id="s-bar-rebanho"><div style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Configure os parâmetros e clique em Recalcular.</div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Animais Vendidos</div></div>
+        <div class="cb" id="s-bar-vendas"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros</div></div>
-      <div class="cb">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="sc-nat" value="75" min="40" max="95" oninput="runSc()"></div>
-          <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="sc-propboi" value="30" min="10" max="100" oninput="runSc()"></div>
-          <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="sc-renovboi" value="20" min="0" max="100" oninput="runSc()"></div>
-          <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="sc-desc" value="30" min="5" max="50" oninput="runSc()"></div>
-          <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="sc-vendbez" value="30" min="0" max="100" oninput="runSc()"></div>
-          <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div>
-          <div class="field"><label>Preço Arroba (R$/@)</label><input type="number" id="sc-preco" value="320" min="100" max="800" oninput="runSc()"></div>
-          <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div>
-          <div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div>
-        </div>
+    <div class="g2" style="margin-top:0">
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Receita por Categoria</div></div>
+        <div class="cb" id="s-bar-receita"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Fluxo de Renovação de Bois</div></div>
+        <div class="cb" id="s-flow-bois" style="overflow-x:auto"></div>
       </div>
     </div>
   </div>
-  <div id="sc-result"></div>
+
+  <!-- ── Parâmetros ── -->
+  <div class="sc-spanel" id="scp-params">
+    <div class="g2">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="ch">
+            <div class="ct"><div class="cd" style="background:var(--cy)"></div>Animais Base</div>
+            <button class="btn-sm" onclick="syncFromClass()">↺ Sincronizar da classificação</button>
+          </div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo()"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Nível Tecnológico</label>
+                <select id="s-nivel" onchange="recalcCiclo()">
+                  <option value="baixo">Baixo</option>
+                  <option value="medio" selected>Médio</option>
+                  <option value="alto">Alto</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>Preço Boi (R$/cab.)</label><input type="number" id="s-preco-boi" value="4500" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço Matriz (R$/cab.)</label><input type="number" id="s-preco-mat" value="3200" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div>
+            </div>
+            <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch">
+            <div class="ct"><div class="cd" style="background:var(--pu)"></div>Custos por Nível (R$/cab/ano)</div>
+            <div id="s-lvl-badge"></div>
+          </div>
+          <div class="cb" style="overflow-x:auto">
+            <table class="cetbl">
+              <thead><tr><th>Categoria</th><th>Baixo</th><th>Médio</th><th>Alto</th></tr></thead>
+              <tbody id="s-cost-tbody"></tbody>
+            </table>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)">
+              <span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Custo Total do Rebanho</span>
+              <span id="s-custo-total" style="font-family:var(--fn);font-weight:800;font-size:1.6rem;color:var(--rd)">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-p" style="margin-top:16px" onclick="recalcCiclo()"><span>↻ Recalcular Tudo</span></button>
+  </div>
+
+  <!-- ── Rebanho ── -->
+  <div class="sc-spanel" id="scp-rebanho">
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd"></div>Categorias do Rebanho</div></div>
+        <div style="overflow-x:auto">
+          <table class="ytbl" id="s-tbl-rebanho">
+            <thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">%</th></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g r" id="s-tot-reb" style="border-top:1px solid var(--b2)">—</td><td class="r" style="border-top:1px solid var(--b2)">100%</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Produção de Bezerros</div></div>
+        <div class="cb" id="s-prod-bez"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Reprodução ── -->
+  <div class="sc-spanel" id="scp-rep">
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd"></div>Bois Reprodutores</div></div>
+        <div class="cb" id="s-rep-bois"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Renovação de Matrizes</div></div>
+        <div class="cb" id="s-rep-mat"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Vendas ── -->
+  <div class="sc-spanel" id="scp-vendas">
+    <div class="card">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Resumo de Vendas</div></div>
+      <div style="overflow-x:auto">
+        <table class="ytbl" id="s-tbl-vendas">
+          <thead><tr><th>Categoria</th><th class="r">Quantidade</th><th class="r">%</th><th>Memória de Cálculo</th></tr></thead>
+          <tbody></tbody>
+          <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Total Vendido</td><td class="a r" id="s-tot-vnd" style="border-top:1px solid var(--b2)">—</td><td style="border-top:1px solid var(--b2)"></td><td style="border-top:1px solid var(--b2)"></td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Financeiro ── -->
+  <div class="sc-spanel" id="scp-fin">
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Receitas</div></div>
+        <div style="overflow-x:auto">
+          <table class="ytbl" id="s-tbl-rec">
+            <thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">Preço Unit.</th><th class="r">Receita</th></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Receita Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="g" id="s-rec-tot" style="border-top:1px solid var(--b2)">—</td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--rd)"></div>Custos de Produção</div></div>
+        <div style="overflow-x:auto">
+          <table class="ytbl" id="s-tbl-cus">
+            <thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">Custo/Cab</th><th class="r">Total</th></tr></thead>
+            <tbody></tbody>
+            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Custo Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="cr" id="s-cus-tot" style="border-top:1px solid var(--b2)">—</td></tr></tfoot>
+          </table>
+        </div>
+        <div class="cb" id="s-res-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Projeção 5 Anos ── -->
+  <div class="sc-spanel" id="scp-5anos">
+    <div class="g2" style="margin-bottom:20px">
+      <div>
+        <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione o cenário</div>
+        <div id="sc-list">
+          <div class="sc-card sc-opt sel" onclick="selSc('otimista',this)"><div class="sc-name">Otimista</div><div class="sc-desc">IATF, suplementação, genética melhorada. Alta produtividade.</div></div>
+          <div class="sc-card sc-cres" onclick="selSc('crescimento',this)"><div class="sc-name">Crescimento Gradual</div><div class="sc-desc">Expansão sustentável com reinvestimento de resultados.</div></div>
+          <div class="sc-card sc-spec" onclick="selSc('especulativo',this)"><div class="sc-name">Alta Venda</div><div class="sc-desc">Maximiza venda aproveitando preço favorável.</div></div>
+          <div class="sc-card sc-cons" onclick="selSc('conservador',this)"><div class="sc-name">Conservador — Manutenção</div><div class="sc-desc">Estabilidade mínima em cenário de baixa de preços.</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
+        <div class="cb">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div>
+            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div>
+            <div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div>
+          </div>
+          <div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">
+            Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="sc-result"></div>
+  </div>
 </div>
 </main>
 
@@ -430,6 +650,12 @@ async function classificar(){
     showTab('resultado',null);
     document.getElementById('tab-res').style.display='flex';
     document.getElementById('tab-cen').style.display='flex';
+    // Auto-sincroniza animais no ciclo completo
+    document.getElementById('s-mat').value=v[6]+v[8];
+    document.getElementById('s-fem').value=v[0]+v[2]+v[4];
+    document.getElementById('s-mac').value=v[1]+v[3]+v[5];
+    document.getElementById('s-boi').value=v[7]+v[9];
+    recalcCiclo();
     runSc();
   }finally{hideLoading()}
 }
@@ -677,7 +903,176 @@ function getRecs(tipo,ind){
     </div>`).join('');
 }
 
-// ── CENÁRIOS
+// ── CICLO COMPLETO ENGINE ────────────────────────────────────────────────
+let CUSTO_S={
+  baixo: {matrizes:800,bois:600,femeas:400,machos:380},
+  medio: {matrizes:850,bois:650,femeas:450,machos:420},
+  alto:  {matrizes:950,bois:750,femeas:500,machos:480}
+};
+function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
+
+function renderCostTableS(){
+  const cats=[
+    {key:'matrizes',label:'Matrizes (25m+)'},
+    {key:'bois',    label:'Bois Adultos'},
+    {key:'femeas',  label:'Fêmeas Jovens (0-24m)'},
+    {key:'machos',  label:'Machos Jovens (0-24m)'}
+  ];
+  const levels=['baixo','medio','alto'];
+  const tbody=document.getElementById('s-cost-tbody');
+  if(!tbody)return;
+  tbody.innerHTML='';
+  cats.forEach(cat=>{
+    const tr=document.createElement('tr');
+    const td0=document.createElement('td');
+    td0.textContent=cat.label;td0.style.fontWeight='500';
+    tr.appendChild(td0);
+    levels.forEach(lv=>{
+      const td=document.createElement('td');
+      const inp=document.createElement('input');
+      inp.type='number';inp.value=CUSTO_S[lv][cat.key];inp.step=10;
+      inp.addEventListener('change',e=>{CUSTO_S[lv][cat.key]=parseFloat(e.target.value)||0;recalcCiclo();});
+      td.appendChild(inp);tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  hlCostLevel();
+}
+
+function hlCostLevel(){
+  const lv=document.getElementById('s-nivel')?.value||'medio';
+  const idx={baixo:1,medio:2,alto:3}[lv];
+  document.querySelectorAll('#s-cost-tbody tr').forEach(tr=>{
+    for(let i=1;i<=3;i++) tr.cells[i].style.background=(i===idx)?'rgba(74,222,128,.08)':'';
+  });
+}
+
+function calcCiclo(){
+  const mat=gS('s-mat'),fem=gS('s-fem'),mac=gS('s-mac'),boi=gS('s-boi');
+  const nat=gS('s-nat')/100||0.75;
+  const prop=gS('s-propboi')||30;
+  const rb=gS('s-renovboi')/100||0.2;
+  const des=gS('s-desc')/100||0.3;
+  const vbp=gS('s-vendbez')/100||0.3;
+  const niv=document.getElementById('s-nivel')?.value||'medio';
+  const pBoi=gS('s-preco-boi')||4500;
+  const pMat=gS('s-preco-mat')||3200;
+  const pBezArr=gS('s-bez-arr')||8;
+  const pArr=gS('s-preco-arr')||350;
+
+  const totBez=Math.floor(mat*nat);
+  const bezF=Math.floor(totBez/2),bezM=totBez-bezF;
+  const bNec=Math.max(1,Math.ceil(mat/prop));
+  const bExc=Math.max(0,boi-bNec);
+  const bRen=Math.ceil(bNec*rb);
+  const macRest=Math.max(0,mac-bRen);
+  const bVend=bExc+bRen;
+  const desQ=Math.floor(mat*des);
+  const bezV=Math.floor(fem*vbp);
+  const femR=fem-bezV;
+  const cresc=femR-desQ;
+  const totReb=mat+fem+mac+boi;
+  const totVend=bVend+desQ+bezV;
+  const pBezCab=pBezArr*pArr;
+  const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rTot=rBoi+rMat+rBez;
+  const cn=CUSTO_S[niv];
+  const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cTot=cMat+cBoi+cFem+cMac;
+  const res=rTot-cTot;
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rTot,cMat,cBoi,cFem,cMac,cTot,res};
+}
+
+function makeBarsS(items,maxV,colors){
+  return items.map((it,i)=>{
+    const pct=maxV>0?Math.max(Math.round(it.val/maxV*100),it.val>0?5:0):0;
+    return`<div class="brow"><div class="brow-l">${it.lbl}</div><div class="brow-t"><div class="brow-f" style="width:${pct}%;background:${colors[i%colors.length]}"><span>${it.dis}</span></div></div></div>`;
+  }).join('');
+}
+
+function recalcCiclo(){
+  if(!document.getElementById('s-cost-tbody')?.children.length) renderCostTableS();
+  else hlCostLevel();
+  const d=calcCiclo();
+  const nb=d.niv;
+  const nbLbl={baixo:'Baixo',medio:'Médio',alto:'Alto'}[nb];
+
+  // Level badge
+  const lvB=document.getElementById('s-lvl-badge');
+  if(lvB) lvB.innerHTML=`<span class="lvl-badge ${nb}">${nbLbl}</span>`;
+
+  // Custo total
+  const ctEl=document.getElementById('s-custo-total');
+  if(ctEl) ctEl.textContent=fR(d.cTot);
+
+  // Preço bezerra info
+  const pbi=document.getElementById('s-preco-bez-info');
+  if(pbi) pbi.textContent=`Preço bezerra = ${gS('s-bez-arr')}@ × R$${gS('s-preco-arr')} = ${fR(d.pBezCab)}/cab`;
+
+  // KPI strip
+  const ki=id=>document.getElementById(id);
+  if(ki('s-kpi-reb')) ki('s-kpi-reb').textContent=fN(d.totReb);
+  if(ki('s-kpi-bez')) ki('s-kpi-bez').textContent=fN(d.totBez);
+  if(ki('s-kpi-vnd')) ki('s-kpi-vnd').textContent=fN(d.totVend)+' cab.';
+  const resEl=ki('s-kpi-res');
+  if(resEl){resEl.textContent=fR(d.res);resEl.className='pjc-v '+(d.res>=0?'cg':'cr');}
+
+  // Dashboard bars
+  const maxReb=Math.max(d.mat,d.fem,d.macRest,d.bNec,1);
+  const bRebEl=ki('s-bar-rebanho');
+  if(bRebEl) bRebEl.innerHTML=makeBarsS([{lbl:'Matrizes',val:d.mat,dis:fN(d.mat)},{lbl:'Fêmeas 0–24m',val:d.fem,dis:fN(d.fem)},{lbl:'Machos 0–24m',val:d.macRest,dis:fN(d.macRest)},{lbl:'Bois',val:d.bNec,dis:fN(d.bNec)}],maxReb,['#22C55E','#16A34A','#15803D','#F59E0B']);
+  const maxVnd=Math.max(d.bVend,d.desQ,d.bezV,1);
+  const bVndEl=ki('s-bar-vendas');
+  if(bVndEl) bVndEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.bVend,dis:fN(d.bVend)},{lbl:'Matrizes',val:d.desQ,dis:fN(d.desQ)},{lbl:'Bezerras',val:d.bezV,dis:fN(d.bezV)}],maxVnd,['#F59E0B','#D97706','#FBBF24']);
+  const maxRec=Math.max(d.rBoi,d.rMat,d.rBez,1);
+  const bRecEl=ki('s-bar-receita');
+  if(bRecEl) bRecEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.rBoi,dis:fR(d.rBoi)},{lbl:'Matrizes',val:d.rMat,dis:fR(d.rMat)},{lbl:'Bezerras',val:d.rBez,dis:fR(d.rBez)}],maxRec,['#38BDF8','#0EA5E9','#7DD3FC']);
+  const bFlEl=ki('s-flow-bois');
+  if(bFlEl) bFlEl.innerHTML=`<div class="flow-wrap"><div class="flow-step"><div class="flow-n">${fN(d.mac)}</div><div class="flow-l">Machos</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n ca">${fN(d.bRen)}</div><div class="flow-l">Renovados</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n">${fN(d.bNec)}</div><div class="flow-l">Bois Ativos</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n cr">${fN(d.bExc)}</div><div class="flow-l">Excedentes</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n ca">${fN(d.bVend)}</div><div class="flow-l">Vendidos</div></div></div>`;
+
+  // Rebanho tab
+  const tReb=document.querySelector('#s-tbl-rebanho tbody');
+  if(tReb){const cats=[['Matrizes (25m+)',d.mat],['Fêmeas 0–24m',d.fem],['Machos 0–24m',d.mac],['Bois Adultos',d.boi]];tReb.innerHTML=cats.map(([c,q])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totReb>0?fP(q/d.totReb):'0%'}</td></tr>`).join('');const el=ki('s-tot-reb');if(el)el.textContent=fN(d.totReb);}
+  const pBez=ki('s-prod-bez');
+  if(pBez) pBez.innerHTML=[['Matrizes',fN(d.mat)+' cab.',''],['Taxa Natalidade',fP(d.nat),'ca'],['Total Bezerros',fN(d.totBez),'cg'],['♀ Bezerras',fN(d.bezF),'cg'],['♂ Bezerros',fN(d.bezM),'ca']].map(([k,v,c])=>mr(k,v,c)).join('');
+
+  // Reprodução tab
+  const rBoisEl=ki('s-rep-bois');
+  if(rBoisEl) rBoisEl.innerHTML=[['Matrizes',fN(d.mat),''],['Bois existentes',fN(d.boi),''],['Bois necessários',fN(d.bNec),'ca'],['Excedentes',fN(d.bExc),'ca'],['Renovação',fN(d.bRen),'ca'],['Machos promovidos','-'+fN(d.bRen),'cr'],['Machos restantes',fN(d.macRest),'cg'],['Total bois vendidos',fN(d.bVend),'cr']].map(([k,v,c])=>mr(k,v,c)).join('');
+  const rMatEl=ki('s-rep-mat');
+  if(rMatEl) rMatEl.innerHTML=[['Matrizes',fN(d.mat),''],['Descarte',fN(d.desQ),'cr'],['Fêmeas jovens',fN(d.fem),''],['Bezerras vendidas',fN(d.bezV),'ca'],['Fêmeas que ficam',fN(d.femR),'cg'],['Reposição necessária',fN(d.desQ),''],['Crescimento líquido',(d.cresc>=0?'+':'')+fN(d.cresc),d.cresc>=0?'cg':'cr']].map(([k,v,c])=>mr(k,v,c)).join('');
+
+  // Vendas tab
+  const tVnd=document.querySelector('#s-tbl-vendas tbody');
+  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
+
+  // Financeiro tab
+  const tRec=document.querySelector('#s-tbl-rec tbody');
+  if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
+  const tCus=document.querySelector('#s-tbl-cus tbody');
+  const cn=CUSTO_S[d.niv];
+  if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
+  const resBox=ki('s-res-box');
+  if(resBox){const pos=d.res>=0;resBox.innerHTML=`<div class="res-box ${pos?'pos':'neg'}"><div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Líquido Anual</div><div style="font-family:var(--fn);font-weight:800;font-size:2.2rem;line-height:1;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res)}</div></div>${d.totVend>0?`<div style="text-align:right"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-bottom:4px">Por animal vendido</div><div style="font-family:var(--fn);font-weight:700;font-size:1.2rem;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res/d.totVend)}</div></div>`:''}</div>`;}
+}
+
+function showScSub(id,btn){
+  document.querySelectorAll('.sc-spanel').forEach(p=>p.classList.remove('act'));
+  document.querySelectorAll('.sc-sn').forEach(b=>b.classList.remove('act'));
+  const p=document.getElementById('scp-'+id);if(p)p.classList.add('act');
+  if(btn)btn.classList.add('act');
+  if(id==='5anos') runSc();
+}
+
+function syncFromClass(){
+  if(!lastVals){toast('Classifique um rebanho primeiro.',true);return}
+  document.getElementById('s-mat').value=lastVals[6]+lastVals[8];
+  document.getElementById('s-fem').value=lastVals[0]+lastVals[2]+lastVals[4];
+  document.getElementById('s-mac').value=lastVals[1]+lastVals[3]+lastVals[5];
+  document.getElementById('s-boi').value=lastVals[7]+lastVals[9];
+  recalcCiclo();
+  toast('Animais sincronizados da classificação.');
+}
+
+// ── CENÁRIOS 5 ANOS
 let scDebounce=null;
 function selSc(sc,el){
   curSc=sc;
@@ -693,15 +1088,15 @@ function runSc(){
     const body={
       valores:lastVals,
       cenario:curSc,
-      nat:document.getElementById('sc-nat').value,
+      nat:document.getElementById('s-nat').value,
       mort:document.getElementById('sc-mort').value,
-      desc:document.getElementById('sc-desc').value,
-      preco:document.getElementById('sc-preco').value,
+      desc:document.getElementById('s-desc').value,
+      preco:document.getElementById('s-preco-arr').value,
       custo:document.getElementById('sc-custo').value,
       peso:document.getElementById('sc-peso').value,
-      propboi:document.getElementById('sc-propboi').value,
-      renovboi:document.getElementById('sc-renovboi').value,
-      vendbez:document.getElementById('sc-vendbez').value,
+      propboi:document.getElementById('s-propboi').value,
+      renovboi:document.getElementById('s-renovboi').value,
+      vendbez:document.getElementById('s-vendbez').value,
     };
     const res=await fetch('/api/cenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
@@ -785,6 +1180,8 @@ function hideLoading(){document.getElementById('loading-ov').classList.remove('s
 function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500)}
 
 buildTable();
+renderCostTableS();
+recalcCiclo();
 runSc();
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
