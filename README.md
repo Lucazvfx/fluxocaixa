@@ -1,4 +1,4 @@
-# 🐄 BoviML — Classificador de Exploração Bovina
+# Classificador de Exploração Bovina E ANALISE 
 
 Sistema Python com Machine Learning para classificar tipo de exploração bovina
 (Cria / Recria / Engorda / Ciclo Completo) com simulação de cenários financeiros.
