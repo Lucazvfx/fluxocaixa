@@ -99,21 +99,25 @@ def api_modelo_info():
 # EXTRAÇÃO DE TEXTO
 # ─────────────────────────────────────────────
 def extrair_texto_pdf(path: str) -> str:
-    result = subprocess.run(
-        ['pdftotext', '-layout', path, '-'],
-        capture_output=True, text=True
-    )
-    if result.returncode != 0 or not result.stdout.strip():
-        try:
-            import pdfplumber
-            text = ''
-            with pdfplumber.open(path) as pdf:
-                for page in pdf.pages:
-                    text += (page.extract_text() or '') + '\n'
-            return text
-        except Exception:
-            raise RuntimeError('Não foi possível extrair texto do PDF')
-    return result.stdout
+    try:
+        result = subprocess.run(
+            ['pdftotext', '-layout', path, '-'],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout
+    except FileNotFoundError:
+        pass  # pdftotext não instalado — usa pdfplumber
+
+    try:
+        import pdfplumber
+        text = ''
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                text += (page.extract_text() or '') + '\n'
+        return text
+    except Exception as e:
+        raise RuntimeError(f'Não foi possível extrair texto do PDF: {e}')
 
 
 # ─────────────────────────────────────────────
