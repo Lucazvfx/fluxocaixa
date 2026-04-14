@@ -77,17 +77,22 @@ def api_ler_pdf():
     if not f.filename.lower().endswith('.pdf'):
         return jsonify({'erro': 'Apenas arquivos PDF são aceitos'}), 400
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-        f.save(tmp.name)
+        tmp_path = tmp.name
+        f.save(tmp_path)
+    # Arquivo fechado antes de processar (necessário no Windows)
+    try:
+        text  = extrair_texto_pdf(tmp_path)
+        orig  = detectar_origem(text)
+        dados = parsear_idaron(text) if orig == 'IDARON' else parsear_indea(text)
+        dados['origem'] = orig
+        return jsonify(dados)
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+    finally:
         try:
-            text  = extrair_texto_pdf(tmp.name)
-            orig  = detectar_origem(text)
-            dados = parsear_idaron(text) if orig == 'IDARON' else parsear_indea(text)
-            dados['origem'] = orig
-            return jsonify(dados)
-        except Exception as e:
-            return jsonify({'erro': str(e)}), 500
-        finally:
-            os.unlink(tmp.name)
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 
 @app.route('/api/modelo-info', methods=['GET'])
