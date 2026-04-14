@@ -970,16 +970,17 @@ function calcCiclo(){
   const bVend=bExc+bRen;
   const desQ=Math.floor(mat*des);
   const bezV=Math.floor(fem*vbp);
+  const bezMV=Math.floor(bezM*vbp);
   const femR=fem-bezV;
   const cresc=femR-desQ;
   const totReb=mat+fem+mac+boi+totBez;
-  const totVend=bVend+desQ+bezV;
+  const totVend=bVend+desQ+bezV+bezMV;
   const pBezCab=pBezArr*pArr;
-  const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rTot=rBoi+rMat+rBez;
+  const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rBezM=bezMV*pBezCab,rTot=rBoi+rMat+rBez+rBezM;
   const cn=CUSTO_S[niv];
   const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez;
   const res=rTot-cTot;
-  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
 }
 
 function makeBarsS(items,maxV,colors){
@@ -1020,9 +1021,9 @@ function recalcCiclo(){
   const maxReb=Math.max(d.mat,d.fem,d.macRest,d.bNec,d.totBez,1);
   const bRebEl=ki('s-bar-rebanho');
   if(bRebEl) bRebEl.innerHTML=makeBarsS([{lbl:'Matrizes',val:d.mat,dis:fN(d.mat)},{lbl:'Fêmeas 0–24m',val:d.fem,dis:fN(d.fem)},{lbl:'Machos 0–24m',val:d.macRest,dis:fN(d.macRest)},{lbl:'Bois',val:d.bNec,dis:fN(d.bNec)},{lbl:'Bezerros',val:d.totBez,dis:fN(d.totBez)}],maxReb,['#22C55E','#16A34A','#15803D','#F59E0B','#FBBF24']);
-  const maxVnd=Math.max(d.bVend,d.desQ,d.bezV,1);
+  const maxVnd=Math.max(d.bVend,d.desQ,d.bezV,d.bezMV,1);
   const bVndEl=ki('s-bar-vendas');
-  if(bVndEl) bVndEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.bVend,dis:fN(d.bVend)},{lbl:'Matrizes',val:d.desQ,dis:fN(d.desQ)},{lbl:'Bezerras',val:d.bezV,dis:fN(d.bezV)}],maxVnd,['#F59E0B','#D97706','#FBBF24']);
+  if(bVndEl) bVndEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.bVend,dis:fN(d.bVend)},{lbl:'Matrizes',val:d.desQ,dis:fN(d.desQ)},{lbl:'Bezerras',val:d.bezV,dis:fN(d.bezV)},{lbl:'Bezerros',val:d.bezMV,dis:fN(d.bezMV)}],maxVnd,['#F59E0B','#D97706','#FBBF24','#FCD34D']);
   const maxRec=Math.max(d.rBoi,d.rMat,d.rBez,1);
   const bRecEl=ki('s-bar-receita');
   if(bRecEl) bRecEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.rBoi,dis:fR(d.rBoi)},{lbl:'Matrizes',val:d.rMat,dis:fR(d.rMat)},{lbl:'Bezerras',val:d.rBez,dis:fR(d.rBez)}],maxRec,['#38BDF8','#0EA5E9','#7DD3FC']);
@@ -1043,11 +1044,11 @@ function recalcCiclo(){
 
   // Vendas tab
   const tVnd=document.querySelector('#s-tbl-vendas tbody');
-  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
+  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`],['Bezerros M.',d.bezMV,`${fN(d.bezM)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
 
   // Financeiro tab
   const tRec=document.querySelector('#s-tbl-rec tbody');
-  if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
+  if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez],['Bezerros M.',d.bezMV,fR(d.pBezCab),d.rBezM]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
   const tCus=document.querySelector('#s-tbl-cus tbody');
   const cn=CUSTO_S[d.niv];
   if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
