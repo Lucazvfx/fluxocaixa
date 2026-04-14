@@ -905,9 +905,9 @@ function getRecs(tipo,ind){
 
 // ── CICLO COMPLETO ENGINE ────────────────────────────────────────────────
 let CUSTO_S={
-  baixo: {matrizes:800,bois:600,femeas:400,machos:380},
-  medio: {matrizes:850,bois:650,femeas:450,machos:420},
-  alto:  {matrizes:950,bois:750,femeas:500,machos:480}
+  baixo: {matrizes:800,bois:600,femeas:400,machos:380,bezerros:180},
+  medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220},
+  alto:  {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280}
 };
 function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
 
@@ -916,7 +916,8 @@ function renderCostTableS(){
     {key:'matrizes',label:'Matrizes (25m+)'},
     {key:'bois',    label:'Bois Adultos'},
     {key:'femeas',  label:'Fêmeas Jovens (0-24m)'},
-    {key:'machos',  label:'Machos Jovens (0-24m)'}
+    {key:'machos',  label:'Machos Jovens (0-24m)'},
+    {key:'bezerros',label:'Bezerros (nascimentos)'}
   ];
   const levels=['baixo','medio','alto'];
   const tbody=document.getElementById('s-cost-tbody');
@@ -971,14 +972,14 @@ function calcCiclo(){
   const bezV=Math.floor(fem*vbp);
   const femR=fem-bezV;
   const cresc=femR-desQ;
-  const totReb=mat+fem+mac+boi;
+  const totReb=mat+fem+mac+boi+totBez;
   const totVend=bVend+desQ+bezV;
   const pBezCab=pBezArr*pArr;
   const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rTot=rBoi+rMat+rBez;
   const cn=CUSTO_S[niv];
-  const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cTot=cMat+cBoi+cFem+cMac;
+  const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez;
   const res=rTot-cTot;
-  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rTot,cMat,cBoi,cFem,cMac,cTot,res};
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
 }
 
 function makeBarsS(items,maxV,colors){
@@ -1016,9 +1017,9 @@ function recalcCiclo(){
   if(resEl){resEl.textContent=fR(d.res);resEl.className='pjc-v '+(d.res>=0?'cg':'cr');}
 
   // Dashboard bars
-  const maxReb=Math.max(d.mat,d.fem,d.macRest,d.bNec,1);
+  const maxReb=Math.max(d.mat,d.fem,d.macRest,d.bNec,d.totBez,1);
   const bRebEl=ki('s-bar-rebanho');
-  if(bRebEl) bRebEl.innerHTML=makeBarsS([{lbl:'Matrizes',val:d.mat,dis:fN(d.mat)},{lbl:'Fêmeas 0–24m',val:d.fem,dis:fN(d.fem)},{lbl:'Machos 0–24m',val:d.macRest,dis:fN(d.macRest)},{lbl:'Bois',val:d.bNec,dis:fN(d.bNec)}],maxReb,['#22C55E','#16A34A','#15803D','#F59E0B']);
+  if(bRebEl) bRebEl.innerHTML=makeBarsS([{lbl:'Matrizes',val:d.mat,dis:fN(d.mat)},{lbl:'Fêmeas 0–24m',val:d.fem,dis:fN(d.fem)},{lbl:'Machos 0–24m',val:d.macRest,dis:fN(d.macRest)},{lbl:'Bois',val:d.bNec,dis:fN(d.bNec)},{lbl:'Bezerros',val:d.totBez,dis:fN(d.totBez)}],maxReb,['#22C55E','#16A34A','#15803D','#F59E0B','#FBBF24']);
   const maxVnd=Math.max(d.bVend,d.desQ,d.bezV,1);
   const bVndEl=ki('s-bar-vendas');
   if(bVndEl) bVndEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.bVend,dis:fN(d.bVend)},{lbl:'Matrizes',val:d.desQ,dis:fN(d.desQ)},{lbl:'Bezerras',val:d.bezV,dis:fN(d.bezV)}],maxVnd,['#F59E0B','#D97706','#FBBF24']);
@@ -1030,7 +1031,7 @@ function recalcCiclo(){
 
   // Rebanho tab
   const tReb=document.querySelector('#s-tbl-rebanho tbody');
-  if(tReb){const cats=[['Matrizes (25m+)',d.mat],['Fêmeas 0–24m',d.fem],['Machos 0–24m',d.mac],['Bois Adultos',d.boi]];tReb.innerHTML=cats.map(([c,q])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totReb>0?fP(q/d.totReb):'0%'}</td></tr>`).join('');const el=ki('s-tot-reb');if(el)el.textContent=fN(d.totReb);}
+  if(tReb){const cats=[['Matrizes (25m+)',d.mat],['Fêmeas 0–24m',d.fem],['Machos 0–24m',d.mac],['Bois Adultos',d.boi],['Bezerros (nascimentos)',d.totBez]];tReb.innerHTML=cats.map(([c,q])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totReb>0?fP(q/d.totReb):'0%'}</td></tr>`).join('');const el=ki('s-tot-reb');if(el)el.textContent=fN(d.totReb);}
   const pBez=ki('s-prod-bez');
   if(pBez) pBez.innerHTML=[['Matrizes',fN(d.mat)+' cab.',''],['Taxa Natalidade',fP(d.nat),'ca'],['Total Bezerros',fN(d.totBez),'cg'],['♀ Bezerras',fN(d.bezF),'cg'],['♂ Bezerros',fN(d.bezM),'ca']].map(([k,v,c])=>mr(k,v,c)).join('');
 
@@ -1049,7 +1050,7 @@ function recalcCiclo(){
   if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
   const tCus=document.querySelector('#s-tbl-cus tbody');
   const cn=CUSTO_S[d.niv];
-  if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
+  if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
   const resBox=ki('s-res-box');
   if(resBox){const pos=d.res>=0;resBox.innerHTML=`<div class="res-box ${pos?'pos':'neg'}"><div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Líquido Anual</div><div style="font-family:var(--fn);font-weight:800;font-size:2.2rem;line-height:1;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res)}</div></div>${d.totVend>0?`<div style="text-align:right"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-bottom:4px">Por animal vendido</div><div style="font-family:var(--fn);font-weight:700;font-size:1.2rem;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res/d.totVend)}</div></div>`:''}</div>`;}
 }
