@@ -543,3 +543,39 @@ def simular_cenario(
         },
         'delta_rebanho': anos_proj[-1]['total'] - int(total_ini),
     }
+
+
+# ─────────────────────────────────────────────
+# RETREINAMENTO COM DADOS CONFIRMADOS
+# ─────────────────────────────────────────────
+def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
+    """
+    Retreina o ensemble combinando os dados de treino originais com
+    registros confirmados pelo usuário armazenados no BD SQLite.
+    Quanto mais confirmações, mais preciso o modelo fica para o rebanho local.
+    """
+    global _pipeline
+    X_base = [extrair_features(v) for v in TRAIN_X]
+    y_base = list(TRAIN_Y)
+
+    if X_extra:
+        X_all = np.array(X_base + [extrair_features(v) for v in X_extra])
+        y_all = np.array(y_base + list(y_extra))
+    else:
+        X_all = np.array(X_base)
+        y_all = np.array(y_base)
+
+    _pipeline = _build_model()
+    _pipeline.fit(X_all, y_all)
+
+    n_classes = len(set(y_all))
+    cv = min(5, max(2, len(X_all) // max(n_classes, 1)))
+    scores = cross_val_score(_pipeline, X_all, y_all, cv=cv, scoring='accuracy')
+
+    return {
+        'accuracy_mean': round(float(scores.mean()), 4),
+        'accuracy_std':  round(float(scores.std()),  4),
+        'n_samples':     int(len(X_all)),
+        'n_features':    int(X_all.shape[1]),
+        'n_confirmados': int(len(X_extra)),
+    }

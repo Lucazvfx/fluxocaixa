@@ -240,7 +240,10 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 
 <header>
   <div class="logo"><div class=""></div>Fluxo de caixa<em>— Gestão Jaine</em></div>
-  <div class="hdr-r"></div>
+  <div class="hdr-r">
+    <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar ML</button>
+  </div>
 </header>
 
 <main>
@@ -339,6 +342,31 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <!-- ═══ RESULTADO ═══ -->
 <div class="panel" id="panel-resultado">
   <div id="result-wrap"></div>
+  <div class="card" id="card-confirmar" style="display:none;margin-top:16px">
+    <div class="ch">
+      <div class="ct"><div class="cd" style="background:var(--g)"></div>Confirmar para Treino do Modelo</div>
+      <span id="conf-saved" style="font-family:var(--fm);font-size:.65rem;color:var(--g);display:none">✓ Salvo!</span>
+    </div>
+    <div class="cb" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:140px">
+        <label>Classificação ML</label>
+        <input type="text" id="conf-ml-tipo" readonly style="background:var(--c2);color:var(--mu)">
+      </div>
+      <div class="field" style="flex:1;min-width:160px">
+        <label>Classificação Correta</label>
+        <select id="conf-tipo">
+          <option value="CRIA">CRIA</option>
+          <option value="RECRIA">RECRIA</option>
+          <option value="ENGORDA">ENGORDA</option>
+          <option value="CICLO_COMPLETO">CICLO COMPLETO</option>
+        </select>
+      </div>
+      <button class="btn-p" onclick="confirmarClassificacao()" style="flex-shrink:0"><span>✓ Confirmar</span></button>
+    </div>
+    <div style="padding:0 22px 16px;font-family:var(--fm);font-size:.65rem;color:var(--mu)">
+      Cada confirmação melhora o modelo. Após acumular dados, clique em <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.
+    </div>
+  </div>
 </div>
 
 <!-- ═══ CENÁRIOS ═══ -->
@@ -630,6 +658,8 @@ function fillEx(t){const e=EX[t];FAIXAS.forEach((f,i)=>{document.getElementById(
 function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value=0;document.getElementById(f.key+'_M').value=0});upd()}
 
 // ── CLASSIFY
+let lastRegistroId=null;
+
 async function classificar(){
   const v=getVals();
   if(v.reduce((a,b)=>a+b,0)<10){toast('Insira pelo menos 10 animais.',true);return}
@@ -646,10 +676,21 @@ async function classificar(){
     const data=await res.json();
     if(data.erro){toast(data.erro,true);return}
     lastVals=v;
+    lastRegistroId=data.registro_id||null;
     renderResult(data);
     showTab('resultado',null);
     document.getElementById('tab-res').style.display='flex';
     document.getElementById('tab-cen').style.display='flex';
+    // Mostra card de confirmação
+    const cc=document.getElementById('card-confirmar');
+    const mlTipo=document.getElementById('conf-ml-tipo');
+    const selTipo=document.getElementById('conf-tipo');
+    if(cc&&lastRegistroId){
+      mlTipo.value=data.classificacao||'';
+      selTipo.value=data.classificacao||'CRIA';
+      document.getElementById('conf-saved').style.display='none';
+      cc.style.display='block';
+    }
     // Auto-sincroniza animais no ciclo completo
     document.getElementById('s-mat').value=v[6]+v[8];
     document.getElementById('s-fem').value=v[0]+v[2]+v[4];
@@ -657,6 +698,7 @@ async function classificar(){
     document.getElementById('s-boi').value=v[7]+v[9];
     recalcCiclo();
     runSc();
+    atualizarDbStats();
   }finally{hideLoading()}
 }
 
@@ -1181,10 +1223,52 @@ function showLoading(t){document.getElementById('loading-ov').classList.add('sho
 function hideLoading(){document.getElementById('loading-ov').classList.remove('show')}
 function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500)}
 
+// ── CONFIRMAR CLASSIFICAÇÃO E RETREINO ML ────────────────────────────────
+async function confirmarClassificacao(){
+  if(!lastRegistroId){toast('Nenhum registro para confirmar.',true);return}
+  const cls=document.getElementById('conf-tipo').value;
+  try{
+    const res=await fetch('/api/confirmar',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({registro_id:lastRegistroId,classificacao:cls})});
+    const data=await res.json();
+    if(data.erro){toast(data.erro,true);return}
+    const sv=document.getElementById('conf-saved');
+    if(sv){sv.style.display='inline';setTimeout(()=>sv.style.display='none',3000)}
+    toast('Confirmado! Total: '+data.stats.confirmados+' registros confirmados.');
+    atualizarDbStats(data.stats);
+  }catch(e){toast('Erro ao confirmar: '+e.message,true)}
+}
+
+async function retreinarModelo(){
+  const btn=document.getElementById('btn-retrain');
+  if(btn){btn.textContent='⏳ Treinando...';btn.disabled=true}
+  showLoading('Retreinando modelo com dados confirmados...');
+  try{
+    const res=await fetch('/api/retrain',{method:'POST'});
+    const data=await res.json();
+    if(data.erro){toast(data.erro,true);return}
+    toast(`Modelo atualizado! Acurácia: ${(data.accuracy_mean*100).toFixed(1)}% (${data.n_confirmados} registros confirmados)`);
+    atualizarDbStats();
+  }catch(e){toast('Erro ao retreinar: '+e.message,true)}
+  finally{
+    if(btn){btn.textContent='↺ Retreinar ML';btn.disabled=false}
+    hideLoading()
+  }
+}
+
+async function atualizarDbStats(s=null){
+  try{
+    if(!s){const r=await fetch('/api/db-stats');s=await r.json()}
+    const el=document.getElementById('hdr-db');
+    if(el) el.textContent=(s.total||0)+' / '+(s.confirmados||0);
+  }catch{}
+}
+
 buildTable();
 renderCostTableS();
 recalcCiclo();
 runSc();
+atualizarDbStats();
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
   <p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p>
