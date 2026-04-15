@@ -1,7 +1,8 @@
 """
 BoviML — Servidor Flask
 """
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import os, re, tempfile, subprocess, threading
 from ml_engine import (
     treinar_modelo, classificar, calcular_indicadores,
@@ -10,6 +11,24 @@ from ml_engine import (
 import database as db
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')
+
+# ── Flask-Login ──────────────────────────────────────────────────────────────
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Faça login para acessar o sistema.'
+
+class User(UserMixin):
+    def __init__(self, data: dict):
+        self.id    = data['id']
+        self.email = data['email']
+        self.nome  = data['nome']
+        self.plano = data.get('plano', 'free')
+
+@login_manager.user_loader
+def load_user(user_id):
+    u = db.buscar_usuario_id(int(user_id))
+    return User(u) if u else None
 
 # ── Startup: carrega modelo do disco ou treina do zero ──────────────────────
 _saved = carregar_modelo()
@@ -43,12 +62,96 @@ def _auto_retrain():
             _retraining = False
 
 
+# ── Auth routes ─────────────────────────────────────────────────────────────
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    erro = None
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        senha = request.form.get('senha', '')
+        u = db.verificar_senha(email, senha)
+        if u:
+            login_user(User(u), remember=True)
+            return redirect(url_for('index'))
+        erro = 'E-mail ou senha incorretos.'
+    return render_template('login.html', erro=erro)
+
+
+@app.route('/cadastro', methods=['GET', 'POST'])
+def cadastro():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    erro = None
+    if request.method == 'POST':
+        nome  = request.form.get('nome', '').strip()
+        email = request.form.get('email', '').strip()
+        senha = request.form.get('senha', '')
+        if not nome or not email or len(senha) < 6:
+            erro = 'Preencha todos os campos. Senha mínima: 6 caracteres.'
+        elif db.buscar_usuario_email(email):
+            erro = 'E-mail já cadastrado.'
+        else:
+            uid = db.criar_usuario(email, nome, senha)
+            u   = db.buscar_usuario_id(uid)
+            login_user(User(u), remember=True)
+            return redirect(url_for('index'))
+    return render_template('cadastro.html', erro=erro)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+# ── Fazendas ─────────────────────────────────────────────────────────────────
+@app.route('/api/fazendas', methods=['GET'])
+@login_required
+def api_listar_fazendas():
+    return jsonify({'fazendas': db.listar_fazendas(current_user.id)})
+
+
+@app.route('/api/fazendas', methods=['POST'])
+@login_required
+def api_criar_fazenda():
+    data = request.json
+    nome = (data.get('nome') or '').strip()
+    if not nome:
+        return jsonify({'erro': 'Nome obrigatório'}), 400
+    fid = db.criar_fazenda(
+        user_id=current_user.id,
+        nome=nome,
+        proprietario=data.get('proprietario', ''),
+        municipio=data.get('municipio', ''),
+        estado=data.get('estado', ''),
+    )
+    return jsonify({'ok': True, 'id': fid})
+
+
+@app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
+@login_required
+def api_historico_fazenda(fid):
+    f = db.buscar_fazenda(fid, current_user.id)
+    if not f:
+        return jsonify({'erro': 'Fazenda não encontrada'}), 404
+    hist = db.historico_fazenda(fid, current_user.id)
+    return jsonify({'fazenda': dict(f), 'historico': hist})
+
+
+# ── App principal ─────────────────────────────────────────────────────────────
 @app.route('/')
+@login_required
 def index():
-    return render_template('index.html', model_stats=stats, cenarios=CENARIOS)
+    fazendas = db.listar_fazendas(current_user.id)
+    return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
+                           usuario=current_user, fazendas=fazendas)
 
 
 @app.route('/api/classificar', methods=['POST'])
+@login_required
 def api_classificar():
     data = request.json
     v = data.get('valores', [])

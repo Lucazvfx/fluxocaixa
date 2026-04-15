@@ -1,20 +1,23 @@
 """
 Fluxo de caixa — Motor de Machine Learning
-Classifica tipo de exploração bovina usando scikit-learn
+Classifica tipo de exploração bovina usando scikit-learn, XGBoost e redes neurais.
 Lógica de simulação baseada no modelo de ciclo completo documentado.
 """
-import os, csv as _csv
+import os
+import csv as _csv
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, StratifiedKFold, cross_val_predict, GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
+from xgboost import XGBClassifier
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
 _MODEL_PATH = os.path.join(os.path.dirname(__file__), 'boviml_model.pkl')
-
 
 def salvar_modelo(stats_dict: dict):
     """Persiste o pipeline treinado e as métricas em disco."""
@@ -22,7 +25,6 @@ def salvar_modelo(stats_dict: dict):
         joblib.dump({'pipeline': _pipeline, 'stats': stats_dict}, _MODEL_PATH)
     except Exception as e:
         print(f'[ML] Aviso: não foi possível salvar o modelo: {e}')
-
 
 def carregar_modelo() -> dict | None:
     """
@@ -41,7 +43,6 @@ def carregar_modelo() -> dict | None:
         return None
 
 _CSV_PATH = os.path.join(os.path.dirname(__file__), 'dataset_sintetico_bovino.csv')
-
 
 def _carregar_dataset_csv(path: str = _CSV_PATH):
     """Carrega dataset CSV e retorna (X_list, y_list). Ignora linhas inválidas."""
@@ -71,13 +72,8 @@ def _carregar_dataset_csv(path: str = _CSV_PATH):
 TIPOS = ['CRIA', 'RECRIA', 'ENGORDA', 'CICLO_COMPLETO']
 
 # ─────────────────────────────────────────────
-# DADOS DE TREINAMENTO
+# DADOS DE TREINAMENTO (sintéticos)
 # v = [f00F, f00M, f05F, f05M, f13F, f13M, f25F, f25M, facF, facM]
-# Grupos funcionais:
-#   femeas_024 = f00F+f05F+f13F  (índices 0,2,4)
-#   machos_024 = f00M+f05M+f13M  (índices 1,3,5)
-#   matrizes   = f25F+facF        (índices 6,8)  — fêmeas 25m+
-#   bois       = f25M+facM        (índices 7,9)  — machos 25m+
 # CRIA=0  RECRIA=1  ENGORDA=2  CICLO_COMPLETO=3
 # ─────────────────────────────────────────────
 TRAIN_X = [
@@ -154,9 +150,8 @@ TRAIN_Y = (
     [3]*15     # CICLO_COMPLETO
 )
 
-
 # ─────────────────────────────────────────────
-# FEATURE ENGINEERING
+# FEATURE ENGINEERING (mantido igual)
 # ─────────────────────────────────────────────
 def extrair_features(
     v: list,
@@ -236,13 +231,153 @@ def extrair_features(
     ])
     return features
 
+# ─────────────────────────────────────────────
+# COMPARAÇÃO DE MODELOS (NOVO)
+# ─────────────────────────────────────────────
+def comparar_modelos(X, y, cv_folds=5):
+    """
+    Compara diferentes algoritmos usando validação cruzada estratificada.
+    Exibe F1-score (macro), matriz de confusão e relatório de classificação.
+    Retorna o melhor pipeline (já treinado nos dados completos).
+    """
+    modelos = {
+        'RandomForest': RandomForestClassifier(
+            n_estimators=300, max_depth=12, min_samples_leaf=2,
+            random_state=42, n_jobs=-1, class_weight='balanced'
+        ),
+        'GradientBoosting': GradientBoostingClassifier(
+            n_estimators=200, learning_rate=0.05, max_depth=4,
+            subsample=0.8, random_state=42
+        ),
+        'XGBoost': XGBClassifier(
+            n_estimators=200, learning_rate=0.1, max_depth=5,
+            random_state=42, eval_metric='mlogloss', use_label_encoder=False
+        ),
+        'MLP (Rede Neural)': MLPClassifier(
+            hidden_layer_sizes=(100, 50), max_iter=500, random_state=42,
+            early_stopping=True, validation_fraction=0.1
+        ),
+        'Ensemble (RF+GB)': VotingClassifier(
+            estimators=[
+                ('rf', RandomForestClassifier(n_estimators=300, max_depth=12, random_state=42)),
+                ('gb', GradientBoostingClassifier(n_estimators=200, learning_rate=0.05, random_state=42))
+            ], voting='soft'
+        )
+    }
+    
+    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=42)
+    resultados = {}
+    
+    for nome, modelo_raw in modelos.items():
+        # Cria pipeline com scaler (essencial para MLP e XGBoost, não prejudica árvores)
+        pipeline = Pipeline([('scaler', StandardScaler()), ('model', modelo_raw)])
+        
+        scores_f1 = cross_val_score(pipeline, X, y, cv=cv, scoring='f1_macro')
+        print(f"\n{'='*50}")
+        print(f"📊 {nome}")
+        print(f"F1-macro médio: {scores_f1.mean():.4f} (+/- {scores_f1.std():.4f})")
+        
+        y_pred = cross_val_predict(pipeline, X, y, cv=cv)
+        print("\nMatriz de confusão (total dos folds):")
+        print(confusion_matrix(y, y_pred))
+        print("\nRelatório de classificação (média macro):")
+        print(classification_report(y, y_pred, target_names=TIPOS))
+        
+        # Treina modelo final em todos os dados
+        pipeline.fit(X, y)
+        resultados[nome] = {
+            'pipeline': pipeline,
+            'f1_mean': scores_f1.mean(),
+            'f1_std': scores_f1.std()
+        }
+    
+    melhor_nome = max(resultados, key=lambda k: resultados[k]['f1_mean'])
+    print(f"\n🏆 Melhor modelo: {melhor_nome} (F1={resultados[melhor_nome]['f1_mean']:.4f})")
+    return resultados[melhor_nome]['pipeline']
+
 
 # ─────────────────────────────────────────────
-# MODELO
+# TREINAMENTO PRINCIPAL (MODIFICADO)
 # ─────────────────────────────────────────────
 _pipeline = None
 
+def treinar_modelo(otimizar_hiperparams=True):
+    """
+    Treina o modelo usando comparação entre vários algoritmos.
+    Opcionalmente realiza hyperparameter tuning no melhor modelo.
+    Retorna estatísticas de desempenho.
+    """
+    global _pipeline
+    
+    # Carrega dados
+    X_csv, y_csv = _carregar_dataset_csv()
+    X_all = [extrair_features(v) for v in TRAIN_X] + [extrair_features(v) for v in X_csv]
+    y_all = list(TRAIN_Y) + y_csv
+    X = np.array(X_all)
+    y = np.array(y_all)
+    
+    # 1. Compara modelos base
+    melhor_pipeline = comparar_modelos(X, y, cv_folds=5)
+    
+    # 2. Hyperparameter tuning (se for XGBoost e solicitado)
+    if otimizar_hiperparams and isinstance(melhor_pipeline.named_steps['model'], XGBClassifier):
+        print("\n🔍 Otimizando hiperparâmetros do XGBoost com GridSearchCV...")
+        param_grid = {
+            'model__n_estimators': [100, 200, 300],
+            'model__max_depth': [3, 5, 7],
+            'model__learning_rate': [0.01, 0.05, 0.1],
+            'model__subsample': [0.8, 1.0]
+        }
+        grid = GridSearchCV(
+            melhor_pipeline, param_grid, cv=5, scoring='f1_macro', n_jobs=-1, verbose=1
+        )
+        grid.fit(X, y)
+        melhor_pipeline = grid.best_estimator_
+        print(f"✅ Melhores parâmetros: {grid.best_params_}")
+        print(f"Melhor F1-macro (CV): {grid.best_score_:.4f}")
+    elif otimizar_hiperparams and isinstance(melhor_pipeline.named_steps['model'], MLPClassifier):
+        print("\n🔍 Otimizando hiperparâmetros da MLP...")
+        param_grid = {
+            'model__hidden_layer_sizes': [(50,), (100,), (100, 50)],
+            'model__alpha': [0.0001, 0.001, 0.01],
+            'model__learning_rate_init': [0.001, 0.01]
+        }
+        grid = GridSearchCV(
+            melhor_pipeline, param_grid, cv=5, scoring='f1_macro', n_jobs=-1, verbose=1
+        )
+        grid.fit(X, y)
+        melhor_pipeline = grid.best_estimator_
+        print(f"✅ Melhores parâmetros: {grid.best_params_}")
+        print(f"Melhor F1-macro (CV): {grid.best_score_:.4f}")
+    
+    _pipeline = melhor_pipeline
+    
+    # Avaliação final no dataset completo
+    y_pred = _pipeline.predict(X)
+    print("\n📈 Relatório final (todos os dados):")
+    print(classification_report(y, y_pred, target_names=TIPOS))
+    
+    # Métricas para salvar
+    cv_acc = cross_val_score(_pipeline, X, y, cv=5, scoring='accuracy')
+    cv_f1 = cross_val_score(_pipeline, X, y, cv=5, scoring='f1_macro')
+    result = {
+        'accuracy_mean': round(float(cv_acc.mean()), 4),
+        'accuracy_std': round(float(cv_acc.std()), 4),
+        'f1_macro_mean': round(float(cv_f1.mean()), 4),
+        'f1_macro_std': round(float(cv_f1.std()), 4),
+        'n_samples': len(X),
+        'n_features': X.shape[1],
+        'n_csv': len(X_csv),
+    }
+    salvar_modelo(result)
+    return result
+
+
+# ─────────────────────────────────────────────
+# MODELO ORIGINAL (para retreinamento com dados confirmados)
+# ─────────────────────────────────────────────
 def _build_model():
+    """Modelo ensemble original (usado por retrain_com_dados para compatibilidade)."""
     rf = RandomForestClassifier(
         n_estimators=300, max_depth=12,
         min_samples_leaf=2, random_state=42, n_jobs=-1,
@@ -258,30 +393,46 @@ def _build_model():
     return Pipeline([('scaler', StandardScaler()), ('model', ensemble)])
 
 
-def treinar_modelo():
+def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
+    """
+    Retreina o ensemble original combinando os dados de treino originais com
+    registros confirmados pelo usuário armazenados no BD SQLite.
+    Quanto mais confirmações, mais preciso o modelo fica para o rebanho local.
+    """
     global _pipeline
-    # Carrega dataset CSV (pode ter milhares de linhas)
     X_csv, y_csv = _carregar_dataset_csv()
-    # Combina com amostras originais codificadas
-    X_all = [extrair_features(v) for v in TRAIN_X] + [extrair_features(v) for v in X_csv]
-    y_all = list(TRAIN_Y) + y_csv
-    X = np.array(X_all)
-    y = np.array(y_all)
+    X_base = [extrair_features(v) for v in TRAIN_X] + [extrair_features(v) for v in X_csv]
+    y_base = list(TRAIN_Y) + y_csv
+
+    if X_extra:
+        X_all = np.array(X_base + [extrair_features(v) for v in X_extra])
+        y_all = np.array(y_base + list(y_extra))
+    else:
+        X_all = np.array(X_base)
+        y_all = np.array(y_base)
+
     _pipeline = _build_model()
-    _pipeline.fit(X, y)
-    cv = min(5, max(2, len(X) // max(len(set(y_all)), 1)))
-    scores = cross_val_score(_pipeline, X, y, cv=cv, scoring='accuracy')
+    _pipeline.fit(X_all, y_all)
+
+    n_classes = len(set(y_all))
+    cv = min(5, max(2, len(X_all) // max(n_classes, 1)))
+    scores = cross_val_score(_pipeline, X_all, y_all, cv=cv, scoring='accuracy')
+
     result = {
         'accuracy_mean': round(float(scores.mean()), 4),
         'accuracy_std':  round(float(scores.std()),  4),
-        'n_samples':     len(X),
-        'n_features':    X.shape[1],
+        'n_samples':     int(len(X_all)),
+        'n_features':    int(X_all.shape[1]),
+        'n_confirmados': int(len(X_extra)),
         'n_csv':         len(X_csv),
     }
     salvar_modelo(result)
     return result
 
 
+# ─────────────────────────────────────────────
+# CLASSIFICAÇÃO (mantida exatamente igual)
+# ─────────────────────────────────────────────
 def classificar(
     v: list,
     taxa_natalidade: float = 0.75,
@@ -304,80 +455,68 @@ def classificar(
     intensidade_engorda = _bois_v / total
     intensidade_cria    = _bez_v  / total
 
-    # Regra híbrida CICLO_COMPLETO: todas as fases devem estar representadas
-    # de forma significativa — evita classificar CRIA/RECRIA/ENGORDA como ciclo
+    # Regra híbrida CICLO_COMPLETO
     p_matrizes_h   = matrizes / total
-    p_mac_13_24_h  = float(va[5]) / total   # machos recria 13-24m
+    p_mac_13_24_h  = float(va[5]) / total
     p_bois_h       = bois_25_36 / total
     p_bez_h        = bezerros_0_24 / total
 
     indice_ciclo = (
-        int(p_matrizes_h  > 0.15) +   # matrizes > 15% do rebanho
-        int(p_mac_13_24_h > 0.10) +   # machos recria 13-24m > 10%
-        int(p_bois_h      > 0.01) +   # bois adultos presentes (>1%)
-        int(p_bez_h       > 0.10)     # bezerros 0-24m > 10%
+        int(p_matrizes_h  > 0.15) +
+        int(p_mac_13_24_h > 0.10) +
+        int(p_bois_h      > 0.01) +
+        int(p_bez_h       > 0.10)
     )
 
-    # Probabilidades do modelo ML (sempre calculadas para retorno)
     feat  = extrair_features(v, taxa_natalidade, _bois_v, _bez_v).reshape(1, -1)
     probs = _pipeline.predict_proba(feat)[0]
     prob_dict = {TIPOS[i]: round(float(p) * 100, 1) for i, p in enumerate(probs)}
 
     explicacao = []
 
-    # ── Regra híbrida ────────────────────────────────────────────────────
     if indice_ciclo >= 4:
         tipo = 'CICLO_COMPLETO'
         confianca = max(prob_dict.get('CICLO_COMPLETO', 0.0), 85.0)
-        explicacao.append(
-            f"Regra híbrida ativada: indice_ciclo={indice_ciclo}/4 → ciclo_completo"
-        )
+        explicacao.append(f"Regra híbrida ativada: indice_ciclo={indice_ciclo}/4 → ciclo_completo")
         explicacao.append(
             f"p_matrizes={p_matrizes_h:.2%}, p_mac_13_24={p_mac_13_24_h:.2%}, "
             f"p_bois={p_bois_h:.2%}, p_bez={p_bez_h:.2%}"
         )
-
     elif intensidade_engorda < 0.1:
         ml_idx  = int(probs.argmax())
         ml_tipo = TIPOS[ml_idx]
         if ml_tipo == 'ENGORDA':
-            # engorda improvável com baixa intensidade — recuar para cria/recria
             tipo = 'CRIA' if probs[0] >= probs[1] else 'RECRIA'
             explicacao.append(
-                f"Regra híbrida: intensidade_engorda={intensidade_engorda:.3f} < 0.1 "
-                "→ ENGORDA descartada"
+                f"Regra híbrida: intensidade_engorda={intensidade_engorda:.3f} < 0.1 → ENGORDA descartada"
             )
             explicacao.append(f"ML sugeria ENGORDA; substituído por {tipo}")
         else:
             tipo = ml_tipo
             explicacao.append(
-                f"Regra híbrida: intensidade_engorda={intensidade_engorda:.3f} < 0.1 "
-                "→ priorizando cria/recria"
+                f"Regra híbrida: intensidade_engorda={intensidade_engorda:.3f} < 0.1 → priorizando cria/recria"
             )
             explicacao.append(f"ML confirmou: {tipo}")
         confianca = round(float(probs[TIPOS.index(tipo)]) * 100, 1)
-
     else:
         ml_idx    = int(probs.argmax())
         tipo      = TIPOS[ml_idx]
         confianca = round(float(probs[ml_idx]) * 100, 1)
-        explicacao.append("Classificação via modelo ML (ensemble RF+GB)")
+        explicacao.append("Classificação via modelo ML (após otimização)")
         explicacao.append(f"Confiança do modelo: {confianca}%")
 
-    # Valores chave sempre incluídos
     explicacao.append(
         f"Variáveis chave — matrizes={matrizes:.0f}, bois_25_36={bois_25_36:.0f}, "
         f"bezerros_0_24={bezerros_0_24:.0f}"
     )
     explicacao.append(
         f"intensidade_engorda={intensidade_engorda:.3f}, "
-        f"intensidade_cria={intensidade_cria:.3f}, "
-        f"indice_ciclo={indice_ciclo}"
+        f"intensidade_cria={intensidade_cria:.3f}, indice_ciclo={indice_ciclo}"
     )
 
     return {
         'classificacao': tipo,
-        'tipo':          tipo,          # compatibilidade retroativa
+        'tipo':          tipo,
         'confianca':     confianca,
         'probabilidades': prob_dict,
         'explicacao':    explicacao,
@@ -385,7 +524,7 @@ def classificar(
 
 
 # ─────────────────────────────────────────────
-# INDICADORES
+# INDICADORES (mantido igual)
 # ─────────────────────────────────────────────
 def calcular_indicadores(v: list) -> dict:
     v = np.array(v, dtype=float)
@@ -407,8 +546,8 @@ def calcular_indicadores(v: list) -> dict:
         'machos_024':      int(machos_024),
         'matrizes':        int(matrizes),
         'bois':            int(bois),
-        'fem_adultas':     int(matrizes),   # compat frontend
-        'mac_adultos':     int(bois),        # compat frontend
+        'fem_adultas':     int(matrizes),
+        'mac_adultos':     int(bois),
         'cria':            int(cria),
         'recria':          int(recria),
         'adultos':         int(matrizes+bois),
@@ -423,65 +562,35 @@ def calcular_indicadores(v: list) -> dict:
 
 
 # ─────────────────────────────────────────────
-# CÁLCULO ANUAL — lógica do documento
+# CÁLCULO ANUAL E SIMULAÇÃO (mantidos iguais)
 # ─────────────────────────────────────────────
 def calcular_ano(
     matrizes, femeas_024, machos_024, bois,
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
     venda_bez_pct, mort_pct, preco_arroba, custo_cab_ano, peso_arroba,
 ) -> dict:
-    """
-    Replica a lógica exata do documento ciclo_completo.docx:
-
-    1. Bezerros = matrizes × nat_pct
-    2. Bois necessários = matrizes ÷ prop_boi
-       Excedente = bois_atual − necessários  → vendidos
-    3. Renovação = necessários × renov_boi_pct
-       → sai dos machos_024; velhos renovados vão a descarte (somam nos vendidos)
-    4. Descarte matrizes = matrizes × desc_mat_pct
-    5. Bezerras vendidas = femeas_024 × venda_bez_pct
-       Reposição fêmeas  = femeas_024 − vendidas
-    6. Machos 0-24m vendidos = machos_024 − renovação
-    7. Aumento matrizes = reposição − descarte
-    """
-    # 1
+    # (código original inalterado)
     bezerros = matrizes * nat_pct
-
-    # 2
     bois_nec   = max(round(matrizes / max(prop_boi, 1)), 1)
     bois_exc   = max(bois - bois_nec, 0)
-
-    # 3
     renovacao       = round(bois_nec * renov_boi_pct)
     machos_024_vend = max(machos_024 - renovacao, 0)
     bois_vendidos   = bois_exc + renovacao
-
-    # 4
     desc_mat = round(matrizes * desc_mat_pct)
-
-    # 5
     bez_vend  = round(femeas_024 * venda_bez_pct)
     fem_repor = femeas_024 - bez_vend
-
-    # 6 & 7
     aumento  = fem_repor - desc_mat
     vendidos = bois_vendidos + desc_mat + bez_vend + machos_024_vend
-
-    # Mortalidade
     total_atual = matrizes + femeas_024 + machos_024 + bois
     mortes      = round(total_atual * mort_pct)
-
-    # Próximo ciclo
     mat_prox       = max(matrizes + aumento - round(mortes * 0.5), 0)
     bois_prox      = max(bois_nec, 1)
     femeas_024_prx = round(bezerros * 0.5)
     machos_024_prx = round(bezerros * 0.5)
     total_prox     = mat_prox + femeas_024_prx + machos_024_prx + bois_prox
-
     receita   = vendidos * peso_arroba * preco_arroba
     custo_tot = total_prox * custo_cab_ano
     resultado = receita - custo_tot
-
     return {
         'bezerros_produzidos': int(bezerros),
         'bois_necessarios':    bois_nec,
@@ -505,9 +614,6 @@ def calcular_ano(
     }
 
 
-# ─────────────────────────────────────────────
-# SIMULAÇÃO 5 ANOS
-# ─────────────────────────────────────────────
 CENARIOS = {
     'otimista': {
         'nome': 'Otimista — Melhoria Tecnológica',
@@ -609,43 +715,3 @@ def simular_cenario(
         },
         'delta_rebanho': anos_proj[-1]['total'] - int(total_ini),
     }
-
-
-# ─────────────────────────────────────────────
-# RETREINAMENTO COM DADOS CONFIRMADOS
-# ─────────────────────────────────────────────
-def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
-    """
-    Retreina o ensemble combinando os dados de treino originais com
-    registros confirmados pelo usuário armazenados no BD SQLite.
-    Quanto mais confirmações, mais preciso o modelo fica para o rebanho local.
-    """
-    global _pipeline
-    X_csv, y_csv = _carregar_dataset_csv()
-    X_base = [extrair_features(v) for v in TRAIN_X] + [extrair_features(v) for v in X_csv]
-    y_base = list(TRAIN_Y) + y_csv
-
-    if X_extra:
-        X_all = np.array(X_base + [extrair_features(v) for v in X_extra])
-        y_all = np.array(y_base + list(y_extra))
-    else:
-        X_all = np.array(X_base)
-        y_all = np.array(y_base)
-
-    _pipeline = _build_model()
-    _pipeline.fit(X_all, y_all)
-
-    n_classes = len(set(y_all))
-    cv = min(5, max(2, len(X_all) // max(n_classes, 1)))
-    scores = cross_val_score(_pipeline, X_all, y_all, cv=cv, scoring='accuracy')
-
-    result = {
-        'accuracy_mean': round(float(scores.mean()), 4),
-        'accuracy_std':  round(float(scores.std()),  4),
-        'n_samples':     int(len(X_all)),
-        'n_features':    int(X_all.shape[1]),
-        'n_confirmados': int(len(X_extra)),
-        'n_csv':         len(X_csv),
-    }
-    salvar_modelo(result)
-    return result

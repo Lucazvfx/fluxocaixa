@@ -244,13 +244,14 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
     <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
+    <!-- Botão de sair (logout) adicionado -->
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
   </div>
 </header>
 
 <main>
 <div class="tab-bar">
   <button class="tab-btn active" onclick="showTab('entrada',this)">Inserir Dados</button>
-  <button class="tab-btn" onclick="showTab('pdf',this)">Ler PDF</button>
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
 </div>
@@ -499,7 +500,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <table class="ytbl" id="s-tbl-rebanho">
             <thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">%</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g r" id="s-tot-reb" style="border-top:1px solid var(--b2)">—</td><td class="r" style="border-top:1px solid var(--b2)">100%</td></tr></tfoot>
+            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g r" id="s-tot-reb" style="border-top:1px solid var(--b2)">—</td><td class="r" style="border-top:1px solid var(--b2)">100%</td></tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -532,7 +534,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <table class="ytbl" id="s-tbl-vendas">
           <thead><tr><th>Categoria</th><th class="r">Quantidade</th><th class="r">%</th><th>Memória de Cálculo</th></tr></thead>
           <tbody></tbody>
-          <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Total Vendido</td><td class="a r" id="s-tot-vnd" style="border-top:1px solid var(--b2)">—</td><td style="border-top:1px solid var(--b2)"></td><td style="border-top:1px solid var(--b2)"></td></tr></tfoot>
+          <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Total Vendido</td><td class="a r" id="s-tot-vnd" style="border-top:1px solid var(--b2)">—</td><td style="border-top:1px solid var(--b2)"></td><td style="border-top:1px solid var(--b2)"></td></tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -547,7 +550,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <table class="ytbl" id="s-tbl-rec">
             <thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">Preço Unit.</th><th class="r">Receita</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Receita Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="g" id="s-rec-tot" style="border-top:1px solid var(--b2)">—</td></tr></tfoot>
+            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Receita Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="g" id="s-rec-tot" style="border-top:1px solid var(--b2)">—</td></tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -557,7 +561,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <table class="ytbl" id="s-tbl-cus">
             <thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">Custo/Cab</th><th class="r">Total</th></tr></thead>
             <tbody></tbody>
-            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Custo Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="cr" id="s-cus-tot" style="border-top:1px solid var(--b2)">—</td></tr></tfoot>
+            <tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Custo Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="cr" id="s-cus-tot" style="border-top:1px solid var(--b2)">—</td></tr>
+            </tfoot>
           </table>
         </div>
         <div class="cb" id="s-res-box"></div>
@@ -759,7 +764,8 @@ function mostrarPDFPreview(data){
         <table class="ytbl">
           <thead><tr><th>Faixa</th><th class="r" style="color:var(--g)">♀ Fêmeas</th><th class="r" style="color:var(--am)">♂ Machos</th><th class="r">Total</th></tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr><td style="font-family:var(--fn);font-weight:700;letter-spacing:1px;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g" style="border-top:1px solid var(--b2)">${fN(v.filter((_,i)=>i%2===0).reduce((a,b)=>a+b,0))}</td><td class="a" style="border-top:1px solid var(--b2)">${fN(v.filter((_,i)=>i%2!==0).reduce((a,b)=>a+b,0))}</td><td class="r" style="font-family:var(--fn);font-weight:800;font-size:1rem;color:var(--am);border-top:1px solid var(--b2)">${fN(data.total)}</td></tr></tfoot>
+          <tfoot><tr><td style="font-family:var(--fn);font-weight:700;letter-spacing:1px;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g" style="border-top:1px solid var(--b2)">${fN(v.filter((_,i)=>i%2===0).reduce((a,b)=>a+b,0))}</td><td class="a" style="border-top:1px solid var(--b2)">${fN(v.filter((_,i)=>i%2!==0).reduce((a,b)=>a+b,0))}</td><td class="r" style="font-family:var(--fn);font-weight:800;font-size:1rem;color:var(--am);border-top:1px solid var(--b2)">${fN(data.total)}</td></tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -1271,6 +1277,11 @@ async function atualizarDbStats(s=null){
       elAcc.style.opacity=s.retraining?'0.6':'1';
     }
   }catch{}
+}
+
+// ── LOGOUT (SAIR) ─────────────────────────────────────────────────────────
+function logout() {
+  window.location.href = '/logout';
 }
 
 buildTable();

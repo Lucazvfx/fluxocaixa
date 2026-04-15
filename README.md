@@ -1,4 +1,4 @@
-# Classificador de Exploração Bovina E ANALISE 
+# Classificador de Exploração Bovina & Analise
 
 Sistema Python com Machine Learning para classificar tipo de exploração bovina
 (Cria / Recria / Engorda / Ciclo Completo) com simulação de cenários financeiros.
@@ -32,6 +32,13 @@ python app.py
 
 Acesse: **http://localhost:5050**
 
+
+# No seu computador, na pasta do projeto
+git add .
+git commit -m "Descrição das alterações"
+git push origin main   
+# ou a branch que você configurou no Railway
+
 ## Funcionalidades
 
 ### 📝 Inserir Dados Manualmente
@@ -40,8 +47,8 @@ Acesse: **http://localhost:5050**
 - Exemplos pré-carregados (Ciclo Completo, Cria, Recria, Engorda, INDEA)
 - Totalizadores em tempo real
 
-### 📋 Ler PDF do INDEA
-- Upload do "Saldo Atual da Exploração" (INDEA-MT)
+### 📋 Ler PDF
+- Upload do "Saldo Atual da Exploração"
 - Extração automática de todos os dados
 - Pré-visualização antes de classificar
 
