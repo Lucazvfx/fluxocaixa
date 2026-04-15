@@ -3,6 +3,7 @@ Fluxo de caixa — Motor de Machine Learning
 Classifica tipo de exploração bovina usando scikit-learn
 Lógica de simulação baseada no modelo de ciclo completo documentado.
 """
+import os, csv as _csv
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.preprocessing import StandardScaler
@@ -10,6 +11,34 @@ from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
 import warnings
 warnings.filterwarnings('ignore')
+
+_CSV_PATH = os.path.join(os.path.dirname(__file__), 'dataset_sintetico_bovino.csv')
+
+
+def _carregar_dataset_csv(path: str = _CSV_PATH):
+    """Carrega dataset CSV e retorna (X_list, y_list). Ignora linhas inválidas."""
+    X, y = [], []
+    if not os.path.exists(path):
+        return X, y
+    with open(path, newline='', encoding='utf-8') as f:
+        reader = _csv.DictReader(f)
+        for row in reader:
+            try:
+                v = [
+                    float(row['f00F']), float(row['f00M']),
+                    float(row['f05F']), float(row['f05M']),
+                    float(row['f13F']), float(row['f13M']),
+                    float(row['f25F']), float(row['f25M']),
+                    float(row['facF']), float(row['facM']),
+                ]
+                label = int(row['rotulo'])
+                if label not in (0, 1, 2, 3):
+                    continue
+                X.append(v)
+                y.append(label)
+            except (KeyError, ValueError):
+                continue
+    return X, y
 
 TIPOS = ['CRIA', 'RECRIA', 'ENGORDA', 'CICLO_COMPLETO']
 
@@ -203,16 +232,23 @@ def _build_model():
 
 def treinar_modelo():
     global _pipeline
-    X = np.array([extrair_features(v) for v in TRAIN_X])
-    y = np.array(TRAIN_Y)
+    # Carrega dataset CSV (pode ter milhares de linhas)
+    X_csv, y_csv = _carregar_dataset_csv()
+    # Combina com amostras originais codificadas
+    X_all = [extrair_features(v) for v in TRAIN_X] + [extrair_features(v) for v in X_csv]
+    y_all = list(TRAIN_Y) + y_csv
+    X = np.array(X_all)
+    y = np.array(y_all)
     _pipeline = _build_model()
     _pipeline.fit(X, y)
-    scores = cross_val_score(_pipeline, X, y, cv=5, scoring='accuracy')
+    cv = min(5, max(2, len(X) // max(len(set(y_all)), 1)))
+    scores = cross_val_score(_pipeline, X, y, cv=cv, scoring='accuracy')
     return {
         'accuracy_mean': round(float(scores.mean()), 4),
         'accuracy_std':  round(float(scores.std()),  4),
         'n_samples':     len(X),
         'n_features':    X.shape[1],
+        'n_csv':         len(X_csv),
     }
 
 
@@ -555,8 +591,9 @@ def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
     Quanto mais confirmações, mais preciso o modelo fica para o rebanho local.
     """
     global _pipeline
-    X_base = [extrair_features(v) for v in TRAIN_X]
-    y_base = list(TRAIN_Y)
+    X_csv, y_csv = _carregar_dataset_csv()
+    X_base = [extrair_features(v) for v in TRAIN_X] + [extrair_features(v) for v in X_csv]
+    y_base = list(TRAIN_Y) + y_csv
 
     if X_extra:
         X_all = np.array(X_base + [extrair_features(v) for v in X_extra])
@@ -578,4 +615,5 @@ def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
         'n_samples':     int(len(X_all)),
         'n_features':    int(X_all.shape[1]),
         'n_confirmados': int(len(X_extra)),
+        'n_csv':         len(X_csv),
     }
