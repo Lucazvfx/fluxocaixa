@@ -241,8 +241,9 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <header>
   <div class="logo"><div class=""></div>Fluxo de caixa<em>— Gestão Jaine</em></div>
   <div class="hdr-r">
+    <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
     <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
-    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar ML</button>
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
   </div>
 </header>
 
@@ -1234,8 +1235,10 @@ async function confirmarClassificacao(){
     if(data.erro){toast(data.erro,true);return}
     const sv=document.getElementById('conf-saved');
     if(sv){sv.style.display='inline';setTimeout(()=>sv.style.display='none',3000)}
-    toast('Confirmado! Total: '+data.stats.confirmados+' registros confirmados.');
+    toast('✓ Confirmado! Modelo atualizando em segundo plano...');
     atualizarDbStats(data.stats);
+    // Verifica acurácia atualizada após ~35s (tempo estimado do retreino)
+    setTimeout(()=>atualizarDbStats(),35000);
   }catch(e){toast('Erro ao confirmar: '+e.message,true)}
 }
 
@@ -1247,11 +1250,11 @@ async function retreinarModelo(){
     const res=await fetch('/api/retrain',{method:'POST'});
     const data=await res.json();
     if(data.erro){toast(data.erro,true);return}
-    toast(`Modelo atualizado! Acurácia: ${(data.accuracy_mean*100).toFixed(1)}% (${data.n_confirmados} registros confirmados)`);
+    toast(`Modelo atualizado! Acurácia: ${(data.accuracy_mean*100).toFixed(1)}% (${data.n_confirmados} confirmados)`);
     atualizarDbStats();
   }catch(e){toast('Erro ao retreinar: '+e.message,true)}
   finally{
-    if(btn){btn.textContent='↺ Retreinar ML';btn.disabled=false}
+    if(btn){btn.textContent='↺ Retreinar';btn.disabled=false}
     hideLoading()
   }
 }
@@ -1259,8 +1262,14 @@ async function retreinarModelo(){
 async function atualizarDbStats(s=null){
   try{
     if(!s){const r=await fetch('/api/db-stats');s=await r.json()}
-    const el=document.getElementById('hdr-db');
-    if(el) el.textContent=(s.total||0)+' / '+(s.confirmados||0);
+    const elDb=document.getElementById('hdr-db');
+    if(elDb) elDb.textContent=(s.total||0)+' / '+(s.confirmados||0);
+    const elAcc=document.getElementById('hdr-acc');
+    if(elAcc&&s.accuracy){
+      elAcc.textContent=(s.accuracy*100).toFixed(1)+'%';
+      elAcc.title='Acurácia ML: '+(s.accuracy*100).toFixed(1)+'%'+(s.retraining?' · atualizando...':'');
+      elAcc.style.opacity=s.retraining?'0.6':'1';
+    }
   }catch{}
 }
 

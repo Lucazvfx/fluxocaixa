@@ -9,8 +9,36 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier,
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
+import joblib
 import warnings
 warnings.filterwarnings('ignore')
+
+_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'boviml_model.pkl')
+
+
+def salvar_modelo(stats_dict: dict):
+    """Persiste o pipeline treinado e as métricas em disco."""
+    try:
+        joblib.dump({'pipeline': _pipeline, 'stats': stats_dict}, _MODEL_PATH)
+    except Exception as e:
+        print(f'[ML] Aviso: não foi possível salvar o modelo: {e}')
+
+
+def carregar_modelo() -> dict | None:
+    """
+    Tenta carregar o modelo salvo em disco.
+    Retorna as métricas salvas ou None se não existir / incompatível.
+    """
+    if not os.path.exists(_MODEL_PATH):
+        return None
+    try:
+        data = joblib.load(_MODEL_PATH)
+        global _pipeline
+        _pipeline = data['pipeline']
+        return data['stats']
+    except Exception as e:
+        print(f'[ML] Modelo em disco incompatível, retreinando: {e}')
+        return None
 
 _CSV_PATH = os.path.join(os.path.dirname(__file__), 'dataset_sintetico_bovino.csv')
 
@@ -243,13 +271,15 @@ def treinar_modelo():
     _pipeline.fit(X, y)
     cv = min(5, max(2, len(X) // max(len(set(y_all)), 1)))
     scores = cross_val_score(_pipeline, X, y, cv=cv, scoring='accuracy')
-    return {
+    result = {
         'accuracy_mean': round(float(scores.mean()), 4),
         'accuracy_std':  round(float(scores.std()),  4),
         'n_samples':     len(X),
         'n_features':    X.shape[1],
         'n_csv':         len(X_csv),
     }
+    salvar_modelo(result)
+    return result
 
 
 def classificar(
@@ -609,7 +639,7 @@ def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
     cv = min(5, max(2, len(X_all) // max(n_classes, 1)))
     scores = cross_val_score(_pipeline, X_all, y_all, cv=cv, scoring='accuracy')
 
-    return {
+    result = {
         'accuracy_mean': round(float(scores.mean()), 4),
         'accuracy_std':  round(float(scores.std()),  4),
         'n_samples':     int(len(X_all)),
@@ -617,3 +647,5 @@ def retrain_com_dados(X_extra: list, y_extra: list) -> dict:
         'n_confirmados': int(len(X_extra)),
         'n_csv':         len(X_csv),
     }
+    salvar_modelo(result)
+    return result

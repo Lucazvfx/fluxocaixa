@@ -2,21 +2,45 @@
 BoviML — Servidor Flask
 """
 from flask import Flask, request, jsonify, render_template
-import os, re, tempfile, subprocess
+import os, re, tempfile, subprocess, threading
 from ml_engine import (
     treinar_modelo, classificar, calcular_indicadores,
-    simular_cenario, retrain_com_dados, CENARIOS
+    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS
 )
 import database as db
 
 app = Flask(__name__)
 
-print("🧠 Treinando modelo ML...")
-stats = treinar_modelo()
-print(f"✅ Modelo treinado | Acurácia CV: {stats['accuracy_mean']*100:.1f}% ± {stats['accuracy_std']*100:.1f}% | Features: {stats['n_features']} | Amostras: {stats['n_samples']}")
+# ── Startup: carrega modelo do disco ou treina do zero ──────────────────────
+_saved = carregar_modelo()
+if _saved:
+    stats = _saved
+    print(f"✅ Modelo carregado do disco | Acurácia: {stats['accuracy_mean']*100:.1f}% | Amostras: {stats['n_samples']}")
+else:
+    print("🧠 Treinando modelo ML (primeira execução)...")
+    stats = treinar_modelo()
+    print(f"✅ Modelo treinado | Acurácia CV: {stats['accuracy_mean']*100:.1f}% ± {stats['accuracy_std']*100:.1f}% | Amostras: {stats['n_samples']}")
 
 db.init_db()
 print("🗃️  Banco SQLite inicializado.")
+
+# ── Auto-retreino em background ──────────────────────────────────────────────
+_retraining = False
+_retrain_lock = threading.Lock()
+
+
+def _auto_retrain():
+    global stats, _retraining
+    with _retrain_lock:
+        _retraining = True
+        try:
+            X_extra, y_extra = db.exportar_treino()
+            stats = retrain_com_dados(X_extra, y_extra)
+            print(f"[ML] Auto-retreino concluído | Acurácia: {stats['accuracy_mean']*100:.1f}% | {stats['n_confirmados']} confirmados")
+        except Exception as e:
+            print(f"[ML] Erro no auto-retreino: {e}")
+        finally:
+            _retraining = False
 
 
 @app.route('/')
@@ -60,7 +84,7 @@ def api_classificar():
 
 @app.route('/api/confirmar', methods=['POST'])
 def api_confirmar():
-    """Confirma ou corrige a classificação de um registro para treinar o modelo."""
+    """Confirma ou corrige a classificação e dispara auto-retreino em background."""
     data = request.json
     rid  = data.get('registro_id')
     cls  = data.get('classificacao', '').strip().upper()
@@ -69,7 +93,10 @@ def api_confirmar():
     try:
         db.confirmar(int(rid), cls)
         s = db.stats()
-        return jsonify({'ok': True, 'stats': s})
+        # Dispara retreino em background se não houver um em andamento
+        if not _retraining:
+            threading.Thread(target=_auto_retrain, daemon=True).start()
+        return jsonify({'ok': True, 'stats': s, 'retraining': True})
     except ValueError as e:
         return jsonify({'erro': str(e)}), 400
 
@@ -91,7 +118,10 @@ def api_historico():
 
 @app.route('/api/db-stats', methods=['GET'])
 def api_db_stats():
-    return jsonify(db.stats())
+    s = db.stats()
+    s['accuracy'] = stats.get('accuracy_mean', 0)
+    s['retraining'] = _retraining
+    return jsonify(s)
 
 
 @app.route('/api/cenario', methods=['POST'])
