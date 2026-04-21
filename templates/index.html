@@ -196,6 +196,21 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-family:var(--fn);font-size:1rem;letter-spacing:.5px}
 
+/* ── RECOMENDAÇÕES ── */
+.rec-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--b)}
+.rec-item:last-child{border-bottom:none;padding-bottom:0}
+.rec-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.rec-content{flex:1}
+.rec-titulo{font-family:var(--fn);font-weight:700;font-size:.85rem;letter-spacing:.3px;margin-bottom:3px}
+.rec-desc{font-family:var(--fb);font-size:.78rem;color:var(--sb);line-height:1.5}
+.rec-impacto{font-family:var(--fm);font-size:.7rem;margin-top:4px;font-weight:600}
+.rec-nivel-critico .rec-titulo{color:var(--rd)}
+.rec-nivel-critico .rec-impacto{color:var(--rd)}
+.rec-nivel-atencao .rec-titulo{color:var(--am)}
+.rec-nivel-atencao .rec-impacto{color:var(--am)}
+.rec-nivel-bom .rec-titulo{color:var(--g)}
+.rec-nivel-bom .rec-impacto{color:var(--g)}
+
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 @media(max-width:900px){.g2,.g3,.g13,.fgrid,.sstrip,.tc-grid{grid-template-columns:1fr 1fr}main,header{padding-left:20px;padding-right:20px}.rhero-tipo{font-size:3rem}.rhero-em{display:none}.tstrip{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.g2,.g3,.sstrip,.tc-grid{grid-template-columns:1fr}}
@@ -466,6 +481,15 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
       <div class="card">
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Fluxo de Renovação de Bois</div></div>
         <div class="cb" id="s-flow-bois" style="overflow-x:auto"></div>
+      </div>
+    </div>
+    <div class="card" id="card-recomendacoes" style="margin-top:16px">
+      <div class="ch">
+        <div class="ct"><div class="cd" style="background:var(--am)"></div>Análise da Fazenda</div>
+        <span id="rec-badge" style="font-family:var(--fm);font-size:.6rem;color:var(--mu)"></span>
+      </div>
+      <div class="cb" id="rec-body">
+        <div style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Preencha os parâmetros para ver a análise.</div>
       </div>
     </div>
   </div>
@@ -1535,6 +1559,7 @@ function runSc(){
 }
 
 function renderSc(d){
+  _lastScResult = d;
   const anos=d.anos, acc=d.acumulado;
   const delta=d.delta_rebanho;
   const maxRec=Math.max(...anos.map(a=>a.receita),1);
@@ -1709,6 +1734,7 @@ const _TUT_STEPS = [
   },
 ];
 let _tutStep = 0;
+let _lastScResult = null;
 
 function tutRender() {
   const s = _TUT_STEPS[_tutStep];

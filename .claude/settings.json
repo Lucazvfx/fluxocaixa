@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//tmp/**)",
+      "Bash(PYTHONIOENCODING=utf-8 nohup python app.py)",
+      "Bash(git -C \"c:/Users/Lucas/Downloads/boviml_python/boviml\" remote -v)",
+      "Bash(git push *)"
+    ]
+  }
+}
