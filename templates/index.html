@@ -307,7 +307,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
               <div class="field">
                 <label>Taxa Natalidade (%)</label>
-                <input type="number" id="c-nat" placeholder="75" min="1" max="100" step="1" oninput="upd()">
+                <input type="number" id="c-nat" placeholder="75" min="1" max="100" step="1" oninput="upd();validarCampo(this,1,100)">
               </div>
               <div class="field">
                 <label>Bois Vendidos (cab.)</label>
@@ -445,10 +445,10 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
+              <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
+              <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
+              <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
               <div class="field"><label>Nível Tecnológico</label>
                 <select id="s-nivel" onchange="recalcCiclo()">
                   <option value="baixo">Baixo</option>
@@ -478,8 +478,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros — CRIA</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Preço Bezerro (R$/cab)</label><input type="number" id="p-preco-bezerro" value="1800" min="0" oninput="runSc()"></div>
-              <div class="field"><label>Taxa de Desmama (%)</label><input type="number" id="p-desmama" value="80" min="1" max="100" oninput="runSc()"></div>
+              <div class="field"><label>Preço Bezerro (R$/cab)</label><input type="number" id="p-preco-bezerro" value="1800" min="1" oninput="runSc();validarCampo(this,1,99999)"></div>
+              <div class="field"><label>Taxa de Desmama (%)</label><input type="number" id="p-desmama" value="80" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
             </div>
           </div>
         </div>
@@ -489,8 +489,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="field"><label>Peso Entrada (@)</label><input type="number" id="p-peso-ent-arr" value="8" step="0.5" min="1" oninput="runSc()"></div>
               <div class="field"><label>Peso Saída (@)</label><input type="number" id="p-peso-sai-arr" value="14" step="0.5" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Meses de Recria</label><input type="number" id="p-meses-recria" value="12" min="1" max="36" oninput="runSc()"></div>
-              <div class="field"><label>Custo/Cabeça/Mês (R$)</label><input type="number" id="p-custo-cab-mes" value="80" min="0" oninput="runSc()"></div>
+              <div class="field"><label>Meses de Recria</label><input type="number" id="p-meses-recria" value="12" min="1" max="36" oninput="runSc();validarCampo(this,1,36)"></div>
+              <div class="field"><label>Custo/Cabeça/Mês (R$)</label><input type="number" id="p-custo-cab-mes" value="80" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
             </div>
           </div>
         </div>
@@ -500,9 +500,9 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="field"><label>Peso Entrada (kg)</label><input type="number" id="p-peso-ent-kg" value="300" min="1" oninput="runSc()"></div>
               <div class="field"><label>Peso Abate (kg)</label><input type="number" id="p-peso-sai-kg" value="520" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Rendimento Carcaça (%)</label><input type="number" id="p-rend-carcaca" value="52" min="1" max="100" oninput="runSc()"></div>
-              <div class="field"><label>Custo/Cab/Dia (R$)</label><input type="number" id="p-custo-dia" value="12" min="0" oninput="runSc()"></div>
-              <div class="field"><label>Dias de Engorda</label><input type="number" id="p-dias-engorda" value="90" min="30" max="365" oninput="runSc()"></div>
+              <div class="field"><label>Rendimento Carcaça (%)</label><input type="number" id="p-rend-carcaca" value="52" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
+              <div class="field"><label>Custo/Cab/Dia (R$)</label><input type="number" id="p-custo-dia" value="12" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
+              <div class="field"><label>Dias de Engorda</label><input type="number" id="p-dias-engorda" value="90" min="30" max="365" oninput="runSc();validarCampo(this,30,365)"></div>
             </div>
           </div>
         </div>
@@ -623,8 +623,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
         <div class="cb">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div>
-            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div>
+            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
+            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
             <div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div>
           </div>
           <div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">
@@ -1127,6 +1127,55 @@ let CUSTO_S={
   medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220},
   alto:  {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280}
 };
+function validarCampo(el, min, max) {
+  const v = parseFloat(el.value);
+  const ok = !isNaN(v) && v >= min && v <= max;
+  el.style.borderColor = ok ? '' : 'var(--rd)';
+  let msg = el.parentNode.querySelector('.v-err');
+  if (!msg) {
+    msg = document.createElement('div');
+    msg.className = 'v-err';
+    msg.style.cssText = 'font-family:var(--fm);font-size:.55rem;color:var(--rd);margin-top:3px';
+    el.parentNode.appendChild(msg);
+  }
+  msg.textContent = ok ? '' : `Deve ser entre ${min} e ${max}`;
+  validarTudo();
+  return ok;
+}
+
+const _REGRAS_VALIDACAO = [
+  ['c-nat',           1,   100],
+  ['p-desmama',       1,   100],
+  ['p-rend-carcaca',  1,   100],
+  ['sc-mort',         0,    15],
+  ['s-desc',          0,   100],
+  ['s-vendbez',       0,   100],
+  ['s-renovboi',      0,   100],
+  ['s-propboi',       1,   100],
+  ['p-preco-bezerro', 1, 99999],
+  ['p-custo-dia',     1,  9999],
+  ['p-custo-cab-mes', 1,  9999],
+  ['sc-custo',        1,  9999],
+  ['p-dias-engorda',  30,  365],
+  ['p-meses-recria',  1,    36],
+  ['s-peso-boi',      8,    30],
+  ['s-peso-vaca',     6,    25],
+];
+
+function validarTudo() {
+  let invalido = false;
+  _REGRAS_VALIDACAO.forEach(([id, min, max]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const card = el.closest('[id^="card-params-"]');
+    if (card && card.style.display === 'none') return;
+    const v = parseFloat(el.value);
+    if (!isNaN(v) && (v < min || v > max)) invalido = true;
+  });
+  const btn = document.getElementById('btn-class');
+  if (btn) btn.disabled = invalido;
+}
+
 function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
 
 function renderCostTableS(){
