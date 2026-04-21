@@ -1,8 +1,9 @@
 """
-BoviML — Camada de persistência
+Fluxo de Gestão — Camada de persistência
 Usa PostgreSQL (via DATABASE_URL) em produção e SQLite localmente.
 """
 import json, os
+from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 _DATABASE_URL = os.environ.get('DATABASE_URL', '')
@@ -46,7 +47,7 @@ if _USE_PG:
 else:
     import sqlite3
 
-    _DB_PATH = os.path.join(os.path.dirname(__file__), 'boviml.db')
+    _DB_PATH = os.path.join(os.path.dirname(__file__), 'gestao.db')
 
     def get_conn():
         conn = sqlite3.connect(_DB_PATH)
@@ -130,9 +131,21 @@ def init_db():
         )
     ''', commit=True)
 
-    # Colunas adicionadas na feature/auth (retrocompat)
+    # Nova Tabela: Histórico de Cotações da Arroba (Agora com Boi China)
+    _exec(f'''
+        CREATE TABLE IF NOT EXISTS cotacao_arroba (
+            id           {_AI},
+            data_cotacao DATE UNIQUE,
+            preco_boi    REAL,
+            preco_vaca   REAL,
+            preco_boi_china REAL
+        )
+    ''', commit=True)
+
+    # Colunas adicionadas de forma segura (retrocompatibilidade)
     _add_column_safe('registros', 'user_id',    'INTEGER')
     _add_column_safe('registros', 'fazenda_id', 'INTEGER')
+    _add_column_safe('cotacao_arroba', 'preco_boi_china', 'REAL')
 
 
 # ─────────────────────────────────────────────
@@ -147,14 +160,12 @@ def criar_usuario(email: str, nome: str, senha: str) -> int:
     )
     return int(rid)
 
-
 def buscar_usuario_email(email: str) -> dict | None:
     ph = _PH
     return _exec(
         f'SELECT * FROM usuarios WHERE email={ph}',
         (email.lower().strip(),), fetch='one'
     )
-
 
 def buscar_usuario_id(user_id: int) -> dict | None:
     ph = _PH
@@ -163,13 +174,11 @@ def buscar_usuario_id(user_id: int) -> dict | None:
         (user_id,), fetch='one'
     )
 
-
 def verificar_senha(email: str, senha: str) -> dict | None:
     u = buscar_usuario_email(email)
     if u and check_password_hash(u['senha_hash'], senha):
         return u
     return None
-
 
 # ─────────────────────────────────────────────
 # FAZENDAS
@@ -185,7 +194,6 @@ def criar_fazenda(user_id: int, nome: str, proprietario: str = '',
         fetch='lastrow', commit=True
     )
     return int(rid)
-
 
 def listar_fazendas(user_id: int) -> list:
     ph = _PH
@@ -209,14 +217,12 @@ def listar_fazendas(user_id: int) -> list:
         result.append(d)
     return result
 
-
 def buscar_fazenda(fazenda_id: int, user_id: int) -> dict | None:
     ph = _PH
     return _exec(
         f'SELECT * FROM fazendas WHERE id={ph} AND user_id={ph}',
         (fazenda_id, user_id), fetch='one'
     )
-
 
 def historico_fazenda(fazenda_id: int, user_id: int, limit: int = 30) -> list:
     ph = _PH
@@ -237,7 +243,6 @@ def historico_fazenda(fazenda_id: int, user_id: int, limit: int = 30) -> list:
         result.append(d)
     return result
 
-
 # ─────────────────────────────────────────────
 # CLASSIFICAÇÕES
 # ─────────────────────────────────────────────
@@ -253,7 +258,6 @@ def salvar(valores: list, class_ml: str, confianca: float,
     rid = _exec(sql, params, fetch='lastrow', commit=True)
     return int(rid)
 
-
 def confirmar(registro_id: int, class_conf: str):
     VALIDOS = {'CRIA', 'RECRIA', 'ENGORDA', 'CICLO_COMPLETO'}
     if class_conf not in VALIDOS:
@@ -261,7 +265,6 @@ def confirmar(registro_id: int, class_conf: str):
     ph = _PH
     _exec(f'UPDATE registros SET class_conf={ph} WHERE id={ph}',
           (class_conf, registro_id), commit=True)
-
 
 def exportar_treino():
     TIPOS = ['CRIA', 'RECRIA', 'ENGORDA', 'CICLO_COMPLETO']
@@ -276,7 +279,6 @@ def exportar_treino():
             X.append(json.loads(r['valores']))
             y.append(TIPOS.index(t))
     return X, y
-
 
 def listar(limit: int = 60, user_id: int = None) -> list:
     ph = _PH
@@ -303,7 +305,6 @@ def listar(limit: int = 60, user_id: int = None) -> list:
         result.append(d)
     return result
 
-
 def stats(user_id: int = None) -> dict:
     ph = _PH
     where = f'WHERE user_id={ph}' if user_id else ''
@@ -324,3 +325,51 @@ def stats(user_id: int = None) -> dict:
         'confirmados': int(conf),
         'por_tipo':    {r['class_conf']: r['n'] for r in rows},
     }
+
+# ─────────────────────────────────────────────
+# COTAÇÕES DA ARROBA (FINANÇAS)
+# ─────────────────────────────────────────────
+def guardar_cotacao_diaria(precos: dict):
+    """
+    Insere ou atualiza o preço da arroba para a data atual.
+    Compatível com PostgreSQL e SQLite através da função abstrata _exec.
+    """
+    hoje = datetime.now().strftime('%Y-%m-%d')
+    ph = _PH
+    boi = float(precos.get('boi', 0.0))
+    vaca = float(precos.get('vaca', 0.0))
+    china = float(precos.get('boi_china', 0.0))
+
+    # Verifica se já existe um registro para o dia de hoje
+    existente = _exec(f'SELECT id FROM cotacao_arroba WHERE data_cotacao={ph}', (hoje,), fetch='one')
+
+    if existente:
+        # Se existir, atualiza (Evita erros de constraint UNIQUE na data)
+        _exec(f'''UPDATE cotacao_arroba 
+                  SET preco_boi={ph}, preco_vaca={ph}, preco_boi_china={ph}
+                  WHERE id={ph}''', 
+              (boi, vaca, china, existente['id']), commit=True)
+    else:
+        # Se não existir, insere um novo registro histórico
+        _exec(f'''INSERT INTO cotacao_arroba (data_cotacao, preco_boi, preco_vaca, preco_boi_china) 
+                  VALUES ({ph}, {ph}, {ph}, {ph})''', 
+              (hoje, boi, vaca, china), commit=True)
+
+def obter_cotacoes_atuais() -> dict:
+    """
+    Busca o preço mais recente no banco de dados.
+    Retorna dicionário {'boi': valor, 'vaca': valor, 'boi_china': valor}
+    """
+    try:
+        resultado = _exec('SELECT preco_boi, preco_vaca, preco_boi_china FROM cotacao_arroba ORDER BY data_cotacao DESC LIMIT 1', fetch='one')
+        if resultado:
+            return {
+                'boi': float(resultado['preco_boi'] or 0.0), 
+                'vaca': float(resultado['preco_vaca'] or 0.0),
+                'boi_china': float(resultado.get('preco_boi_china') or 0.0)
+            }
+    except Exception as e:
+        print(f"[Erro DB Cotação]: {e}")
+        
+    # Preços de segurança (fallback) caso o banco esteja vazio
+    return {'boi': 0.0, 'vaca': 0.0, 'boi_china': 0.0}

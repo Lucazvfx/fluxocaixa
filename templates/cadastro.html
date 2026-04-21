@@ -3,14 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fluxo de Caixa - Cadastro</title>
+    <title>Fluxo de Gestão - Criar Usuário</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #1e3c2c 0%, #2a5a3a 100%);
@@ -20,8 +15,7 @@
             align-items: center;
             padding: 20px;
         }
-
-        .cadastro-container {
+        .container {
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.2);
@@ -29,142 +23,78 @@
             width: 100%;
             max-width: 450px;
         }
-
-        .cadastro-header {
+        .header {
             background: #2c5e3a;
             color: white;
             text-align: center;
             padding: 30px 20px;
         }
-
-        .cadastro-header h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-
-        .cadastro-header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-
-        .cadastro-body {
-            padding: 30px 35px 40px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #2d3748;
-        }
-
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { opacity: 0.8; font-size: 13px; }
+        .body { padding: 30px 35px 40px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748; }
         input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #cbd5e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s;
+            width: 100%; padding: 12px 15px;
+            border: 1px solid #cbd5e0; border-radius: 8px;
+            font-size: 16px; transition: all 0.3s;
         }
-
-        input:focus {
-            outline: none;
-            border-color: #2c5e3a;
-            box-shadow: 0 0 0 3px rgba(44,94,58,0.2);
-        }
-
+        input:focus { outline: none; border-color: #2c5e3a; box-shadow: 0 0 0 3px rgba(44,94,58,0.2); }
         button {
-            width: 100%;
-            background: #2c5e3a;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
+            width: 100%; background: #2c5e3a; color: white;
+            border: none; padding: 12px; font-size: 16px;
+            font-weight: bold; border-radius: 8px; cursor: pointer; transition: background 0.3s;
         }
-
-        button:hover {
-            background: #1e4028;
-        }
-
+        button:hover { background: #1e4028; }
         .error {
-            background: #fed7d7;
-            color: #c53030;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 14px;
+            background: #fed7d7; color: #c53030;
+            padding: 10px; border-radius: 8px;
+            margin-bottom: 20px; text-align: center; font-size: 14px;
         }
-
-        .login-link {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
+        .success {
+            background: #c6f6d5; color: #276749;
+            padding: 10px; border-radius: 8px;
+            margin-bottom: 20px; text-align: center; font-size: 14px;
         }
-
-        .login-link a {
-            color: #2c5e3a;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-
-        .logo {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-
-        .senha-requisito {
-            font-size: 12px;
-            color: #718096;
-            margin-top: 5px;
-        }
+        .back-link { text-align: center; margin-top: 20px; font-size: 14px; }
+        .back-link a { color: #2c5e3a; text-decoration: none; font-weight: bold; }
+        .back-link a:hover { text-decoration: underline; }
+        .senha-requisito { font-size: 12px; color: #718096; margin-top: 5px; }
     </style>
 </head>
 <body>
-    <div class="cadastro-container">
-        <div class="cadastro-header">
-            <div class="logo"></div>
-            <h1>Criar Conta</h1>
-            <p>Comece a usar o Fluxo de Caixa gratuitamente</p>
+    <div class="container">
+        <div class="header">
+            <h1>Criar Novo Usuário</h1>
+            <p>Somente administradores podem criar contas</p>
         </div>
-        <div class="cadastro-body">
+        <div class="body">
             {% if erro %}
-            <div class="error">
-                ⚠️ {{ erro }}
-            </div>
+            <div class="error">⚠️ {{ erro }}</div>
+            {% endif %}
+            {% if ok %}
+            <div class="success">✅ {{ ok }}</div>
             {% endif %}
 
             <form method="POST" action="{{ url_for('cadastro') }}">
                 <div class="form-group">
                     <label>Nome completo</label>
-                    <input type="text" name="nome" required autofocus placeholder="Seu nome">
+                    <input type="text" name="nome" required autofocus placeholder="Nome do usuário">
                 </div>
                 <div class="form-group">
                     <label>E-mail</label>
-                    <input type="email" name="email" required placeholder="voce@exemplo.com">
+                    <input type="email" name="email" required placeholder="usuario@exemplo.com">
                 </div>
                 <div class="form-group">
                     <label>Senha</label>
                     <input type="password" name="senha" required placeholder="********">
                     <div class="senha-requisito">Mínimo de 6 caracteres</div>
                 </div>
-                <button type="submit">Cadastrar</button>
+                <button type="submit">Criar Usuário</button>
             </form>
 
-            <div class="login-link">
-                Já tem conta? <a href="{{ url_for('login') }}">Faça login</a>
+            <div class="back-link">
+                <a href="{{ url_for('index') }}">← Voltar ao sistema</a>
             </div>
         </div>
     </div>

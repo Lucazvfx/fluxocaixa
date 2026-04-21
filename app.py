@@ -1,5 +1,5 @@
 """
-BoviML — Servidor Flask
+Fluxo de Gestão — Servidor Flask
 """
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -17,7 +17,7 @@ import database as db
 from scraper import obter_precos_arroba
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')
+app.secret_key = os.environ.get('SECRET_KEY', 'fluxo-gestao-dev-secret-2026')
 
 # ── Flask-Login ──────────────────────────────────────────────────────────────
 login_manager = LoginManager(app)
@@ -105,11 +105,15 @@ def login():
         erro = 'E-mail ou senha incorretos.'
     return render_template('login.html', erro=erro)
 
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'viniciuslukas353@gmail.com')
+
 @app.route('/cadastro', methods=['GET', 'POST'])
+@login_required
 def cadastro():
-    if current_user.is_authenticated:
+    if current_user.email != ADMIN_EMAIL:
         return redirect(url_for('index'))
     erro = None
+    ok   = None
     if request.method == 'POST':
         nome  = request.form.get('nome', '').strip()
         email = request.form.get('email', '').strip()
@@ -119,11 +123,9 @@ def cadastro():
         elif db.buscar_usuario_email(email):
             erro = 'E-mail já cadastrado.'
         else:
-            uid = db.criar_usuario(email, nome, senha)
-            u   = db.buscar_usuario_id(uid)
-            login_user(User(u), remember=True)
-            return redirect(url_for('index'))
-    return render_template('cadastro.html', erro=erro)
+            db.criar_usuario(email, nome, senha)
+            ok = f'Usuário {nome} ({email}) criado com sucesso.'
+    return render_template('cadastro.html', erro=erro, ok=ok)
 
 @app.route('/logout')
 @login_required
@@ -225,6 +227,7 @@ def api_classificar():
                     'breakeven_estimado': breakeven_est})
 
 @app.route('/api/confirmar', methods=['POST'])
+@login_required
 def api_confirmar():
     """Confirma ou corrige a classificação e dispara auto-retreino em background."""
     data = request.json
@@ -243,6 +246,7 @@ def api_confirmar():
         return jsonify({'erro': str(e)}), 400
 
 @app.route('/api/retrain', methods=['POST'])
+@login_required
 def api_retrain():
     """Retreina o modelo com dados base + registros confirmados do BD."""
     global stats
@@ -251,11 +255,13 @@ def api_retrain():
     return jsonify({**stats, 'ok': True})
 
 @app.route('/api/historico', methods=['GET'])
+@login_required
 def api_historico():
     limit = min(int(request.args.get('limit', 60)), 200)
     return jsonify({'registros': db.listar(limit), 'stats': db.stats()})
 
 @app.route('/api/db-stats', methods=['GET'])
+@login_required
 def api_db_stats():
     s = db.stats()
     s['accuracy'] = stats.get('accuracy_mean', 0)

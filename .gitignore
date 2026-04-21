@@ -11,5 +11,7 @@ build/
 Thumbs.db
 instance/
 *.log
-boviml_model.pkl
-boviml.db
+gestao_model.pkl
+gestao.db
+*.db
+*.pkl

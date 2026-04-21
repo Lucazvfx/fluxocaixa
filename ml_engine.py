@@ -17,7 +17,7 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 
-_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'boviml_model.pkl')
+_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'gestao_model.pkl')
 
 def salvar_modelo(stats_dict: dict):
     """Persiste o pipeline treinado e as métricas em disco."""

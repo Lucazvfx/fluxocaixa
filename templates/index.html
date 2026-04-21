@@ -200,6 +200,52 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 @media(max-width:900px){.g2,.g3,.g13,.fgrid,.sstrip,.tc-grid{grid-template-columns:1fr 1fr}main,header{padding-left:20px;padding-right:20px}.rhero-tipo{font-size:3rem}.rhero-em{display:none}.tstrip{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.g2,.g3,.sstrip,.tc-grid{grid-template-columns:1fr}}
 
+/* ── MOBILE: grids inline dos cards de parâmetros ── */
+@media(max-width:600px){
+  .tab-bar{flex-wrap:wrap;width:100%}
+  .tab-btn{font-size:.65rem;padding:8px 12px;flex:1 1 auto;text-align:center}
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:repeat(4"]{grid-template-columns:1fr 1fr!important}
+  [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important}
+  [style*="grid-template-columns:repeat(6"]{grid-template-columns:1fr 1fr!important}
+  #s-kpi{grid-template-columns:1fr 1fr!important}
+  .rhero-grid{grid-template-columns:1fr!important}
+  main{padding:24px 16px 80px}
+  header{padding:0 16px}
+  .tab-bar{margin-bottom:20px}
+  .sc-sn{font-size:.6rem;padding:6px 10px}
+}
+@media(max-width:400px){
+  #s-kpi{grid-template-columns:1fr!important}
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+}
+
+/* ── TUTORIAL MODAL ── */
+#tut-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#tut-box{background:var(--c);border:1px solid var(--b2);border-radius:20px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+#tut-head{background:var(--g);padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+#tut-head h2{font-family:var(--fn);font-weight:800;font-size:1.1rem;letter-spacing:.5px;color:#000}
+#tut-head span{font-family:var(--fm);font-size:.65rem;color:rgba(0,0,0,.6)}
+#tut-body{padding:28px 24px 20px}
+.tut-step-num{font-family:var(--fm);font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:8px}
+.tut-step-title{font-family:var(--fn);font-weight:700;font-size:1.3rem;color:var(--tx);margin-bottom:10px;line-height:1.2}
+.tut-step-desc{font-family:var(--fb);font-size:.85rem;color:var(--sb);line-height:1.6}
+.tut-step-desc b{color:var(--am);font-weight:600}
+.tut-step-icon{font-size:2.2rem;margin-bottom:16px}
+#tut-prog{display:flex;gap:6px;margin:20px 0 24px}
+.tut-dot{width:28px;height:3px;border-radius:2px;background:var(--b2);transition:background .3s}
+.tut-dot.act{background:var(--g)}
+#tut-foot{display:flex;align-items:center;justify-content:space-between;padding:0 24px 24px}
+.tut-skip{font-family:var(--fb);font-size:.78rem;color:var(--mu);cursor:pointer;background:none;border:none;padding:0}
+.tut-skip:hover{color:var(--sb)}
+.tut-nav{display:flex;gap:8px}
+.tut-btn{font-family:var(--fn);font-weight:700;font-size:.72rem;letter-spacing:1px;padding:10px 22px;border-radius:10px;border:none;cursor:pointer;transition:all .2s}
+.tut-btn.sec{background:var(--b2);color:var(--tx)}
+.tut-btn.sec:hover{background:var(--b)}
+.tut-btn.pri{background:var(--g);color:#000}
+.tut-btn.pri:hover{opacity:.9}
+
 /* ── CICLO COMPLETO ── */
 .sc-sn{font-family:var(--fn);font-weight:700;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap}
 .sc-sn:hover{border-color:var(--am);color:var(--am)}
@@ -241,14 +287,16 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <header>
   <div class="logo"><div class=""></div>Fluxo de caixa<em>— Gestão Jaine</em></div>
   <div class="hdr-r">
-    <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
-    <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
-    <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi Gordo (R$/arroba)">Boi Gordo: --</span>
-    <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca Gorda (R$/arroba)">Vaca Gorda: --</span>
-    <span id="hdr-china" class="ml-acc" style="cursor:default" title="Cotação Boi China (R$/arroba)">Boi China: --</span>
-    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
-    <!-- Botão de sair (logout) adicionado -->
-    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
+  <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
+  <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
+  <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi Gordo (R$/arroba)">Boi Gordo: --</span>
+  <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca Gorda (R$/arroba)">Vaca Gorda: --</span>
+  <span id="hdr-china" class="ml-acc" style="cursor:default" title="Cotação Boi China (R$/arroba)">Boi China: --</span>
+  <span id="hdr-indicador" class="ml-acc" style="cursor:default" title="Indicador Scot RO (R$/arroba)">Indicador RO: --</span>
+  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
+  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">? Ajuda</button>
+  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
+</div>
   </div>
 </header>
 
@@ -466,9 +514,11 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="field"><label>Peso Boi (@)</label><input type="number" id="s-peso-boi" value="20" step="0.5" min="8" max="30" oninput="recalcCiclo();validarCampo(this,8,30)"></div>
+              <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="350" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Vaca (@)</label><input type="number" id="s-peso-vaca" value="17" step="0.5" min="6" max="25" oninput="recalcCiclo();validarCampo(this,6,25)"></div>
+              <div class="field"><label>Preço @ Vaca (R$)</label><input type="number" id="s-preco-arr-vaca" value="290" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div>
             </div>
             <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
           </div>
@@ -639,72 +689,72 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 </div>
 </main>
 
+<!-- ═══ TUTORIAL MODAL ═══ -->
+<div id="tut-overlay" style="display:none">
+  <div id="tut-box">
+    <div id="tut-head">
+      <h2>Por onde começar</h2>
+      <span id="tut-counter">1 / 5</span>
+    </div>
+    <div id="tut-body">
+      <div class="tut-step-icon" id="tut-icon"></div>
+      <div class="tut-step-num" id="tut-num"></div>
+      <div class="tut-step-title" id="tut-title"></div>
+      <div class="tut-step-desc" id="tut-desc"></div>
+      <div id="tut-prog"></div>
+    </div>
+    <div id="tut-foot">
+      <button class="tut-skip" onclick="tutFechar()">Não mostrar novamente</button>
+      <div class="tut-nav">
+        <button class="tut-btn sec" id="tut-back" onclick="tutNav(-1)">← Voltar</button>
+        <button class="tut-btn pri" id="tut-next" onclick="tutNav(1)">Próximo →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-  // Fallback values provided by server-side (populated by rota index())
-  const _COTACOES_FALLBACK = {
-    boi: {{ cotacoes['boi']|default(0) }},
-    vaca: {{ cotacoes['vaca']|default(0) }},
-    boi_china: {{ cotacoes['boi_china']|default(0) }}
-  };
+ // ==================== PREÇOS (CORRIGIDO) ====================
+const _COTACOES_FALLBACK = {
+  boi: {{ cotacoes['boi']|default(0) }},
+  vaca: {{ cotacoes['vaca']|default(0) }},
+  boi_china: {{ cotacoes['boi_china']|default(0) }},
+  indicador: {{ cotacoes['indicador']|default(0) }}
+};
 
-  function _fmtValor(v){
-    const n = Number(v) || 0;
-    return n.toFixed(2) + ' R$';
-  }
-  function showToast(msg, isError=false){
-    const t = document.getElementById('toast');
-    if(!t) return;
-    t.textContent = msg;
-    t.classList.toggle('err', !!isError);
-    t.classList.add('show');
-    clearTimeout(window._toastTimer);
-    window._toastTimer = setTimeout(()=> t.classList.remove('show'), 6000);
-  }
+function _fmtValor(v){
+  const n = Number(v) || 0;
+  return n.toFixed(2) + ' R$';
+}
 
-  async function atualizarPrecos(){
-    try{
-      const res = await fetch('/api/precos/live');
-      // Se a resposta não for OK, tenta extrair a mensagem JSON e mostra como aviso
-      if(!res.ok){
-        try{
-          const err = await res.json();
-          const m = err.msg || err.erro || JSON.stringify(err);
-          showToast(m, true);
-        }catch(e){
-          showToast('Erro ao obter preços (network). Usando última cotação conhecida.', true);
-        }
-        // usa fallback abaixo
-      } else {
-        const j = await res.json();
-        if(j && j.ok && j.precos){
-          const p = j.precos;
-          document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(p.boi);
-          document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(p.vaca);
-          document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(p.boi_china);
-          return;
-        }
-        // caso j.ok não exista
-        if(j && (j.erro || j.msg)){
-          const m = j.msg || j.erro;
-          showToast(m, true);
-        }
-      }
-    }catch(e){
-      // fetch threw (CORS, network, etc.)
-      showToast('Não foi possível conectar ao serviço de preços. Usando última cotação conhecida.', true);
+async function atualizarPrecos(){
+  console.log("🔄 Atualizando preços...");
+  try{
+    const response = await fetch('/api/precos/live');
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if(data && data.ok && data.precos){
+      const p = data.precos;
+      document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(p.boi);
+      document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(p.vaca);
+      document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(p.boi_china);
+      document.getElementById('hdr-indicador').textContent = 'Indicador RO: ' + _fmtValor(p.indicador);
+      return;
     }
-
-    // Fallback: valores servidos pelo backend (rotina diária)
+    throw new Error("Resposta inválida");
+  } catch(e){
+    console.warn("Erro na API, usando fallback do banco:", e);
     document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(_COTACOES_FALLBACK.boi);
     document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(_COTACOES_FALLBACK.vaca);
     document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(_COTACOES_FALLBACK.boi_china);
+    document.getElementById('hdr-indicador').textContent = 'Indicador RO: ' + _fmtValor(_COTACOES_FALLBACK.indicador);
   }
+}
 
-  document.addEventListener('DOMContentLoaded', ()=>{
-    atualizarPrecos();
-    // Atualiza a cada 30 minutos
-    setInterval(atualizarPrecos, 1000 * 60 * 30);
-  });
+document.addEventListener('DOMContentLoaded', ()=>{
+  atualizarPrecos();
+  setInterval(atualizarPrecos, 1000 * 60 * 30);
+});
 </script>
 
 <script>
@@ -1224,12 +1274,14 @@ function calcCiclo(){
   const des=gS('s-desc')/100||0.3;
   const vbp=gS('s-vendbez')/100||0.3;
   const niv=document.getElementById('s-nivel')?.value||'medio';
+  const pArr=gS('s-preco-arr')||350;
+  const pArrBoi=gS('s-preco-arr-boi')||pArr;
+  const pArrVaca=gS('s-preco-arr-vaca')||pArr;
   const pesoBoi=gS('s-peso-boi')||20;
   const pesoVaca=gS('s-peso-vaca')||17;
-  const pBoi=pesoBoi*pArr;
-  const pMat=pesoVaca*pArr;
   const pBezArr=gS('s-bez-arr')||8;
-  const pArr=gS('s-preco-arr')||350;
+  const pBoi=pesoBoi*pArrBoi;
+  const pMat=pesoVaca*pArrVaca;
 
   const totBez=Math.floor(mat*nat);
   const bezF=Math.floor(totBez/2),bezM=totBez-bezF;
@@ -1277,7 +1329,7 @@ function recalcCiclo(){
 
   // Preço bezerra info
   const pbi=document.getElementById('s-preco-bez-info');
-  if(pbi) pbi.textContent=`Preço bezerra = ${gS('s-bez-arr')}@ × R$${gS('s-preco-arr')} = ${fR(d.pBezCab)}/cab`;
+  if(pbi) pbi.innerHTML=`Boi: ${gS('s-peso-boi')}@ × R$${gS('s-preco-arr-boi')||gS('s-preco-arr')} = <b>${fR(d.pBoi)}/cab</b> &nbsp;|&nbsp; Vaca: ${gS('s-peso-vaca')}@ × R$${gS('s-preco-arr-vaca')||gS('s-preco-arr')} = <b>${fR(d.pMat)}/cab</b> &nbsp;|&nbsp; Bezerra: ${gS('s-bez-arr')}@ × R$${gS('s-preco-arr')} = <b>${fR(d.pBezCab)}/cab</b>`;
 
   // KPI strip
   const ki=id=>document.getElementById(id);
@@ -1628,6 +1680,75 @@ renderCostTableS();
 recalcCiclo();
 runSc();
 atualizarDbStats();
+
+// ── TUTORIAL ──────────────────────────────────────────────────────────────
+const _TUT_STEPS = [
+  {
+    icon: '👋',
+    num: 'PASSO 1 DE 4',
+    title: 'Bem-vindo ao Fluxo de Gestão',
+    desc: 'Este guia rápido mostra como usar o sistema em menos de 2 minutos. Você pode abrir este tutorial a qualquer momento clicando em <b>Ajuda</b> no cabeçalho.',
+  },
+  {
+    icon: '🐄',
+    num: 'PASSO 2 DE 4',
+    title: 'Informe o seu rebanho',
+    desc: 'Vá para a aba <b>PARÂMETROS</b> e preencha quantos animais você tem em cada categoria: Matrizes, Fêmeas 0–24m, Machos 0–24m e Bois Adultos.',
+  },
+  {
+    icon: '⚙️',
+    num: 'PASSO 3 DE 4',
+    title: 'Configure os parâmetros',
+    desc: 'Ainda em <b>PARÂMETROS</b>, ajuste a Taxa de Natalidade, Descarte de Matrizes e Venda de Bezerras. No card <b>Preços de Venda</b>, informe o peso e o preço da arroba para cada categoria.',
+  },
+  {
+    icon: '📊',
+    num: 'PASSO 4 DE 4',
+    title: 'Veja os resultados no Dashboard',
+    desc: 'O <b>DASHBOARD</b> atualiza em tempo real conforme você digita. Veja composição do rebanho, animais vendidos, receita por categoria e o resultado financeiro do ano.',
+  },
+];
+let _tutStep = 0;
+
+function tutRender() {
+  const s = _TUT_STEPS[_tutStep];
+  document.getElementById('tut-icon').textContent   = s.icon;
+  document.getElementById('tut-num').textContent    = s.num;
+  document.getElementById('tut-title').textContent  = s.title;
+  document.getElementById('tut-desc').innerHTML     = s.desc;
+  document.getElementById('tut-counter').textContent = `${_tutStep+1} / 4`;
+  document.getElementById('tut-back').style.visibility = _tutStep === 0 ? 'hidden' : 'visible';
+  const btn = document.getElementById('tut-next');
+  btn.textContent = _tutStep === _TUT_STEPS.length - 1 ? 'Começar ✓' : 'Próximo →';
+  const prog = document.getElementById('tut-prog');
+  prog.innerHTML = _TUT_STEPS.map((_,i) =>
+    `<div class="tut-dot${i===_tutStep?' act':''}"></div>`
+  ).join('');
+}
+
+function tutNav(dir) {
+  _tutStep += dir;
+  if (_tutStep >= _TUT_STEPS.length) { tutFechar(); return; }
+  if (_tutStep < 0) _tutStep = 0;
+  tutRender();
+}
+
+function tutAbrir() {
+  _tutStep = 0;
+  tutRender();
+  document.getElementById('tut-overlay').style.display = 'flex';
+}
+
+function tutFechar() {
+  document.getElementById('tut-overlay').style.display = 'none';
+  localStorage.setItem('tut_visto', '1');
+}
+
+document.getElementById('tut-overlay').addEventListener('click', function(e) {
+  if (e.target === this) tutFechar();
+});
+
+if (!localStorage.getItem('tut_visto')) tutAbrir();
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
   <p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p>
