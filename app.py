@@ -3,12 +3,18 @@ BoviML — Servidor Flask
 """
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from apscheduler.schedulers.background import BackgroundScheduler # IMPORT NOVO: Agendador
 import os, re, tempfile, subprocess, threading
+
 from ml_engine import (
     treinar_modelo, classificar, calcular_indicadores,
-    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS
+    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS,
+    avaliar_benchmarks, calcular_breakeven_simples,
 )
 import database as db
+
+# IMPORT NOVO: O seu ficheiro scraper.py
+from scraper import obter_precos_arroba
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')
@@ -43,10 +49,31 @@ else:
 db.init_db()
 print("🗃️  Banco SQLite inicializado.")
 
+# ── Automação: Cotações Diárias (Scraper) ────────────────────────────────────
+def rotina_diaria_cotacoes():
+    """Função executada em background para atualizar preços da arroba."""
+    print("📈 [Scraper] A iniciar a busca automática de cotações...")
+    try:
+        precos = obter_precos_arroba()
+        # Só guarda se os preços forem válidos
+        if precos['boi'] > 0 or precos['vaca'] > 0:
+            db.guardar_cotacao_diaria(precos)
+            print("✅ [Scraper] Cotações atualizadas no banco de dados.")
+    except Exception as e:
+        print(f"❌ [Scraper] Erro na rotina: {e}")
+
+# Configura e inicia o agendador de tarefas
+scheduler = BackgroundScheduler(daemon=True)
+scheduler.add_job(rotina_diaria_cotacoes, 'cron', hour=8, minute=0) # Roda todo dia às 08h00
+scheduler.start()
+
+# Opcional: Roda uma vez assim que o servidor liga para garantir que a tabela não fica vazia
+rotina_diaria_cotacoes()
+
+
 # ── Auto-retreino em background ──────────────────────────────────────────────
 _retraining = False
 _retrain_lock = threading.Lock()
-
 
 def _auto_retrain():
     global stats, _retraining
@@ -78,7 +105,6 @@ def login():
         erro = 'E-mail ou senha incorretos.'
     return render_template('login.html', erro=erro)
 
-
 @app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
     if current_user.is_authenticated:
@@ -99,7 +125,6 @@ def cadastro():
             return redirect(url_for('index'))
     return render_template('cadastro.html', erro=erro)
 
-
 @app.route('/logout')
 @login_required
 def logout():
@@ -112,7 +137,6 @@ def logout():
 @login_required
 def api_listar_fazendas():
     return jsonify({'fazendas': db.listar_fazendas(current_user.id)})
-
 
 @app.route('/api/fazendas', methods=['POST'])
 @login_required
@@ -130,7 +154,6 @@ def api_criar_fazenda():
     )
     return jsonify({'ok': True, 'id': fid})
 
-
 @app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
 @login_required
 def api_historico_fazenda(fid):
@@ -146,9 +169,10 @@ def api_historico_fazenda(fid):
 @login_required
 def index():
     fazendas = db.listar_fazendas(current_user.id)
+    # Busca as cotações do dia para mandar para o Frontend (index.html)
+    cotacoes_dia = db.obter_cotacoes_atuais() 
     return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
-                           usuario=current_user, fazendas=fazendas)
-
+                           usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia)
 
 @app.route('/api/classificar', methods=['POST'])
 @login_required
@@ -182,8 +206,23 @@ def api_classificar():
         nat_pct=nat_pct,
     )
 
-    return jsonify({**result, 'indicadores': ind, 'valores': v, 'registro_id': registro_id})
-
+    ciclo = result['classificacao']
+    taxa_nat = float(data.get('taxa_natalidade', 0.75)) * 100
+    indicadores_bench = {
+        'natalidade':     taxa_nat,
+        'mortalidade':    3.0,
+        'desmama':        80.0,
+        'relacao_fm':     float(ind.get('ratio_fm', 0)),
+        'pct_matrizes':   float(ind.get('pct_matrizes', 0)),
+        'ganho_peso_arr': 0.6,
+        'rend_carcaca':   52.0,
+    }
+    benchmarks    = avaliar_benchmarks(ciclo, indicadores_bench)
+    breakeven_est = calcular_breakeven_simples(v, ciclo)
+    return jsonify({**result, 'indicadores': ind, 'valores': v,
+                    'registro_id': registro_id,
+                    'benchmarks': benchmarks,
+                    'breakeven_estimado': breakeven_est})
 
 @app.route('/api/confirmar', methods=['POST'])
 def api_confirmar():
@@ -203,7 +242,6 @@ def api_confirmar():
     except ValueError as e:
         return jsonify({'erro': str(e)}), 400
 
-
 @app.route('/api/retrain', methods=['POST'])
 def api_retrain():
     """Retreina o modelo com dados base + registros confirmados do BD."""
@@ -212,12 +250,10 @@ def api_retrain():
     stats = retrain_com_dados(X_extra, y_extra)
     return jsonify({**stats, 'ok': True})
 
-
 @app.route('/api/historico', methods=['GET'])
 def api_historico():
     limit = min(int(request.args.get('limit', 60)), 200)
     return jsonify({'registros': db.listar(limit), 'stats': db.stats()})
-
 
 @app.route('/api/db-stats', methods=['GET'])
 def api_db_stats():
@@ -227,12 +263,27 @@ def api_db_stats():
     return jsonify(s)
 
 
+@app.route('/api/precos/live', methods=['GET'])
+def api_precos_live():
+    """Retorna cotações ao vivo: tenta agrobr, depois scraper HTML (scotconsultoria.com.br)."""
+    try:
+        precos = obter_precos_arroba()
+        if precos['boi'] > 0 or precos['vaca'] > 0:
+            db.guardar_cotacao_diaria(precos)
+            return jsonify({'ok': True, 'precos': precos})
+        return jsonify({'erro': 'Nenhum preço obtido do site.'}), 503
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 @app.route('/api/cenario', methods=['POST'])
 def api_cenario():
     data    = request.json
     v       = data.get('valores', [])
     cenario = data.get('cenario', 'crescimento')
+    ciclo   = data.get('ciclo', 'CICLO_COMPLETO').upper()
     params  = {
+        'ciclo':         ciclo,
+        # Parâmetros gerais
         'nat_pct':       float(data.get('nat',      75)),
         'mort_pct':      float(data.get('mort',      3)),
         'desc_pct':      float(data.get('desc',     30)),
@@ -242,18 +293,59 @@ def api_cenario():
         'prop_boi':      float(data.get('propboi',  30)),
         'renov_boi_pct': float(data.get('renovboi', 20)),
         'venda_bez_pct': float(data.get('vendbez',  30)),
+        # CRIA
+        'preco_bezerro': float(data.get('preco_bezerro', 1800)),
+        'desmama_pct':   float(data.get('desmama_pct',    80)),
+        # RECRIA
+        'peso_entrada_arr': float(data.get('peso_entrada_arr',  8)),
+        'peso_saida_arr':   float(data.get('peso_saida_arr',   14)),
+        'meses_recria':     int(data.get('meses_recria',       12)),
+        'custo_cab_mes':    float(data.get('custo_cab_mes',    80)),
+        # ENGORDA
+        'peso_entrada_kg':    float(data.get('peso_entrada_kg',   300)),
+        'peso_saida_kg':      float(data.get('peso_saida_kg',     520)),
+        'rendimento_carcaca': float(data.get('rendimento_carcaca', 52)),
+        'custo_cab_dia':      float(data.get('custo_cab_dia',      12)),
+        'dias_engorda':       int(data.get('dias_engorda',         90)),
     }
     if len(v) != 10:
         return jsonify({'erro': 'Valores inválidos'}), 400
     result = simular_cenario(v, cenario, **params)
     return jsonify(result)
 
-
 @app.route('/api/cenarios', methods=['GET'])
 def api_cenarios():
     return jsonify({k: {'nome': v['nome'], 'desc': v['desc'], 'emoji': v['emoji']}
                     for k, v in CENARIOS.items()})
 
+# ── Rota Nova: Matemática Financeira da Arroba ──────────────────────────────
+@app.route('/api/estimativa-valor', methods=['POST'])
+@login_required
+def api_estimativa_valor():
+    """Calcula o valor estimado de um animal baseado no peso, sexo e cotação do dia."""
+    data = request.json
+    peso_vivo = float(data.get('peso_vivo', 0))
+    sexo = data.get('sexo', 'M').upper() # 'M' ou 'F'
+    
+    if peso_vivo <= 0:
+        return jsonify({"erro": "Peso vivo inválido."}), 400
+
+    cotacoes = db.obter_cotacoes_atuais()
+    preco_arroba = cotacoes.get('boi', 0.0) if sexo == 'M' else cotacoes.get('vaca', 0.0)
+    
+    if preco_arroba == 0.0:
+        return jsonify({"erro": "Cotação indisponível no banco de dados."}), 503
+
+    peso_carcaca_arrobas = peso_vivo / 30.0
+    valor_estimado = peso_carcaca_arrobas * preco_arroba
+
+    return jsonify({
+        "sexo": sexo,
+        "peso_vivo_kg": peso_vivo,
+        "peso_estimado_arrobas": round(peso_carcaca_arrobas, 2),
+        "cotacao_aplicada": preco_arroba,
+        "valor_estimado_reais": round(valor_estimado, 2)
+    })
 
 @app.route('/api/ler-pdf', methods=['POST'])
 def api_ler_pdf():
@@ -288,7 +380,6 @@ def api_ler_pdf():
         except OSError:
             pass
 
-
 @app.route('/api/modelo-info', methods=['GET'])
 def api_modelo_info():
     return jsonify(stats)
@@ -318,7 +409,6 @@ def extrair_texto_pdf(path: str) -> str:
     except Exception as e:
         raise RuntimeError(f'Não foi possível extrair texto do PDF: {e}')
 
-
 # ─────────────────────────────────────────────
 # DETECÇÃO DE ORIGEM
 # ─────────────────────────────────────────────
@@ -339,7 +429,6 @@ def detectar_origem(text: str) -> str:
         return 'INDEA'
     return 'GENERICO'
 
-
 # ─────────────────────────────────────────────
 # HELPERS COMUNS
 # ─────────────────────────────────────────────
@@ -350,7 +439,6 @@ def _animais_vazios() -> dict:
         'fac_F': 0, 'fac_M': 0,
     }
 
-
 def _para_valores(animais: dict) -> list:
     return [
         animais['f00_F'], animais['f00_M'],
@@ -360,14 +448,12 @@ def _para_valores(animais: dict) -> list:
         animais['fac_F'], animais['fac_M'],
     ]
 
-
 def _sexo_da_linha(up: str):
     if 'FEMEA' in up or 'FÊMEA' in up:
         return 'F'
     if 'MACHO' in up:
         return 'M'
     return None
-
 
 # ─────────────────────────────────────────────
 # PARSER INDEA-MT
@@ -406,10 +492,10 @@ def parsear_indea(text: str) -> dict:
         if not sexo:
             continue
         if   '00 A 04' in up or '0 A 04' in up or '0 A 4' in up: faixa = 'f00'
-        elif '05 A 12' in up or '5 A 12' in up:                   faixa = 'f05'
-        elif '13 A 24' in up:                                      faixa = 'f13'
-        elif '25 A 36' in up:                                      faixa = 'f25'
-        elif 'ACIMA'   in up:                                      faixa = 'fac'
+        elif '05 A 12' in up or '5 A 12' in up:                  faixa = 'f05'
+        elif '13 A 24' in up:                                    faixa = 'f13'
+        elif '25 A 36' in up:                                    faixa = 'f25'
+        elif 'ACIMA'   in up:                                    faixa = 'fac'
         else:
             continue
         animais[f'{faixa}_{sexo}'] = qtd
@@ -422,28 +508,23 @@ def parsear_indea(text: str) -> dict:
         'animais': animais, 'valores': valores,
     }
 
-
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO — extração por tabela (formulário de anotações)
 # ─────────────────────────────────────────────
-# Padrões de faixa etária usados em ambos os parsers
 _FAIXA_PATS = [
     (r'0\s*[AÀ]\s*0?6\s*(M[EÊ]S)?|ATÉ\s*6|ATE\s*6',           'f00'),
-    (r'0?7\s*[AÀ]\s*12\s*(M[EÊ]S)?',                            'f05'),
+    (r'0?7\s*[AÀ]\s*12\s*(M[EÊ]S)?',                           'f05'),
     (r'0\s*[AÀ]\s*12\s*(M[EÊ]S)?|ATÉ\s*12|ATE\s*12',           'f00_12'),
-    (r'13\s*[AÀ]\s*24\s*(M[EÊ]S)?',                             'f13'),
-    (r'25\s*[AÀ]\s*36\s*(M[EÊ]S)?',                             'f25'),
-    (r'ACIMA|MAIOR\s*DE?\s*36|>\s*36',                          'fac'),
+    (r'13\s*[AÀ]\s*24\s*(M[EÊ]S)?',                            'f13'),
+    (r'25\s*[AÀ]\s*36\s*(M[EÊ]S)?',                            'f25'),
+    (r'ACIMA|MAIOR\s*DE?\s*36|>\s*36',                         'fac'),
 ]
 
-
 def _faixa_de_celula(cell_up: str):
-    """Retorna o código de faixa se a célula contiver um marcador de faixa etária."""
     for pat, faixa in _FAIXA_PATS:
         if re.search(pat, cell_up):
             return faixa
     return None
-
 
 def _adicionar(animais: dict, faixa: str, sexo: str, qtd: int):
     if faixa == 'f00_12':
@@ -453,22 +534,14 @@ def _adicionar(animais: dict, faixa: str, sexo: str, qtd: int):
     else:
         animais[f'{faixa}_{sexo}'] += qtd
 
-
 def _parsear_tabela_bovinos(table) -> dict:
-    """
-    Interpreta uma tabela pdfplumber buscando cabeçalhos de faixa etária/sexo.
-    Suporta layouts onde F/M são sub-colunas abaixo das faixas etárias,
-    ou onde faixas e sexo estão na mesma célula.
-    """
     animais = _animais_vazios()
     if not table or len(table) < 2:
         return animais
 
-    # Normaliza: None → ''
     rows = [[str(c or '').upper().strip() for c in row] for row in table]
 
-    # ── Passo 1: mapear colunas com faixas etárias ────────────────────────
-    faixa_col = {}   # col_idx → faixa
+    faixa_col = {}
     for row in rows:
         for c_idx, cell in enumerate(row):
             f = _faixa_de_celula(cell)
@@ -476,10 +549,9 @@ def _parsear_tabela_bovinos(table) -> dict:
                 faixa_col[c_idx] = f
 
     if not faixa_col:
-        return animais  # sem cabeçalhos reconhecíveis
+        return animais
 
-    # ── Passo 2: mapear colunas com sexo ──────────────────────────────────
-    sexo_col = {}    # col_idx → sexo
+    sexo_col = {}
     for row in rows:
         for c_idx, cell in enumerate(row):
             if cell in ('F', 'FÊMEA', 'FEMEA') or re.match(r'^F[EÊ]MEA$', cell):
@@ -487,24 +559,18 @@ def _parsear_tabela_bovinos(table) -> dict:
             elif cell in ('M', 'MACHO') or re.match(r'^MACHO$', cell):
                 sexo_col[c_idx] = 'M'
 
-    # ── Passo 3: construir mapa final col_idx → (faixa, sexo) ─────────────
     col_map = {}
-
     if sexo_col:
         for c_idx, sexo in sexo_col.items():
-            # Coluna de sexo mais próxima de uma coluna de faixa (dist ≤ 4)
-            candidatos = {fc: f for fc, f in faixa_col.items()
-                          if abs(fc - c_idx) <= 4}
+            candidatos = {fc: f for fc, f in faixa_col.items() if abs(fc - c_idx) <= 4}
             if candidatos:
                 nearest = min(candidatos, key=lambda x: abs(x - c_idx))
                 col_map[c_idx] = (candidatos[nearest], sexo)
     else:
-        # Sem marcadores F/M explícitos — assume alternância F, M para cada faixa
         sorted_f = sorted(faixa_col.items())
         for i, (c_idx, faixa) in enumerate(sorted_f):
             col_map[c_idx] = (faixa, 'F' if i % 2 == 0 else 'M')
 
-    # ── Passo 4: extrair números das linhas de dados ───────────────────────
     for row in rows:
         for c_idx, cell in enumerate(row):
             if c_idx not in col_map:
@@ -519,12 +585,7 @@ def _parsear_tabela_bovinos(table) -> dict:
 
     return animais
 
-
 def _parse_idaron_tabelas(pdf_path: str) -> dict:
-    """
-    Tenta extrair bovinos via extração de tabelas pdfplumber.
-    Funciona bem para o formulário IDARON estruturado em grade.
-    """
     try:
         import pdfplumber
         animais = _animais_vazios()
@@ -548,18 +609,12 @@ def _parse_idaron_tabelas(pdf_path: str) -> dict:
                                 if v > 0:
                                     animais[k] = max(animais[k], v)
                     if sum(animais.values()) > 0:
-                        break   # encontrou na primeira estratégia que funcionou
-
+                        break
         return animais
     except Exception:
         return _animais_vazios()
 
-
 def _parse_idaron_words(pdf_path: str) -> dict:
-    """
-    Fallback: usa posições X das palavras para mapear colunas.
-    Útil quando pdfplumber não detecta bordas de tabela.
-    """
     try:
         import pdfplumber
         animais = _animais_vazios()
@@ -570,14 +625,12 @@ def _parse_idaron_words(pdf_path: str) -> dict:
                 if not words:
                     continue
 
-                # Agrupa palavras por linha (y0 próximo)
                 linhas: dict[float, list] = {}
                 for w in words:
-                    y = round(w['top'] / 4) * 4   # quantiza em 4pt
+                    y = round(w['top'] / 4) * 4
                     linhas.setdefault(y, []).append(w)
 
-                # 1ª passagem: mapear colunas de faixa por x
-                faixa_x: dict[float, str] = {}   # x_mid → faixa
+                faixa_x: dict[float, str] = {}
                 for y, ws in linhas.items():
                     texto = ' '.join(w['text'].upper() for w in ws)
                     f = _faixa_de_celula(texto)
@@ -588,8 +641,7 @@ def _parse_idaron_words(pdf_path: str) -> dict:
                 if not faixa_x:
                     continue
 
-                # 2ª passagem: mapear colunas de sexo
-                col_map: dict[float, tuple] = {}   # x_mid → (faixa, sexo)
+                col_map: dict[float, tuple] = {}
                 for y, ws in linhas.items():
                     for w in ws:
                         t = w['text'].upper()
@@ -601,11 +653,9 @@ def _parse_idaron_words(pdf_path: str) -> dict:
                                 col_map[x_mid] = (faixa_x[nearest], sexo)
 
                 if not col_map:
-                    # Sem marcadores F/M — alternância
                     for i, (xf, faixa) in enumerate(sorted(faixa_x.items())):
                         col_map[xf] = (faixa, 'F' if i % 2 == 0 else 'M')
 
-                # 3ª passagem: extrair números
                 for y, ws in linhas.items():
                     for w in ws:
                         if not re.match(r'^\d+$', w['text']):
@@ -623,12 +673,10 @@ def _parse_idaron_words(pdf_path: str) -> dict:
     except Exception:
         return _animais_vazios()
 
-
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO — texto linha a linha (fallback)
 # ─────────────────────────────────────────────
 def _parse_idaron_linhas(text: str) -> dict:
-    """Parser texto-linha original — fallback para documentos GTA/saldo IDARON."""
     animais = _animais_vazios()
 
     for line in text.split('\n'):
@@ -664,7 +712,6 @@ def _parse_idaron_linhas(text: str) -> dict:
         elif 'ACIMA' in up:
             animais[f'fac_{sexo}'] = qtd
 
-    # Categorias zootécnicas (bezerra, novilha, vaca, touro…)
     _categorias = [
         (['BEZERRA', 'BEZERRO'],   'f05', None),
         (['GARROTA', 'GARROTE'],   'f13', None),
@@ -691,24 +738,16 @@ def _parse_idaron_linhas(text: str) -> dict:
 
     return animais
 
-
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO — orquestrador
 # ─────────────────────────────────────────────
 def parsear_idaron(text: str, pdf_path: str = None) -> dict:
-    """
-    Suporta dois layouts IDARON:
-      1. Formulário de Anotações (grade de células) → extração por tabela/palavras
-      2. GTA / Saldo de Exploração (texto linha a linha) → parser regex
-    """
     fazenda = municipio = proprietario = cpf = data_saldo = ie = ''
 
-    # IE (Inscrição Estadual)
     m = re.search(r'\bI\.?E\.?\b[:\s]+([A-Z0-9\.\-\/]+)', text, re.I)
     if m:
         ie = m.group(1).strip()
 
-    # Nome da propriedade
     for pat in [
         r'NOME\s+DA\s+PROPRIEDADE[:\s]+(.+)',
         r'PROPRIEDADE[:\s]+(.+)',
@@ -720,7 +759,6 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
             fazenda = m.group(1).strip()[:60]
             break
 
-    # Município
     m = re.search(
         r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-]+?(?:/\s*RO)?)(?:\s{2,}|\n|$)',
         text, re.I
@@ -728,7 +766,6 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
     if m:
         municipio = m.group(1).strip()
 
-    # CPF / Proprietário
     m = re.search(
         r'(?:CPF|PRODUTOR)[:\s/]*'
         r'(\d{3}\.?\d{3}\.?\d{3}[\-\.]?\d{2})'
@@ -745,19 +782,15 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
     if m:
         data_saldo = m.group(1)
 
-    # ── Extração de animais (3 estratégias em cascata) ────────────────────
     animais = _animais_vazios()
 
     if pdf_path:
-        # 1. Tabela (melhor para formulário de anotações em grade)
         animais = _parse_idaron_tabelas(pdf_path)
 
     if pdf_path and sum(animais.values()) == 0:
-        # 2. Posição de palavras (fallback para PDFs sem bordas de célula)
         animais = _parse_idaron_words(pdf_path)
 
     if sum(animais.values()) == 0:
-        # 3. Texto linha a linha (GTA, saldo de exploração, etc.)
         animais = _parse_idaron_linhas(text)
 
     valores = _para_valores(animais)
