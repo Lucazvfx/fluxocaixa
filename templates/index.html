@@ -243,6 +243,9 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <div class="hdr-r">
     <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
     <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
+    <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi Gordo (R$/arroba)">Boi Gordo: --</span>
+    <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca Gorda (R$/arroba)">Vaca Gorda: --</span>
+    <span id="hdr-china" class="ml-acc" style="cursor:default" title="Cotação Boi China (R$/arroba)">Boi China: --</span>
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
     <!-- Botão de sair (logout) adicionado -->
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
@@ -373,8 +376,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 
 <!-- ═══ CENÁRIOS ═══ -->
 <div class="panel" id="panel-cenarios">
-  <div class="ptitle">Ciclo Completo — <em>Análise Detalhada</em></div>
-  <p class="psub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
+  <div class="ptitle" id="cenarios-titulo">Ciclo Completo — <em>Análise Detalhada</em></div>
+  <p class="psub" id="cenarios-sub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
 
   <!-- Sub-nav -->
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
@@ -470,6 +473,40 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
             <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
           </div>
         </div>
+        <!-- Campos específicos por ciclo -->
+        <div class="card" id="card-params-cria" style="margin-bottom:16px;display:none">
+          <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros — CRIA</div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>Preço Bezerro (R$/cab)</label><input type="number" id="p-preco-bezerro" value="1800" min="0" oninput="runSc()"></div>
+              <div class="field"><label>Taxa de Desmama (%)</label><input type="number" id="p-desmama" value="80" min="1" max="100" oninput="runSc()"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="card-params-recria" style="margin-bottom:16px;display:none">
+          <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Parâmetros — RECRIA</div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>Peso Entrada (@)</label><input type="number" id="p-peso-ent-arr" value="8" step="0.5" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Peso Saída (@)</label><input type="number" id="p-peso-sai-arr" value="14" step="0.5" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Meses de Recria</label><input type="number" id="p-meses-recria" value="12" min="1" max="36" oninput="runSc()"></div>
+              <div class="field"><label>Custo/Cabeça/Mês (R$)</label><input type="number" id="p-custo-cab-mes" value="80" min="0" oninput="runSc()"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="card-params-engorda" style="margin-bottom:16px;display:none">
+          <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros — ENGORDA</div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field"><label>Peso Entrada (kg)</label><input type="number" id="p-peso-ent-kg" value="300" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Peso Abate (kg)</label><input type="number" id="p-peso-sai-kg" value="520" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Rendimento Carcaça (%)</label><input type="number" id="p-rend-carcaca" value="52" min="1" max="100" oninput="runSc()"></div>
+              <div class="field"><label>Custo/Cab/Dia (R$)</label><input type="number" id="p-custo-dia" value="12" min="0" oninput="runSc()"></div>
+              <div class="field"><label>Dias de Engorda</label><input type="number" id="p-dias-engorda" value="90" min="30" max="365" oninput="runSc()"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="ch">
             <div class="ct"><div class="cd" style="background:var(--pu)"></div>Custos por Nível (R$/cab/ano)</div>
@@ -602,6 +639,74 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 </main>
 
 <script>
+  // Fallback values provided by server-side (populated by rota index())
+  const _COTACOES_FALLBACK = {
+    boi: {{ cotacoes['boi']|default(0) }},
+    vaca: {{ cotacoes['vaca']|default(0) }},
+    boi_china: {{ cotacoes['boi_china']|default(0) }}
+  };
+
+  function _fmtValor(v){
+    const n = Number(v) || 0;
+    return n.toFixed(2) + ' R$';
+  }
+  function showToast(msg, isError=false){
+    const t = document.getElementById('toast');
+    if(!t) return;
+    t.textContent = msg;
+    t.classList.toggle('err', !!isError);
+    t.classList.add('show');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(()=> t.classList.remove('show'), 6000);
+  }
+
+  async function atualizarPrecos(){
+    try{
+      const res = await fetch('/api/precos/live');
+      // Se a resposta não for OK, tenta extrair a mensagem JSON e mostra como aviso
+      if(!res.ok){
+        try{
+          const err = await res.json();
+          const m = err.msg || err.erro || JSON.stringify(err);
+          showToast(m, true);
+        }catch(e){
+          showToast('Erro ao obter preços (network). Usando última cotação conhecida.', true);
+        }
+        // usa fallback abaixo
+      } else {
+        const j = await res.json();
+        if(j && j.ok && j.precos){
+          const p = j.precos;
+          document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(p.boi);
+          document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(p.vaca);
+          document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(p.boi_china);
+          return;
+        }
+        // caso j.ok não exista
+        if(j && (j.erro || j.msg)){
+          const m = j.msg || j.erro;
+          showToast(m, true);
+        }
+      }
+    }catch(e){
+      // fetch threw (CORS, network, etc.)
+      showToast('Não foi possível conectar ao serviço de preços. Usando última cotação conhecida.', true);
+    }
+
+    // Fallback: valores servidos pelo backend (rotina diária)
+    document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(_COTACOES_FALLBACK.boi);
+    document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(_COTACOES_FALLBACK.vaca);
+    document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(_COTACOES_FALLBACK.boi_china);
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    atualizarPrecos();
+    // Atualiza a cada 30 minutos
+    setInterval(atualizarPrecos, 1000 * 60 * 30);
+  });
+</script>
+
+<script>
 const FAIXAS=[
   {key:'f00',l:'00–04 meses',cF:'#FBBF24',cM:'#F59E0B'},
   {key:'f05',l:'05–12 meses',cF:'#34D399',cM:'#10B981'},
@@ -622,7 +727,7 @@ const fN=n=>Math.round(n).toLocaleString('pt-BR');
 const fR=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');
 const fP=n=>(n*100).toFixed(1)+'%';
 
-let lastVals=null, curSc='otimista';
+let lastVals=null, curSc='otimista', curCiclo='CICLO_COMPLETO';
 
 // ── BUILD TABLE
 function buildTable(){
@@ -683,6 +788,8 @@ async function classificar(){
     if(data.erro){toast(data.erro,true);return}
     lastVals=v;
     lastRegistroId=data.registro_id||null;
+    curCiclo=data.classificacao||'CICLO_COMPLETO';
+    atualizarParamsCiclo(curCiclo);
     renderResult(data);
     showTab('resultado',null);
     document.getElementById('tab-res').style.display='flex';
@@ -910,6 +1017,68 @@ function renderResult(data){
   setTimeout(()=>{
     document.querySelectorAll('#dist-bars [data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
   },200);
+  if(data.benchmarks && data.benchmarks.length){
+    document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBenchmarksHTML(data.benchmarks));
+  }
+  if(data.breakeven_estimado && data.breakeven_estimado.preco_breakeven){
+    document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBreakevenCompactoHTML(data.breakeven_estimado));
+  }
+}
+
+const _FAIXA_COR   = {abaixo:'var(--rd)', medio:'var(--am)', bom:'var(--g)', excelente:'#22D3EE'};
+const _FAIXA_LABEL = {abaixo:'Abaixo da média RO', medio:'Média RO', bom:'Bom ✓', excelente:'Excelente ★'};
+const _FAIXA_PCT   = {abaixo:15, medio:42, bom:72, excelente:100};
+
+function renderBenchmarksHTML(benchmarks) {
+  if (!benchmarks || !benchmarks.length) return '';
+  const itens = benchmarks.map(b => {
+    const cor  = _FAIXA_COR[b.faixa];
+    const pct  = _FAIXA_PCT[b.faixa];
+    const prox = b.proximo_nivel
+      ? `Faltam ${b.falta} ${b.unidade} para <strong>${b.proximo_nivel}</strong>`
+      : 'Nível máximo atingido ✓';
+    return `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-family:var(--fb);font-size:.83rem">${b.label}</span>
+          <span style="font-family:var(--fm);font-size:.65rem;color:${cor};background:${cor}1A;padding:2px 9px;border-radius:4px;border:1px solid ${cor}40">${_FAIXA_LABEL[b.faixa]}</span>
+        </div>
+        <div style="height:7px;background:var(--c2);border-radius:4px;overflow:hidden;border:1px solid var(--b)">
+          <div style="width:${pct}%;height:100%;background:${cor};border-radius:3px;transition:width .9s cubic-bezier(.34,1.2,.64,1)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span style="font-family:var(--fm);font-size:.58rem;color:var(--tx)">${b.valor} ${b.unidade}</span>
+          <span style="font-family:var(--fm);font-size:.58rem;color:var(--sb)">${prox}</span>
+        </div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Benchmarks — Rondônia</div>
+        <span style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">Médias regionais RO · Embrapa/SEAGRI</span>
+      </div>
+      <div class="cb">${itens}</div>
+    </div>`;
+}
+
+function renderBreakevenCompactoHTML(be) {
+  if (!be || !be.preco_breakeven) return '';
+  return `
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Ponto de Equilíbrio — Estimativa</div>
+        <span style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">baseado em custos padrão RO</span>
+      </div>
+      <div class="cb" style="display:flex;align-items:center;gap:24px">
+        <div style="text-align:center">
+          <div style="font-family:var(--fm);font-size:.55rem;color:var(--mu);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Preço Mínimo</div>
+          <div style="font-family:var(--fn);font-weight:800;font-size:2rem;color:var(--rd)">R$&nbsp;${Math.round(be.preco_breakeven).toLocaleString('pt-BR')}</div>
+          <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${be.unidade}</div>
+        </div>
+        <div style="font-family:var(--fb);font-size:.8rem;color:var(--sb);flex:1">
+          Se vender acima desse valor, a operação é lucrativa. Execute a simulação na aba <strong>Simular Cenários</strong> para ver o slider com o preço real do mercado.
+        </div>
+      </div>
+    </div>`;
 }
 
 function mr(k,v,c){return`<div class="mrow"><span class="mk">${k}</span><span class="mv ${c}">${v}</span></div>`}
@@ -1113,6 +1282,21 @@ function showScSub(id,btn){
   if(id==='5anos') runSc();
 }
 
+const _CICLO_INFO = {
+  CRIA:          {titulo:'Cria — <em>Análise de Matrizes e Bezerros</em>',    sub:'Foco na produção de bezerros desmamados. Receita por cabeça vendida.'},
+  RECRIA:        {titulo:'Recria — <em>Análise de Ganho de Peso</em>',         sub:'Foco em transformar garrotes leves em novilhos prontos para venda. Receita por arroba.'},
+  ENGORDA:       {titulo:'Engorda — <em>Análise de Rendimento de Carcaça</em>',sub:'Foco em boi gordo para abate. Receita por arroba de carcaça.'},
+  CICLO_COMPLETO:{titulo:'Ciclo Completo — <em>Análise Detalhada</em>',        sub:'Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.'},
+};
+function atualizarParamsCiclo(ciclo){
+  const info=_CICLO_INFO[ciclo]||_CICLO_INFO['CICLO_COMPLETO'];
+  document.getElementById('cenarios-titulo').innerHTML=info.titulo;
+  document.getElementById('cenarios-sub').textContent=info.sub;
+  document.getElementById('card-params-cria').style.display    = ciclo==='CRIA'    ? 'block':'none';
+  document.getElementById('card-params-recria').style.display  = ciclo==='RECRIA'  ? 'block':'none';
+  document.getElementById('card-params-engorda').style.display = ciclo==='ENGORDA' ? 'block':'none';
+}
+
 function syncFromClass(){
   if(!lastVals){toast('Classifique um rebanho primeiro.',true);return}
   document.getElementById('s-mat').value=lastVals[6]+lastVals[8];
@@ -1136,18 +1320,34 @@ function runSc(){
   if(!lastVals){document.getElementById('sc-result').innerHTML='<div style="text-align:center;color:var(--mu);padding:40px;font-family:var(--fm);font-size:.75rem">Classifique um rebanho primeiro para ver a projeção.</div>';return}
   clearTimeout(scDebounce);
   scDebounce=setTimeout(async()=>{
+    const gv=id=>{const el=document.getElementById(id);return el?el.value:null};
     const body={
       valores:lastVals,
       cenario:curSc,
-      nat:document.getElementById('s-nat').value,
-      mort:document.getElementById('sc-mort').value,
-      desc:document.getElementById('s-desc').value,
-      preco:document.getElementById('s-preco-arr').value,
-      custo:document.getElementById('sc-custo').value,
-      peso:document.getElementById('sc-peso').value,
-      propboi:document.getElementById('s-propboi').value,
-      renovboi:document.getElementById('s-renovboi').value,
-      vendbez:document.getElementById('s-vendbez').value,
+      ciclo:curCiclo,
+      nat:gv('s-nat'),
+      mort:gv('sc-mort'),
+      desc:gv('s-desc'),
+      preco:gv('s-preco-arr'),
+      custo:gv('sc-custo'),
+      peso:gv('sc-peso'),
+      propboi:gv('s-propboi'),
+      renovboi:gv('s-renovboi'),
+      vendbez:gv('s-vendbez'),
+      // CRIA
+      preco_bezerro:gv('p-preco-bezerro'),
+      desmama_pct:gv('p-desmama'),
+      // RECRIA
+      peso_entrada_arr:gv('p-peso-ent-arr'),
+      peso_saida_arr:gv('p-peso-sai-arr'),
+      meses_recria:gv('p-meses-recria'),
+      custo_cab_mes:gv('p-custo-cab-mes'),
+      // ENGORDA
+      peso_entrada_kg:gv('p-peso-ent-kg'),
+      peso_saida_kg:gv('p-peso-sai-kg'),
+      rendimento_carcaca:gv('p-rend-carcaca'),
+      custo_cab_dia:gv('p-custo-dia'),
+      dias_engorda:gv('p-dias-engorda'),
     };
     const res=await fetch('/api/cenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
