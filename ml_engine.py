@@ -676,7 +676,19 @@ def _simular_cria(
         matrizes   = matrizes_prox
         fem_recria = bezerras_ret
 
-    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'CRIA')
+    result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'CRIA')
+    ano1 = anos_proj[0]
+    units = float(max(ano1['vendidos'], 1))
+    result.update({
+        'preco_breakeven':         round(ano1['custo'] / units, 2),
+        'preco_breakeven_unidade': 'R$/cabeça',
+        'preco_usado':             preco_bz,
+        'slider_units':            units,
+        'slider_custo_ano1':       ano1['custo'],
+        'margem_atual_pct':        round(ano1['resultado'] / max(ano1['custo'], 1) * 100, 1),
+        'margem_atual_rs':         round(ano1['resultado'], 2),
+    })
+    return result
 
 
 def _simular_recria(
@@ -729,7 +741,19 @@ def _simular_recria(
         })
         animais = animais_prox
 
-    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'RECRIA')
+    result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'RECRIA')
+    ano1 = anos_proj[0]
+    units = float(max(ano1['vendidos'], 1)) * peso_saida_arr
+    result.update({
+        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
+        'preco_breakeven_unidade': 'R$/arroba',
+        'preco_usado':             preco,
+        'slider_units':            round(units, 2),
+        'slider_custo_ano1':       ano1['custo'],
+        'margem_atual_pct':        round(ano1['resultado'] / max(ano1['custo'], 1) * 100, 1),
+        'margem_atual_rs':         round(ano1['resultado'], 2),
+    })
+    return result
 
 
 def _simular_engorda(
@@ -788,7 +812,20 @@ def _simular_engorda(
         })
         bois = bois_prox
 
-    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'ENGORDA')
+    result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'ENGORDA')
+    ano1 = anos_proj[0]
+    arrobas_por_boi_be = (peso_saida_kg * rend) / 15.0
+    units = float(max(ano1['vendidos'], 1)) * arrobas_por_boi_be
+    result.update({
+        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
+        'preco_breakeven_unidade': 'R$/arroba',
+        'preco_usado':             preco,
+        'slider_units':            round(units, 2),
+        'slider_custo_ano1':       ano1['custo'],
+        'margem_atual_pct':        round(ano1['resultado'] / max(ano1['custo'], 1) * 100, 1),
+        'margem_atual_rs':         round(ano1['resultado'], 2),
+    })
+    return result
 
 
 def _montar_resultado(cenario, sc, anos_proj, total_ini, ciclo):
@@ -1059,4 +1096,17 @@ def simular_cenario(
         femeas_024 = float(r['femeas_024_prox'])
         machos_024 = float(r['machos_024_prox'])
 
-    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'CICLO_COMPLETO')
+    result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'CICLO_COMPLETO')
+    ano1 = anos_proj[0]
+    preco_adj = preco_arroba * m['preco']
+    units = float(max(ano1['vendidos'], 1)) * peso_arroba
+    result.update({
+        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
+        'preco_breakeven_unidade': 'R$/arroba',
+        'preco_usado':             preco_adj,
+        'slider_units':            round(units, 2),
+        'slider_custo_ano1':       ano1['custo'],
+        'margem_atual_pct':        round(ano1['resultado'] / max(ano1['custo'], 1) * 100, 1),
+        'margem_atual_rs':         round(ano1['resultado'], 2),
+    })
+    return result
