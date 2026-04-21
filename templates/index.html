@@ -289,6 +289,42 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 .res-box{border-radius:var(--r);padding:20px 24px;margin-top:16px;border:1px solid;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .res-box.pos{border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06)}
 .res-box.neg{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
+
+/* ── MODAL ALERTAS ── */
+#alerta-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#alerta-overlay.show{display:flex}
+#alerta-box{background:var(--c);border:1px solid var(--b2);border-radius:20px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+#alerta-head{background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(248,113,113,.1));border-bottom:1px solid var(--b2);padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+#alerta-head h2{font-family:var(--fn);font-weight:800;font-size:1.1rem;color:var(--am)}
+#alerta-body{padding:24px}
+.alerta-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--b)}
+.alerta-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.alerta-label{font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--sb)}
+.alerta-input{background:var(--c2);border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px;color:var(--tx);font-family:var(--fm);font-size:.82rem;width:100%;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.alerta-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.alerta-input:focus{border-color:var(--am)}
+.alerta-input::placeholder{color:var(--mu)}
+.alerta-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:.55rem;padding:3px 10px;border-radius:4px;letter-spacing:1px;text-transform:uppercase}
+.alerta-badge.ativo{background:rgba(74,222,128,.15);color:var(--g);border:1px solid rgba(74,222,128,.25)}
+.alerta-badge.inativo{background:rgba(74,74,100,.15);color:var(--mu);border:1px solid var(--b2)}
+.alerta-ativo-indicator{width:5px;height:5px;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── CALCULADORA DE CUSTOS ── */
+.kpi-custos{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.kpi-c{background:var(--c);padding:20px 18px}
+.kpi-c-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px}
+.kpi-c-v{font-family:var(--fn);font-weight:800;font-size:1.6rem;letter-spacing:-.5px;line-height:1}
+.kpi-c-d{font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:4px}
+.custo-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.custo-row:last-child{border-bottom:none}
+.custo-key{font-size:.84rem;color:var(--sb)}
+.custo-input{background:var(--c2);border:1px solid var(--b2);border-radius:8px;padding:7px 12px;color:var(--tx);font-family:var(--fm);font-size:.82rem;width:130px;text-align:right;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.custo-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.custo-input:focus{border-color:var(--g)}
+.custo-tag{font-family:var(--fm);font-size:.58rem;color:var(--mu);margin-left:8px;min-width:60px}
+@media(max-width:900px){.kpi-custos{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.kpi-custos{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -310,6 +346,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <span id="hdr-indicador" class="ml-acc" style="cursor:default" title="Indicador Scot RO (R$/arroba)">Indicador RO: --</span>
   <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
   <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">? Ajuda</button>
+  <span style="width:1px;height:18px;background:var(--b2);display:inline-block;margin:0 4px;vertical-align:middle"></span>
+  <button id="btn-alertas" class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 12px;border-radius:8px;border:1px solid rgba(248,113,113,.3);display:flex;align-items:center;gap:5px" onclick="alertasAbrir()"><span style="font-size:.7rem"></span>Alertas</button>
 </div>
   </div>
 </header>
@@ -319,6 +357,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <button class="tab-btn active" onclick="showTab('entrada',this)">Inserir Dados</button>
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
+  <button class="tab-btn" onclick="showTab('custos',this)">Custo/Cab.</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -710,6 +749,67 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <div id="sc-result"></div>
   </div>
 </div>
+
+<!-- ═══ CALCULADORA DE CUSTO/CABEÇA ═══ -->
+<div class="panel" id="panel-custos">
+  <div class="ptitle">Custo por <em>Cabeça</em></div>
+  <p class="psub">Calcule o custo real por animal e o ponto de equilíbrio da sua operação.</p>
+
+  <div class="kpi-custos">
+    <div class="kpi-c">
+      <div class="kpi-c-l">Custo Total/Ano</div>
+      <div class="kpi-c-v cr" id="cc-total">R$ 0</div>
+      <div class="kpi-c-d">soma de todos os custos</div>
+    </div>
+    <div class="kpi-c">
+      <div class="kpi-c-l">Custo/Cabeça/Ano</div>
+      <div class="kpi-c-v ca" id="cc-por-cab">R$ 0</div>
+      <div class="kpi-c-d" id="cc-por-cab-mes">— /mês</div>
+    </div>
+    <div class="kpi-c">
+      <div class="kpi-c-l">Custo/@ Produzida</div>
+      <div class="kpi-c-v cp" id="cc-por-arr">R$ 0</div>
+      <div class="kpi-c-d">break-even estimado</div>
+    </div>
+    <div class="kpi-c">
+      <div class="kpi-c-l">Margem/Cabeça</div>
+      <div class="kpi-c-v" id="cc-margem">—</div>
+      <div class="kpi-c-d" id="cc-margem-txt">com preço atual do mercado</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Rebanho e Área</div>
+          <button class="btn-sm" onclick="ccSincronizar()">↺ Da classificação</button>
+        </div>
+        <div class="cb">
+          <div class="custo-row"><span class="custo-key">Total de animais</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-animais" value="0" min="0" oninput="calcCustos()"><span class="custo-tag">cabeças</span></div></div>
+          <div class="custo-row"><span class="custo-key">Área total da fazenda</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-area" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">hectares</span></div></div>
+          <div class="custo-row"><span class="custo-key">Arrobas produzidas/ano</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-arrobas" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">@/ano</span></div></div>
+          <div class="custo-row"><span class="custo-key">Preço @ boi gordo atual</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-preco-arr" value="0" min="0" step="5" oninput="calcCustos()"><span class="custo-tag">R$/@</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--rd)"></div>Custos Anuais</div></div>
+        <div class="cb">
+          <div class="custo-row"><span class="custo-key">Alimentação / Suplementação</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-alimentacao" value="0" min="0" step="100" oninput="calcCustos()"><span class="custo-tag">R$/cab</span></div></div>
+          <div class="custo-row"><span class="custo-key">Sal mineral</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-mineral" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/cab</span></div></div>
+          <div class="custo-row"><span class="custo-key">Veterinário / Medicamentos</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-vet" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/cab</span></div></div>
+          <div class="custo-row"><span class="custo-key">Mão de obra (total)</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-mao-obra" value="0" min="0" step="100" oninput="calcCustos()"><span class="custo-tag">R$/ano</span></div></div>
+          <div class="custo-row"><span class="custo-key">Manutenção de pastagem</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-pastagem" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/ha</span></div></div>
+          <div class="custo-row"><span class="custo-key">Arrendamento / Imposto</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-arrendamento" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/ha</span></div></div>
+          <div class="custo-row"><span class="custo-key">Outros (energia, combustível...)</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-outros" value="0" min="0" step="100" oninput="calcCustos()"><span class="custo-tag">R$/ano</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="cc-resultado" style="margin-top:8px"></div>
+</div>
+
 </main>
 
 <!-- ═══ TUTORIAL MODAL ═══ -->
@@ -731,6 +831,46 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
       <div class="tut-nav">
         <button class="tut-btn sec" id="tut-back" onclick="tutNav(-1)">← Voltar</button>
         <button class="tut-btn pri" id="tut-next" onclick="tutNav(1)">Próximo →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL ALERTAS DE MERCADO ═══ -->
+<div id="alerta-overlay">
+  <div id="alerta-box">
+    <div id="alerta-head">
+      <h2>Alertas de Mercado</h2>
+      <button onclick="alertasFechar()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:1.2rem;line-height:1">✕</button>
+    </div>
+    <div id="alerta-body">
+      <p style="font-family:var(--fb);font-size:.82rem;color:var(--sb);margin-bottom:20px">Defina os limites de preço. Você será notificado quando a cotação ultrapassar esses valores.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="alerta-label">Cotação</div>
+        <div class="alerta-label">Mínimo (R$/@)</div>
+        <div class="alerta-label">Máximo (R$/@)</div>
+      </div>
+      <div class="alerta-row">
+        <div style="font-family:var(--fn);font-weight:700;font-size:.9rem">Boi Gordo</div>
+        <input class="alerta-input" type="number" id="al-boi-min" placeholder="Ex: 280" min="0" step="1">
+        <input class="alerta-input" type="number" id="al-boi-max" placeholder="Ex: 360" min="0" step="1">
+      </div>
+      <div class="alerta-row">
+        <div style="font-family:var(--fn);font-weight:700;font-size:.9rem">Vaca Gorda</div>
+        <input class="alerta-input" type="number" id="al-vaca-min" placeholder="Ex: 220" min="0" step="1">
+        <input class="alerta-input" type="number" id="al-vaca-max" placeholder="Ex: 300" min="0" step="1">
+      </div>
+      <div class="alerta-row">
+        <div style="font-family:var(--fn);font-weight:700;font-size:.9rem">Boi China</div>
+        <input class="alerta-input" type="number" id="al-china-min" placeholder="Ex: 300" min="0" step="1">
+        <input class="alerta-input" type="number" id="al-china-max" placeholder="Ex: 400" min="0" step="1">
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:22px">
+        <span id="alerta-status" class="alerta-badge inativo"><span class="alerta-ativo-indicator" style="background:var(--mu)"></span>Sem alertas</span>
+        <div style="display:flex;gap:8px">
+          <button onclick="alertasLimpar()" style="font-family:var(--fn);font-weight:700;font-size:.7rem;padding:10px 18px;border-radius:10px;border:1px solid var(--b2);background:none;color:var(--mu);cursor:pointer">Limpar</button>
+          <button onclick="alertasSalvar()" style="font-family:var(--fn);font-weight:700;font-size:.7rem;padding:10px 22px;border-radius:10px;border:none;background:var(--am);color:#000;cursor:pointer">Salvar Alertas</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1857,7 +1997,162 @@ document.getElementById('tut-overlay').addEventListener('click', function(e) {
 });
 
 if (!localStorage.getItem('tut_visto')) tutAbrir();
+// ═══════════════════════════════════════════════════════
+// ALERTAS DE MERCADO
+// ═══════════════════════════════════════════════════════
+const _AL_KEY = 'boviml_alertas_v1';
+let _alertasConfig = {boi_min:null,boi_max:null,vaca_min:null,vaca_max:null,china_min:null,china_max:null};
+let _precoAtual = {boi:0,vaca:0,boi_china:0};
 
+function alertasAbrir(){
+  const cfg=JSON.parse(localStorage.getItem(_AL_KEY)||'{}');
+  _alertasConfig={..._alertasConfig,...cfg};
+  ['boi-min','boi-max','vaca-min','vaca-max','china-min','china-max'].forEach(id=>{
+    const el=document.getElementById('al-'+id);
+    const key=id.replace(/-/g,'_');
+    if(el) el.value=_alertasConfig[key]||'';
+  });
+  _alertasAtualizarStatus();
+  document.getElementById('alerta-overlay').classList.add('show');
+}
+function alertasFechar(){document.getElementById('alerta-overlay').classList.remove('show');}
+function alertasSalvar(){
+  _alertasConfig.boi_min  =parseFloat(document.getElementById('al-boi-min').value)||null;
+  _alertasConfig.boi_max  =parseFloat(document.getElementById('al-boi-max').value)||null;
+  _alertasConfig.vaca_min =parseFloat(document.getElementById('al-vaca-min').value)||null;
+  _alertasConfig.vaca_max =parseFloat(document.getElementById('al-vaca-max').value)||null;
+  _alertasConfig.china_min=parseFloat(document.getElementById('al-china-min').value)||null;
+  _alertasConfig.china_max=parseFloat(document.getElementById('al-china-max').value)||null;
+  localStorage.setItem(_AL_KEY,JSON.stringify(_alertasConfig));
+  _alertasAtualizarStatus();_alertasVerificar(_precoAtual);
+  toast('Alertas salvos!');alertasFechar();
+}
+function alertasLimpar(){
+  _alertasConfig={boi_min:null,boi_max:null,vaca_min:null,vaca_max:null,china_min:null,china_max:null};
+  localStorage.removeItem(_AL_KEY);
+  ['al-boi-min','al-boi-max','al-vaca-min','al-vaca-max','al-china-min','al-china-max'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  _alertasAtualizarStatus();
+  const btn=document.getElementById('btn-alertas');
+  if(btn){btn.style.background='rgba(248,113,113,.1)';btn.style.color='var(--rd)';btn.style.border='1px solid rgba(248,113,113,.3)';btn.textContent='Alertas';}
+}
+function _alertasAtualizarStatus(){
+  const temAlgum=Object.values(_alertasConfig).some(v=>v!==null);
+  const b=document.getElementById('alerta-status');
+  if(!b)return;
+  b.className=temAlgum?'alerta-badge ativo':'alerta-badge inativo';
+  b.innerHTML=temAlgum
+    ?'<span class="alerta-ativo-indicator" style="background:var(--g)"></span>Alertas ativos'
+    :'<span class="alerta-ativo-indicator" style="background:var(--mu)"></span>Sem alertas';
+}
+function _alertasVerificar(precos){
+  if(!precos)return;
+  const cfg=JSON.parse(localStorage.getItem(_AL_KEY)||'{}');
+  const checks=[
+    {key:'boi',      min:cfg.boi_min,   max:cfg.boi_max,   label:'Boi Gordo'},
+    {key:'vaca',     min:cfg.vaca_min,  max:cfg.vaca_max,  label:'Vaca Gorda'},
+    {key:'boi_china',min:cfg.china_min, max:cfg.china_max, label:'Boi China'},
+  ];
+  let disparou=false;
+  checks.forEach(c=>{
+    const v=parseFloat(precos[c.key])||0;if(!v)return;
+    if(c.min!==null&&c.min!==undefined&&v<c.min){disparou=true;toast(`ALERTA: ${c.label} em R$${v.toFixed(2)}/@ abaixo do minimo (R$${c.min})`,true);}
+    if(c.max!==null&&c.max!==undefined&&v>c.max){disparou=true;toast(`ALERTA: ${c.label} em R$${v.toFixed(2)}/@ acima do maximo (R$${c.max})`);}
+  });
+  const btn=document.getElementById('btn-alertas');
+  if(!btn)return;
+  if(disparou){btn.style.background='rgba(251,191,36,.25)';btn.style.color='var(--am)';btn.style.border='1px solid rgba(251,191,36,.6)';btn.textContent='ALERTA!';}
+  else if(Object.values(cfg).some(v=>v!==null)){btn.style.background='rgba(74,222,128,.1)';btn.style.color='var(--g)';btn.style.border='1px solid rgba(74,222,128,.3)';btn.textContent='Alertas';}
+}
+document.getElementById('alerta-overlay').addEventListener('click',function(e){if(e.target===this)alertasFechar();});
+// Inicializa status ao carregar
+(function(){
+  const cfg=JSON.parse(localStorage.getItem(_AL_KEY)||'{}');
+  _alertasConfig={..._alertasConfig,...cfg};
+  _alertasAtualizarStatus();
+  const btn=document.getElementById('btn-alertas');
+  if(btn&&Object.values(cfg).some(v=>v!==null)){btn.style.background='rgba(74,222,128,.1)';btn.style.color='var(--g)';btn.style.border='1px solid rgba(74,222,128,.3)';}
+})();
+
+// ═══════════════════════════════════════════════════════
+// CALCULADORA DE CUSTO POR CABEÇA
+// ═══════════════════════════════════════════════════════
+function ccSincronizar(){
+  if(!lastVals){toast('Faca uma classificacao primeiro.',true);return;}
+  const total=lastVals.reduce((a,b)=>a+b,0);
+  document.getElementById('cc-animais').value=total;
+  const boiTxt=document.getElementById('hdr-boi')?.textContent||'';
+  const boi=parseFloat(boiTxt.replace(/[^\d.,]/g,'').replace(',','.'))||0;
+  if(boi>0)document.getElementById('cc-preco-arr').value=boi.toFixed(2);
+  calcCustos();toast('Dados sincronizados!');
+}
+function calcCustos(){
+  const n   =parseFloat(document.getElementById('cc-animais').value)||0;
+  const area=parseFloat(document.getElementById('cc-area').value)||0;
+  const arrs=parseFloat(document.getElementById('cc-arrobas').value)||0;
+  const pArr=parseFloat(document.getElementById('cc-preco-arr').value)||0;
+  const alim=parseFloat(document.getElementById('cc-alimentacao').value)||0;
+  const min =parseFloat(document.getElementById('cc-mineral').value)||0;
+  const vet =parseFloat(document.getElementById('cc-vet').value)||0;
+  const mao =parseFloat(document.getElementById('cc-mao-obra').value)||0;
+  const past=parseFloat(document.getElementById('cc-pastagem').value)||0;
+  const arrend=parseFloat(document.getElementById('cc-arrendamento').value)||0;
+  const out =parseFloat(document.getElementById('cc-outros').value)||0;
+
+  const custoPorCabAno=(alim+min+vet);
+  const custoTotal=custoPorCabAno*n + mao + (past+arrend)*area + out;
+  const custoCab=n>0?custoTotal/n:0;
+  const custoArr=arrs>0?custoTotal/arrs:0;
+  const recCab=arrs>0&&n>0?(arrs*pArr)/n:0;
+  const margem=recCab-custoCab;
+  const fmt=v=>'R$ '+Math.round(v).toLocaleString('pt-BR');
+
+  document.getElementById('cc-total').textContent=fmt(custoTotal);
+  document.getElementById('cc-por-cab').textContent=fmt(custoCab);
+  document.getElementById('cc-por-cab-mes').textContent=fmt(custoCab/12)+' /mes';
+  document.getElementById('cc-por-arr').textContent=custoArr>0?fmt(custoArr):'—';
+  const elM=document.getElementById('cc-margem');
+  const elMt=document.getElementById('cc-margem-txt');
+  if(pArr>0&&n>0&&arrs>0){
+    elM.textContent=(margem>=0?'+':'')+fmt(margem);
+    elM.style.color=margem>=0?'var(--g)':'var(--rd)';
+    elMt.textContent=margem>=0?'lucro por cabeca/ano':'prejuizo por cabeca/ano';
+  }else{elM.textContent='—';elM.style.color='';elMt.textContent='informe arrobas e preco para calcular';}
+
+  const res=document.getElementById('cc-resultado');
+  if(!res)return;
+  if(custoTotal===0){res.innerHTML='';return;}
+  const lucro=arrs*pArr-custoTotal;
+  const pos=lucro>=0;
+  res.innerHTML=`<div class="res-box ${pos?'pos':'neg'}">
+    <div>
+      <div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Anual Estimado</div>
+      <div style="font-family:var(--fn);font-weight:800;font-size:2rem;color:${pos?'var(--g)':'var(--rd)'}">${pos?'+':''}${fmt(lucro)}</div>
+      <div style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-top:4px">${arrs>0?Math.round(arrs)+'@ x R$'+pArr.toFixed(2)+' = '+fmt(arrs*pArr)+' de receita':'Informe arrobas produzidas para ver receita'}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Break-even (@)</div>
+      <div style="font-family:var(--fn);font-weight:800;font-size:1.8rem;color:var(--am)">${custoArr>0?'R$ '+custoArr.toFixed(2):'—'}</div>
+      <div style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-top:4px">${pArr>0&&custoArr>0?(pArr>custoArr?'Lucrando R$'+(pArr-custoArr).toFixed(2)+'/@ acima do ponto':'Prejuizo R$'+(custoArr-pArr).toFixed(2)+'/@ abaixo do ponto'):'informe o preco atual'}</div>
+    </div>
+  </div>`;
+}
+
+// Intercepta atualizarPrecos para verificar alertas e preencher calculadora
+const _origAP=window.atualizarPrecos;
+window.atualizarPrecos=async function(){
+  if(_origAP)await _origAP();
+  try{
+    const r=await fetch('/api/precos/live');const d=await r.json();
+    if(d&&d.precos){
+      _precoAtual=d.precos;
+      const cc=document.getElementById('cc-preco-arr');
+      if(cc&&(parseFloat(cc.value)||0)===0&&d.precos.boi>0){cc.value=d.precos.boi.toFixed(2);calcCustos();}
+      _alertasVerificar(d.precos);
+    }
+  }catch(e){}
+};
+
+calcCustos();
 
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
