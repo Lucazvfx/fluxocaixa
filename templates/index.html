@@ -727,7 +727,7 @@ const fN=n=>Math.round(n).toLocaleString('pt-BR');
 const fR=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');
 const fP=n=>(n*100).toFixed(1)+'%';
 
-let lastVals=null, curSc='otimista', curCiclo='CICLO_COMPLETO';
+let lastVals=null, curSc='otimista', curCiclo='CICLO_COMPLETO', sliderData=null;
 
 // ── BUILD TABLE
 function buildTable(){
@@ -1288,6 +1288,79 @@ const _CICLO_INFO = {
   ENGORDA:       {titulo:'Engorda — <em>Análise de Rendimento de Carcaça</em>',sub:'Foco em boi gordo para abate. Receita por arroba de carcaça.'},
   CICLO_COMPLETO:{titulo:'Ciclo Completo — <em>Análise Detalhada</em>',        sub:'Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.'},
 };
+function renderBreakevenHTML(d) {
+  if (!d.preco_breakeven) return '';
+  const be    = d.preco_breakeven;
+  const unid  = d.preco_breakeven_unidade || 'R$/arroba';
+  const usado = d.preco_usado || be;
+  const marg  = d.margem_atual_pct || 0;
+  const corM  = marg >= 0 ? 'var(--g)' : 'var(--rd)';
+  const slMin = Math.round(be * 0.80);
+  const slMax = Math.round(be * 1.50);
+  return `
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Ponto de Equilíbrio — Simulação de Preço</div></div>
+      <div class="cb">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+          <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px;text-align:center">
+            <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Preço Mínimo</div>
+            <div style="font-family:var(--fn);font-weight:800;font-size:1.5rem;color:var(--rd)">${fR(be)}</div>
+            <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${unid}</div>
+          </div>
+          <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px;text-align:center">
+            <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Preço Simulado</div>
+            <div style="font-family:var(--fn);font-weight:800;font-size:1.5rem;color:var(--cy)">${fR(usado)}</div>
+            <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${unid}</div>
+          </div>
+          <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px;text-align:center">
+            <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Margem Ano 1</div>
+            <div style="font-family:var(--fn);font-weight:800;font-size:1.5rem;color:${corM}">${marg>0?'+':''}${marg}%</div>
+            <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${fR(d.margem_atual_rs||0)}</div>
+          </div>
+        </div>
+        <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:16px">
+          <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:12px">Mover o slider para simular variação de preço</div>
+          <input type="range" id="slider-preco" min="${slMin}" max="${slMax}" value="${Math.round(usado)}" step="1"
+            style="width:100%;accent-color:var(--g);cursor:pointer;height:6px"
+            oninput="atualizarSlider(this.value)">
+          <div style="display:flex;justify-content:space-between;margin-top:6px;font-family:var(--fm);font-size:.58rem;color:var(--mu)">
+            <span>${fR(slMin)}</span>
+            <span id="slider-label" style="color:var(--tx);font-weight:700;font-size:.65rem">${fR(Math.round(usado))}</span>
+            <span>${fR(slMax)}</span>
+          </div>
+          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:var(--c);border:1px solid var(--b);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-family:var(--fm);font-size:.52rem;color:var(--mu);margin-bottom:6px">RESULTADO ANO 1</div>
+              <div id="slider-res-ano1" style="font-family:var(--fn);font-weight:800;font-size:1.4rem">—</div>
+            </div>
+            <div style="background:var(--c);border:1px solid var(--b);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-family:var(--fm);font-size:.52rem;color:var(--mu);margin-bottom:6px">RESULTADO 5 ANOS</div>
+              <div id="slider-res-acum" style="font-family:var(--fn);font-weight:800;font-size:1.4rem">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function atualizarSlider(precoStr) {
+  if (!sliderData) return;
+  const p = parseFloat(precoStr);
+  const lbl = document.getElementById('slider-label');
+  if (lbl) lbl.textContent = fR(p);
+
+  const receita1 = p * sliderData.units;
+  const result1  = receita1 - sliderData.custo_ano1;
+  const el1 = document.getElementById('slider-res-ano1');
+  if (el1) { el1.textContent = fR(result1); el1.style.color = result1 >= 0 ? 'var(--g)' : 'var(--rd)'; }
+
+  const ratio   = sliderData.preco_usado > 0 ? p / sliderData.preco_usado : 1;
+  const recAcum = sliderData.acumulado_receita * ratio;
+  const resAcum = recAcum - sliderData.acumulado_custo;
+  const el2 = document.getElementById('slider-res-acum');
+  if (el2) { el2.textContent = fR(resAcum); el2.style.color = resAcum >= 0 ? 'var(--g)' : 'var(--rd)'; }
+}
+
 function atualizarParamsCiclo(ciclo){
   const info=_CICLO_INFO[ciclo]||_CICLO_INFO['CICLO_COMPLETO'];
   document.getElementById('cenarios-titulo').innerHTML=info.titulo;
@@ -1407,6 +1480,18 @@ function renderSc(d){
         </table>
       </div>
     </div>`;
+
+  if (d.preco_breakeven) {
+    sliderData = {
+      units:             d.slider_units,
+      custo_ano1:        d.slider_custo_ano1,
+      preco_usado:       d.preco_usado || d.preco_breakeven,
+      acumulado_receita: d.acumulado.receita,
+      acumulado_custo:   d.acumulado.custo,
+    };
+    document.getElementById('sc-result').insertAdjacentHTML('beforeend', renderBreakevenHTML(d));
+    atualizarSlider(d.preco_usado || d.preco_breakeven);
+  }
 }
 
 // ── NAVIGATION
