@@ -290,6 +290,8 @@ def api_cenario():
         'preco_arroba':  float(data.get('preco',   320)),
         'custo_cab_ano': float(data.get('custo',   850)),
         'peso_arroba':   float(data.get('peso',     16)),
+        'peso_boi':      float(data.get('peso_boi',  20)),
+        'peso_vaca':     float(data.get('peso_vaca', 17)),
         'prop_boi':      float(data.get('propboi',  30)),
         'renov_boi_pct': float(data.get('renovboi', 20)),
         'venda_bez_pct': float(data.get('vendbez',  30)),

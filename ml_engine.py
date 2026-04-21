@@ -567,7 +567,8 @@ def calcular_indicadores(v: list) -> dict:
 def calcular_ano(
     matrizes, femeas_024, machos_024, bois,
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
-    venda_bez_pct, mort_pct, preco_arroba, custo_cab_ano, peso_arroba,
+    venda_bez_pct, mort_pct, preco_arroba, custo_cab_ano,
+    peso_boi: float = 20.0, peso_vaca: float = 17.0, peso_bezerra: float = 8.0,
 ) -> dict:
     # (código original inalterado)
     bezerros = matrizes * nat_pct
@@ -588,7 +589,11 @@ def calcular_ano(
     femeas_024_prx = round(bezerros * 0.5)
     machos_024_prx = round(bezerros * 0.5)
     total_prox     = mat_prox + femeas_024_prx + machos_024_prx + bois_prox
-    receita   = vendidos * peso_arroba * preco_arroba
+    receita   = (
+        bois_vendidos                * peso_boi      +
+        desc_mat                     * peso_vaca     +
+        (bez_vend + machos_024_vend) * peso_bezerra
+    ) * preco_arroba
     custo_tot = total_prox * custo_cab_ano
     resultado = receita - custo_tot
     return {
@@ -1031,6 +1036,8 @@ def simular_cenario(
     rendimento_carcaca: float = 52.0,
     custo_cab_dia:      float = 12.0,
     dias_engorda:       int   = 90,
+    peso_boi:           float = 20.0,
+    peso_vaca:          float = 17.0,
 ) -> dict:
     if ciclo == 'CRIA':
         return _simular_cria(
@@ -1074,7 +1081,9 @@ def simular_cenario(
             mort_pct=mort,
             preco_arroba=preco_arroba * m['preco'],
             custo_cab_ano=custo_cab_ano,
-            peso_arroba=peso_arroba,
+            peso_boi=peso_boi,
+            peso_vaca=peso_vaca,
+            peso_bezerra=peso_arroba,
         )
         anos_proj.append({
             'ano':      yr,
@@ -1099,7 +1108,11 @@ def simular_cenario(
     result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'CICLO_COMPLETO')
     ano1 = anos_proj[0]
     preco_adj = preco_arroba * m['preco']
-    units = float(max(ano1['vendidos'], 1)) * peso_arroba
+    bv = float(ano1.get('bois_vendidos', 0))
+    dv = float(ano1.get('matrizes_descartadas', 0))
+    ov = float(max(ano1['vendidos'] - bv - dv, 0))
+    peso_medio = (bv * peso_boi + dv * peso_vaca + ov * peso_arroba) / max(ano1['vendidos'], 1)
+    units = float(max(ano1['vendidos'], 1)) * peso_medio
     result.update({
         'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
         'preco_breakeven_unidade': 'R$/arroba',

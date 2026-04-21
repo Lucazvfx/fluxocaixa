@@ -95,7 +95,7 @@ def test_avaliar_benchmarks_retorna_estrutura_correta():
     assert 'falta' in item
 
 
-from ml_engine import simular_cenario, calcular_breakeven_simples
+from ml_engine import simular_cenario, calcular_breakeven_simples, calcular_ano
 
 
 def test_simular_cria_retorna_breakeven():
@@ -150,3 +150,36 @@ def test_calcular_breakeven_simples_engorda():
     result = calcular_breakeven_simples(v, 'ENGORDA')
     assert result['unidade'] == 'R$/arroba'
     assert result['preco_breakeven'] > 0
+
+
+def test_calcular_ano_pesos_separados():
+    r = calcular_ano(
+        matrizes=500, femeas_024=300, machos_024=200, bois=20,
+        nat_pct=0.75, desc_mat_pct=0.30, prop_boi=30, renov_boi_pct=0.20,
+        venda_bez_pct=0.30, mort_pct=0.03,
+        preco_arroba=350.0, custo_cab_ano=850.0,
+        peso_boi=20.0, peso_vaca=17.0, peso_bezerra=8.0,
+    )
+    assert r['receita'] > 0
+    bois_vend = r['bois_vendidos']
+    desc_mat  = r['descarte_matrizes']
+    bez_vend  = r['bezerras_vendidas']
+    mac_vend  = r['machos_024_vendidos']
+    esperado  = (bois_vend * 20 + desc_mat * 17 + (bez_vend + mac_vend) * 8) * 350
+    assert abs(r['receita'] - esperado) < 1.0
+
+
+def test_calcular_ano_sem_peso_arroba():
+    import inspect
+    sig = inspect.signature(calcular_ano)
+    assert 'peso_arroba' not in sig.parameters
+    assert 'peso_boi'     in sig.parameters
+    assert 'peso_vaca'    in sig.parameters
+    assert 'peso_bezerra' in sig.parameters
+
+
+def test_simular_cenario_ciclo_completo_peso_boi_vaca():
+    v = [300, 280, 400, 200, 900, 1200, 250, 80, 600, 40]
+    r1 = simular_cenario(v, 'crescimento', peso_boi=20.0, peso_vaca=17.0)
+    r2 = simular_cenario(v, 'crescimento', peso_boi=25.0, peso_vaca=22.0)
+    assert r2['acumulado']['receita'] > r1['acumulado']['receita']
