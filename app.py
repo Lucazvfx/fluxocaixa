@@ -2,6 +2,7 @@
 Fluxo de Gestão - Servidor Flask
 """
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler # IMPORT NOVO: Agendador
 import os, re, tempfile, subprocess, threading
 
@@ -17,6 +18,69 @@ from scraper import obter_precos_arroba
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'fluxo-gestao-dev-secret-2026')
+
+# ── Autenticação ─────────────────────────────────────────────────────────────
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.login_message = 'Por favor, faça login para acessar esta página.'
+login_manager.init_app(app)
+
+class User(UserMixin):
+    def __init__(self, user_id, email, nome):
+        self.id = user_id
+        self.email = email
+        self.nome = nome
+
+@login_manager.user_loader
+def load_user(user_id):
+    u = db.buscar_usuario_id(int(user_id))
+    if u:
+        return User(u['id'], u['email'], u['nome'])
+    return None
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        senha = request.form.get('senha')
+        u = db.verificar_senha(email, senha)
+        if u:
+            user_obj = User(u['id'], u['email'], u['nome'])
+            login_user(user_obj, remember=True)
+            return redirect(url_for('index'))
+        else:
+            flash('Email ou senha inválidos', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+        
+    if request.method == 'POST':
+        email = request.form.get('email')
+        nome = request.form.get('nome')
+        senha = request.form.get('senha')
+        
+        if db.buscar_usuario_email(email):
+            flash('Email já cadastrado', 'error')
+        else:
+            uid = db.criar_usuario(email, nome, senha)
+            user_obj = User(uid, email, nome)
+            login_user(user_obj)
+            return redirect(url_for('index'))
+            
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 # ── Startup: carrega modelo do disco ou treina do zero ──────────────────────
 _saved = carregar_modelo()
@@ -73,10 +137,12 @@ def _auto_retrain():
 
 # ── Fazendas ─────────────────────────────────────────────────────────────────
 @app.route('/api/fazendas', methods=['GET'])
+@login_required
 def api_listar_fazendas():
-    return jsonify({'fazendas': db.listar_fazendas()})
+    return jsonify({'fazendas': db.listar_fazendas(user_id=current_user.id)})
 
 @app.route('/api/fazendas', methods=['POST'])
+@login_required
 def api_criar_fazenda():
     data = request.json
     nome = (data.get('nome') or '').strip()
@@ -87,28 +153,33 @@ def api_criar_fazenda():
         proprietario=data.get('proprietario', ''),
         municipio=data.get('municipio', ''),
         estado=data.get('estado', ''),
+        user_id=current_user.id
     )
     return jsonify({'ok': True, 'id': fid})
 
 @app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
+@login_required
 def api_historico_fazenda(fid):
-    f = db.buscar_fazenda(fid)
+    f = db.buscar_fazenda(fid, user_id=current_user.id)
     if not f:
         return jsonify({'erro': 'Fazenda não encontrada'}), 404
-    hist = db.historico_fazenda(fid)
+    hist = db.historico_fazenda(fid, user_id=current_user.id)
     return jsonify({'fazenda': dict(f), 'historico': hist})
 
 
 # ── App principal ─────────────────────────────────────────────────────────────
 @app.route('/')
+@login_required
 def index():
-    fazendas = db.listar_fazendas()
+    fazendas = db.listar_fazendas(user_id=current_user.id)
     # Busca as cotações do dia para mandar para o Frontend (index.html)
     cotacoes_dia = db.obter_cotacoes_atuais() 
     return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
                            fazendas=fazendas, cotacoes=cotacoes_dia)
 
+
 @app.route('/api/classificar', methods=['POST'])
+@login_required
 def api_classificar():
     data = request.json
     v = data.get('valores', [])
@@ -137,6 +208,8 @@ def api_classificar():
         fazenda=fazenda,
         municipio=municipio,
         nat_pct=nat_pct,
+        user_id=current_user.id,
+        fazenda_id=data.get('fazenda_id')
     )
 
     ciclo = result['classificacao']
@@ -158,6 +231,7 @@ def api_classificar():
                     'breakeven_estimado': breakeven_est})
 
 @app.route('/api/confirmar', methods=['POST'])
+@login_required
 def api_confirmar():
     """Confirma ou corrige a classificação e dispara auto-retreino em background."""
     data = request.json
@@ -176,6 +250,7 @@ def api_confirmar():
         return jsonify({'erro': str(e)}), 400
 
 @app.route('/api/retrain', methods=['POST'])
+@login_required
 def api_retrain():
     """Retreina o modelo com dados base + registros confirmados do BD."""
     global stats
@@ -184,11 +259,13 @@ def api_retrain():
     return jsonify({**stats, 'ok': True})
 
 @app.route('/api/historico', methods=['GET'])
+@login_required
 def api_historico():
     limit = min(int(request.args.get('limit', 60)), 200)
     return jsonify({'registros': db.listar(limit), 'stats': db.stats()})
 
 @app.route('/api/db-stats', methods=['GET'])
+@login_required
 def api_db_stats():
     s = db.stats()
     s['accuracy'] = stats.get('accuracy_mean', 0)
@@ -197,6 +274,7 @@ def api_db_stats():
 
 
 @app.route('/api/precos/live', methods=['GET'])
+@login_required
 def api_precos_live():
     """Retorna cotações ao vivo: tenta agrobr, depois scraper HTML (scotconsultoria.com.br)."""
     try:
@@ -209,6 +287,7 @@ def api_precos_live():
         return jsonify({'erro': str(e)}), 500
 
 @app.route('/api/cenario', methods=['POST'])
+@login_required
 def api_cenario():
     data    = request.json
     v       = data.get('valores', [])
@@ -249,12 +328,14 @@ def api_cenario():
     return jsonify(result)
 
 @app.route('/api/cenarios', methods=['GET'])
+@login_required
 def api_cenarios():
     return jsonify({k: {'nome': v['nome'], 'desc': v['desc'], 'emoji': v['emoji']}
                     for k, v in CENARIOS.items()})
 
 # ── Rota Nova: Matemática Financeira da Arroba ──────────────────────────────
 @app.route('/api/estimativa-valor', methods=['POST'])
+@login_required
 def api_estimativa_valor():
     """Calcula o valor estimado de um animal baseado no peso, sexo e cotação do dia."""
     data = request.json
@@ -282,6 +363,7 @@ def api_estimativa_valor():
     })
 
 @app.route('/api/ler-pdf', methods=['POST'])
+@login_required
 def api_ler_pdf():
     if 'pdf' not in request.files:
         return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
@@ -315,6 +397,7 @@ def api_ler_pdf():
             pass
 
 @app.route('/api/modelo-info', methods=['GET'])
+@login_required
 def api_modelo_info():
     return jsonify(stats)
 

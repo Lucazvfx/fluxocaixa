@@ -348,6 +348,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">? Ajuda</button>
   <span style="width:1px;height:18px;background:var(--b2);display:inline-block;margin:0 4px;vertical-align:middle"></span>
   <button id="btn-alertas" class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 12px;border-radius:8px;border:1px solid rgba(248,113,113,.3);display:flex;align-items:center;gap:5px" onclick="alertasAbrir()"><span style="font-size:.7rem"></span>Alertas</button>
+  <span class="ml-acc" style="border-color:var(--b2);color:var(--tx);padding:4px 12px">👤 {{ current_user.nome }}</span>
+  <a href="{{ url_for('logout') }}" class="ml-acc" style="text-decoration:none;background:rgba(248,113,113,.1);color:var(--rd);border-color:rgba(248,113,113,.3);padding:4px 12px">Sair</a>
 </div>
   </div>
 </header>
@@ -369,10 +371,20 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <div class="ch"><div class="ct"><div class="cd"></div>Dados</div></div>
     <div class="cb">
       <div class="fgrid">
-        <div class="field"><label>Fazenda</label><input type="text" id="f_faz" placeholder="Ex: Fazenda Santa Cruz"></div>
+        <div class="field">
+          <label>Selecionar Fazenda</label>
+          <select id="f_sel_faz" onchange="carregarFazenda(this.value)">
+            <option value="">-- Nova Fazenda --</option>
+            {% for f in fazendas %}
+              <option value="{{ f.id }}">{{ f.nome }} ({{ f.municipio }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Nome da Fazenda</label><input type="text" id="f_faz" placeholder="Ex: Fazenda Santa Cruz"></div>
         <div class="field"><label>Município / Estado</label><input type="text" id="f_mun" placeholder="Ex: Juara - MT"></div>
-        <div class="field"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
+        <input type="hidden" id="f_id_faz" value="">
       </div>
+      <div class="field" style="margin-top:14px"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
     </div>
   </div>
 
@@ -987,12 +999,51 @@ function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value
 // ── CLASSIFY
 let lastRegistroId=null;
 
+// ── FAZENDAS
+async function carregarFazenda(fid){
+  if(!fid){
+    document.getElementById('f_faz').value='';
+    document.getElementById('f_mun').value='';
+    document.getElementById('f_prop').value='';
+    document.getElementById('f_id_faz').value='';
+    return;
+  }
+  showLoading('Carregando dados da fazenda...');
+  try{
+    const res=await fetch(`/api/fazendas/${fid}/historico`);
+    const data=await res.json();
+    if(data.erro){toast(data.erro,true);return}
+    const f=data.fazenda;
+    document.getElementById('f_faz').value=f.nome||'';
+    document.getElementById('f_mun').value=f.municipio||'';
+    document.getElementById('f_prop').value=f.proprietario||'';
+    document.getElementById('f_id_faz').value=f.id||'';
+    
+    if(data.historico && data.historico.length > 0){
+      const last = data.historico[0];
+      FAIXAS.forEach((faixa,i)=>{
+        document.getElementById(faixa.key+'_F').value=last.valores[i*2];
+        document.getElementById(faixa.key+'_M').value=last.valores[i*2+1]
+      });
+      document.getElementById('c-nat').value=last.nat_pct||'';
+      upd();
+      toast(`Dados carregados da fazenda ${f.nome}`);
+    }
+  }finally{hideLoading()}
+}
+
 async function classificar(){
   const v=getVals();
   if(v.reduce((a,b)=>a+b,0)<10){toast('Insira pelo menos 10 animais.',true);return}
   showLoading('Classificando com ML...');
   try{
-    const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
+    const body={
+      valores:v,
+      fazenda:document.getElementById('f_faz').value,
+      municipio:document.getElementById('f_mun').value,
+      proprietario:document.getElementById('f_prop').value,
+      fazenda_id:document.getElementById('f_id_faz').value || null
+    };
     const natV=document.getElementById('c-nat').value;
     const boisvV=document.getElementById('c-boisv').value;
     const bezvV=document.getElementById('c-bezv').value;

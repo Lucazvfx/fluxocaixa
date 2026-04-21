@@ -5,6 +5,7 @@ Usa PostgreSQL (via DATABASE_URL) em produção e SQLite localmente.
 import json, os
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from contextlib import contextmanager
 
 _DATABASE_URL = os.environ.get('DATABASE_URL', '')
 _USE_PG = bool(_DATABASE_URL)
@@ -16,28 +17,31 @@ if _USE_PG:
     import psycopg2
     import psycopg2.extras
 
+    @contextmanager
     def get_conn():
         conn = psycopg2.connect(_DATABASE_URL)
-        return conn
+        try:
+            yield conn
+        finally:
+            conn.close()
 
     def _exec(sql, params=(), fetch=None, commit=False):
-        conn = get_conn()
-        try:
+        with get_conn() as conn:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(sql, params)
                 result = None
                 if fetch == 'one':
-                    result = cur.fetchone()
+                    row = cur.fetchone()
+                    result = dict(row) if row else None
                 elif fetch == 'all':
-                    result = cur.fetchall()
+                    rows = cur.fetchall()
+                    result = [dict(r) for r in rows]
                 elif fetch == 'lastrow':
                     cur.execute('SELECT lastval()')
                     result = cur.fetchone()['lastval']
                 if commit:
                     conn.commit()
                 return result
-        finally:
-            conn.close()
 
     _PH  = '%s'
     _AI  = 'SERIAL PRIMARY KEY'
@@ -195,7 +199,7 @@ def criar_fazenda(nome: str, proprietario: str = '',
     )
     return int(rid)
 
-def listar_fazendas() -> list:
+def listar_fazendas(user_id: int) -> list:
     ph = _PH
     rows = _exec(
         f'''SELECT f.id, f.nome, f.proprietario, f.municipio, f.estado,
@@ -204,9 +208,10 @@ def listar_fazendas() -> list:
                    MAX(r.created_at) as ultima_analise
             FROM fazendas f
             LEFT JOIN registros r ON r.fazenda_id = f.id
+            WHERE f.user_id = {ph}
             GROUP BY f.id, f.nome, f.proprietario, f.municipio, f.estado, f.created_at
             ORDER BY ultima_analise DESC NULLS LAST, f.created_at DESC''',
-        (), fetch='all'
+        (user_id,), fetch='all'
     ) or []
     result = []
     for r in rows:
@@ -216,23 +221,30 @@ def listar_fazendas() -> list:
         result.append(d)
     return result
 
-def buscar_fazenda(fazenda_id: int) -> dict | None:
+def buscar_fazenda(fazenda_id: int, user_id: int = None) -> dict | None:
     ph = _PH
-    return _exec(
-        f'SELECT * FROM fazendas WHERE id={ph}',
-        (fazenda_id,), fetch='one'
-    )
+    sql = f'SELECT * FROM fazendas WHERE id={ph}'
+    params = [fazenda_id]
+    if user_id is not None:
+        sql += f' AND user_id={ph}'
+        params.append(user_id)
+    return _exec(sql, tuple(params), fetch='one')
 
-def historico_fazenda(fazenda_id: int, limit: int = 30) -> list:
+def historico_fazenda(fazenda_id: int, user_id: int = None, limit: int = 30) -> list:
     ph = _PH
-    rows = _exec(
-        f'''SELECT r.id, r.valores, r.class_ml, r.class_conf, r.confianca,
+    sql = f'''SELECT r.id, r.valores, r.class_ml, r.class_conf, r.confianca,
                    r.nat_pct, r.created_at
             FROM registros r
-            WHERE r.fazenda_id={ph}
-            ORDER BY r.created_at DESC LIMIT {ph}''',
-        (fazenda_id, limit), fetch='all'
-    ) or []
+            WHERE r.fazenda_id={ph}'''
+    params = [fazenda_id]
+    if user_id is not None:
+        sql += f' AND r.user_id={ph}'
+        params.append(user_id)
+    
+    sql += f' ORDER BY r.created_at DESC LIMIT {ph}'
+    params.append(limit)
+    
+    rows = _exec(sql, tuple(params), fetch='all') or []
     result = []
     for r in rows:
         d = dict(r)
@@ -278,14 +290,18 @@ def exportar_treino():
             y.append(TIPOS.index(t))
     return X, y
 
-def listar(limit: int = 60) -> list:
+def listar(limit: int = 60, user_id: int = None) -> list:
     ph = _PH
-    rows = _exec(
-        f'''SELECT id, valores, class_ml, class_conf, confianca,
-                   fazenda, municipio, created_at
-            FROM registros ORDER BY created_at DESC LIMIT {ph}''',
-        (limit,), fetch='all'
-    ) or []
+    sql = 'SELECT id, valores, class_ml, class_conf, confianca, fazenda, municipio, created_at FROM registros'
+    params = []
+    if user_id is not None:
+        sql += f' WHERE user_id={ph}'
+        params.append(user_id)
+    
+    sql += f' ORDER BY created_at DESC LIMIT {ph}'
+    params.append(limit)
+    
+    rows = _exec(sql, tuple(params), fetch='all') or []
     result = []
     for r in rows:
         d = dict(r)
@@ -294,17 +310,23 @@ def listar(limit: int = 60) -> list:
         result.append(d)
     return result
 
-def stats() -> dict:
-    total = (_exec(f'SELECT COUNT(*) as n FROM registros',
-                   (), fetch='one') or {}).get('n', 0)
-    conf = (_exec(f'SELECT COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL',
-                  (), fetch='one') or {}).get('n', 0)
-    rows = _exec(
-        f'''SELECT class_conf, COUNT(*) as n FROM registros
-            WHERE class_conf IS NOT NULL
-            GROUP BY class_conf''',
-        (), fetch='all'
-    ) or []
+def stats(user_id: int = None) -> dict:
+    ph = _PH
+    sql_tot = 'SELECT COUNT(*) as n FROM registros'
+    sql_conf = 'SELECT COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL'
+    sql_tipo = 'SELECT class_conf, COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL GROUP BY class_conf'
+    
+    params = []
+    if user_id is not None:
+        sql_tot += f' WHERE user_id={ph}'
+        sql_conf += f' AND user_id={ph}'
+        sql_tipo = sql_tipo.replace('GROUP BY', f' AND user_id={ph} GROUP BY')
+        params.append(user_id)
+        
+    total = (_exec(sql_tot, tuple(params), fetch='one') or {}).get('n', 0)
+    conf = (_exec(sql_conf, tuple(params), fetch='one') or {}).get('n', 0)
+    rows = _exec(sql_tipo, tuple(params), fetch='all') or []
+    
     return {
         'total':       int(total),
         'confirmados': int(conf),
