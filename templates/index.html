@@ -465,8 +465,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Preço Boi (R$/cab.)</label><input type="number" id="s-preco-boi" value="4500" min="0" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Preço Matriz (R$/cab.)</label><input type="number" id="s-preco-mat" value="3200" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Peso Boi (@)</label><input type="number" id="s-peso-boi" value="20" step="0.5" min="8" max="30" oninput="recalcCiclo();validarCampo(this,8,30)"></div>
+              <div class="field"><label>Peso Vaca (@)</label><input type="number" id="s-peso-vaca" value="17" step="0.5" min="6" max="25" oninput="recalcCiclo();validarCampo(this,6,25)"></div>
               <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div>
               <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div>
             </div>
@@ -1174,8 +1174,10 @@ function calcCiclo(){
   const des=gS('s-desc')/100||0.3;
   const vbp=gS('s-vendbez')/100||0.3;
   const niv=document.getElementById('s-nivel')?.value||'medio';
-  const pBoi=gS('s-preco-boi')||4500;
-  const pMat=gS('s-preco-mat')||3200;
+  const pesoBoi=gS('s-peso-boi')||20;
+  const pesoVaca=gS('s-peso-vaca')||17;
+  const pBoi=pesoBoi*pArr;
+  const pMat=pesoVaca*pArr;
   const pBezArr=gS('s-bez-arr')||8;
   const pArr=gS('s-preco-arr')||350;
 
@@ -1198,7 +1200,7 @@ function calcCiclo(){
   const cn=CUSTO_S[niv];
   const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez;
   const res=rTot-cTot;
-  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pesoBoi,pesoVaca,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
 }
 
 function makeBarsS(items,maxV,colors){
@@ -1266,7 +1268,7 @@ function recalcCiclo(){
 
   // Financeiro tab
   const tRec=document.querySelector('#s-tbl-rec tbody');
-  if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez],['Bezerros M.',d.bezMV,fR(d.pBezCab),d.rBezM]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
+  if(tRec){tRec.innerHTML=[['Bois',d.bVend,`${d.pesoBoi}@ · ${fR(d.pBoi)}`,d.rBoi],['Matrizes',d.desQ,`${d.pesoVaca}@ · ${fR(d.pMat)}`,d.rMat],['Bezerras',d.bezV,`${gS('s-bez-arr')}@ · ${fR(d.pBezCab)}`,d.rBez],['Bezerros M.',d.bezMV,`${gS('s-bez-arr')}@ · ${fR(d.pBezCab)}`,d.rBezM]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
   const tCus=document.querySelector('#s-tbl-cus tbody');
   const cn=CUSTO_S[d.niv];
   if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
@@ -1419,6 +1421,8 @@ function runSc(){
       peso_entrada_kg:gv('p-peso-ent-kg'),
       peso_saida_kg:gv('p-peso-sai-kg'),
       rendimento_carcaca:gv('p-rend-carcaca'),
+      peso_boi:gv('s-peso-boi'),
+      peso_vaca:gv('s-peso-vaca'),
       custo_cab_dia:gv('p-custo-dia'),
       dias_engorda:gv('p-dias-engorda'),
     };
