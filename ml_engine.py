@@ -614,6 +614,332 @@ def calcular_ano(
     }
 
 
+# ─────────────────────────────────────────────
+# SIMULAÇÕES ESPECÍFICAS POR CICLO
+# ─────────────────────────────────────────────
+
+def _simular_cria(
+    v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
+    preco_bezerro, custo_cab_ano, anos,
+):
+    """
+    CRIA: receita vem da venda de bezerros desmamados por cabeça.
+    Não usa preço de arroba — o produto final é o bezerro.
+    """
+    va  = np.array(v, dtype=float)
+    sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
+    m   = sc['mods']
+
+    nat      = min((nat_pct / 100) * m['nat'], 0.95)
+    mort     = (mort_pct / 100) * m['mort']
+    desmama  = (desmama_pct / 100)
+    venda_bz = (venda_bez_pct / 100)
+    preco_bz = preco_bezerro * m['preco']
+
+    matrizes    = float(va[6] + va[8])
+    fem_recria  = float(va[0] + va[2] + va[4])
+    total_ini   = float(va.sum())
+
+    anos_proj = []
+    for yr in range(1, anos + 1):
+        nascidos      = matrizes * nat
+        desmamados    = nascidos * desmama * (1 - mort)
+        vez_vendidos  = desmamados * venda_bz
+        machos_vend   = vez_vendidos * 0.5
+        femeas_vend   = vez_vendidos * 0.5
+        bezerras_ret  = (desmamados - vez_vendidos) * 0.5
+
+        descarte_mat  = round(matrizes * 0.15)
+        matrizes_prox = max(matrizes + bezerras_ret - descarte_mat, matrizes * 0.7)
+        total_prox    = int(matrizes_prox + bezerras_ret)
+        mortes        = round((matrizes + fem_recria) * mort)
+
+        receita  = vez_vendidos * preco_bz
+        custo    = (matrizes + fem_recria) * custo_cab_ano
+        resultado = receita - custo
+
+        anos_proj.append({
+            'ano': yr,
+            'total': total_prox,
+            'matrizes': int(matrizes_prox),
+            'bezerros': int(nascidos),
+            'vendidos': int(vez_vendidos),
+            'bois_vendidos': int(machos_vend),
+            'matrizes_descartadas': descarte_mat,
+            'bezerras_vendidas': int(femeas_vend),
+            'machos_vendidos': int(machos_vend),
+            'aumento_matrizes': int(bezerras_ret - descarte_mat),
+            'receita': round(receita, 2),
+            'custo': round(custo, 2),
+            'resultado': round(resultado, 2),
+        })
+        matrizes   = matrizes_prox
+        fem_recria = bezerras_ret
+
+    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'CRIA')
+
+
+def _simular_recria(
+    v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
+    meses_recria, custo_cab_mes, anos,
+):
+    """
+    RECRIA: compra garrotes/novilhos leves e vende mais pesados.
+    Receita = animais vendidos × arrobas na saída × preço arroba novilho.
+    """
+    va  = np.array(v, dtype=float)
+    sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
+    m   = sc['mods']
+
+    mort  = (mort_pct / 100) * m['mort']
+    preco = preco_arroba * m['preco']
+
+    # Animais em recria = machos 05-24 meses
+    animais   = float(va[1] + va[3] + va[5])
+    total_ini = float(va.sum())
+
+    anos_proj = []
+    for yr in range(1, anos + 1):
+        mortes       = animais * mort
+        animais_sai  = animais - mortes
+        ganho_arr    = peso_saida_arr - peso_entrada_arr
+
+        receita   = animais_sai * peso_saida_arr * preco
+        custo     = animais * meses_recria * custo_cab_mes
+        resultado = receita - custo
+
+        # Capacidade cresce levemente a cada ano
+        animais_prox = animais * (1 + 0.04 * m['nat'])
+
+        anos_proj.append({
+            'ano': yr,
+            'total': int(animais_prox),
+            'matrizes': 0,
+            'bezerros': 0,
+            'vendidos': int(animais_sai),
+            'bois_vendidos': int(animais_sai),
+            'matrizes_descartadas': 0,
+            'bezerras_vendidas': 0,
+            'machos_vendidos': int(animais_sai),
+            'aumento_matrizes': 0,
+            'ganho_arrobas_por_animal': round(ganho_arr, 2),
+            'receita': round(receita, 2),
+            'custo': round(custo, 2),
+            'resultado': round(resultado, 2),
+        })
+        animais = animais_prox
+
+    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'RECRIA')
+
+
+def _simular_engorda(
+    v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
+    rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
+):
+    """
+    ENGORDA: vende boi gordo por arroba de carcaça.
+    Receita = bois abatidos × (peso_saida × rendimento / 15) × preço arroba boi gordo.
+    """
+    va  = np.array(v, dtype=float)
+    sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
+    m   = sc['mods']
+
+    mort  = (mort_pct / 100) * m['mort']
+    preco = preco_arroba * m['preco']
+    rend  = rendimento_carcaca / 100
+
+    # Bois em engorda = machos adultos (25m+)
+    bois      = float(va[7] + va[9])
+    total_ini = float(va.sum())
+
+    # Lotes por ano: quantas rodadas cabem em 365 dias
+    lotes_ano = max(1, int(365 / max(dias_engorda, 30)))
+
+    anos_proj = []
+    for yr in range(1, anos + 1):
+        bois_no_ano   = bois * lotes_ano
+        mortes        = bois_no_ano * mort
+        bois_abatidos = bois_no_ano - mortes
+
+        arrobas_por_boi = (peso_saida_kg * rend) / 15.0
+        receita   = bois_abatidos * arrobas_por_boi * preco
+        custo     = bois_no_ano * dias_engorda * custo_cab_dia
+        resultado = receita - custo
+
+        bois_prox = bois * (1 + 0.04 * m['nat'])
+
+        anos_proj.append({
+            'ano': yr,
+            'total': int(bois_prox),
+            'matrizes': 0,
+            'bezerros': 0,
+            'vendidos': int(bois_abatidos),
+            'bois_vendidos': int(bois_abatidos),
+            'matrizes_descartadas': 0,
+            'bezerras_vendidas': 0,
+            'machos_vendidos': int(bois_abatidos),
+            'aumento_matrizes': 0,
+            'arrobas_por_boi': round(arrobas_por_boi, 2),
+            'lotes_por_ano': lotes_ano,
+            'ganho_peso_kg': round(peso_saida_kg - peso_entrada_kg, 1),
+            'receita': round(receita, 2),
+            'custo': round(custo, 2),
+            'resultado': round(resultado, 2),
+        })
+        bois = bois_prox
+
+    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'ENGORDA')
+
+
+def _montar_resultado(cenario, sc, anos_proj, total_ini, ciclo):
+    return {
+        'cenario': cenario,
+        'nome': sc['nome'],
+        'emoji': sc['emoji'],
+        'ciclo': ciclo,
+        'anos': anos_proj,
+        'acumulado': {
+            'receita':   round(sum(a['receita']   for a in anos_proj), 2),
+            'custo':     round(sum(a['custo']     for a in anos_proj), 2),
+            'resultado': round(sum(a['resultado'] for a in anos_proj), 2),
+        },
+        'delta_rebanho': anos_proj[-1]['total'] - int(total_ini),
+    }
+
+
+# ─────────────────────────────────────────────
+# BENCHMARKS — Médias Regionais Rondônia
+# ─────────────────────────────────────────────
+BENCHMARKS_RO = {
+    'natalidade': {
+        'label': 'Taxa de Natalidade',
+        'unidade': '%',
+        'faixas': {'abaixo': 65.0, 'medio': 78.0, 'bom': 88.0},
+        'inverso': False,
+        'ciclos': ['CRIA', 'CICLO_COMPLETO'],
+    },
+    'mortalidade': {
+        'label': 'Mortalidade Geral',
+        'unidade': '%',
+        'faixas': {'abaixo': 5.0, 'medio': 3.0, 'bom': 1.5},
+        'inverso': True,
+        'ciclos': ['CRIA', 'RECRIA', 'ENGORDA', 'CICLO_COMPLETO'],
+    },
+    'desmama': {
+        'label': 'Taxa de Desmama',
+        'unidade': '%',
+        'faixas': {'abaixo': 70.0, 'medio': 82.0, 'bom': 90.0},
+        'inverso': False,
+        'ciclos': ['CRIA', 'CICLO_COMPLETO'],
+    },
+    'relacao_fm': {
+        'label': 'Relação Fêmeas/Macho Adulto',
+        'unidade': ':1',
+        'faixas': {'abaixo': 1.8, 'medio': 2.2, 'bom': 2.8},
+        'inverso': False,
+        'ciclos': ['CRIA', 'CICLO_COMPLETO'],
+    },
+    'pct_matrizes': {
+        'label': '% Matrizes no Rebanho',
+        'unidade': '%',
+        'faixas': {'abaixo': 28.0, 'medio': 35.0, 'bom': 42.0},
+        'inverso': False,
+        'ciclos': ['CRIA', 'CICLO_COMPLETO'],
+    },
+    'ganho_peso_arr': {
+        'label': 'Ganho de Peso (@/mês)',
+        'unidade': '@/mês',
+        'faixas': {'abaixo': 0.5, 'medio': 0.7, 'bom': 0.9},
+        'inverso': False,
+        'ciclos': ['RECRIA'],
+    },
+    'rend_carcaca': {
+        'label': 'Rendimento de Carcaça',
+        'unidade': '%',
+        'faixas': {'abaixo': 50.0, 'medio': 52.0, 'bom': 54.0},
+        'inverso': False,
+        'ciclos': ['ENGORDA', 'CICLO_COMPLETO'],
+    },
+}
+
+
+def _classificar_faixa(valor: float, faixas: dict, inverso: bool = False) -> tuple:
+    """Retorna (faixa, proximo_nivel, falta) comparando valor com thresholds regionais."""
+    t_a, t_m, t_b = faixas['abaixo'], faixas['medio'], faixas['bom']
+    if not inverso:
+        if valor >= t_b:
+            return 'excelente', None, 0.0
+        elif valor >= t_m:
+            return 'bom', 'excelente', round(t_b - valor, 2)
+        elif valor >= t_a:
+            return 'medio', 'bom', round(t_m - valor, 2)
+        else:
+            return 'abaixo', 'medio', round(t_a - valor, 2)
+    else:
+        if valor <= t_b:
+            return 'excelente', None, 0.0
+        elif valor <= t_m:
+            return 'bom', 'excelente', round(valor - t_b, 2)
+        elif valor <= t_a:
+            return 'medio', 'bom', round(valor - t_m, 2)
+        else:
+            return 'abaixo', 'medio', round(valor - t_a, 2)
+
+
+def avaliar_benchmarks(ciclo: str, indicadores: dict) -> list:
+    """Avalia indicadores do rebanho contra benchmarks regionais de Rondônia."""
+    resultado = []
+    for key, cfg in BENCHMARKS_RO.items():
+        if ciclo not in cfg['ciclos']:
+            continue
+        valor = indicadores.get(key)
+        if valor is None:
+            continue
+        faixa, proximo, falta = _classificar_faixa(
+            float(valor), cfg['faixas'], cfg.get('inverso', False)
+        )
+        resultado.append({
+            'key': key,
+            'label': cfg['label'],
+            'valor': round(float(valor), 2),
+            'unidade': cfg['unidade'],
+            'faixa': faixa,
+            'proximo_nivel': proximo,
+            'falta': falta,
+        })
+    return resultado
+
+
+def calcular_breakeven_simples(v: list, ciclo: str) -> dict:
+    """Estimativa rápida do breakeven usando parâmetros padrão RO. Não precisa de simulação completa."""
+    va = np.array(v, dtype=float)
+    custo_cab_ano = 850.0
+
+    if ciclo == 'CRIA':
+        matrizes  = float(va[6] + va[8])
+        total     = float(va.sum()) or 1.0
+        custo     = total * custo_cab_ano
+        bezerros  = matrizes * 0.75 * 0.80 * 0.60
+        if bezerros <= 0:
+            return {}
+        return {'preco_breakeven': round(custo / bezerros, 2), 'unidade': 'R$/cabeça'}
+
+    if ciclo == 'RECRIA':
+        be = round((12 * 80.0) / 14.0, 2)
+        return {'preco_breakeven': be, 'unidade': 'R$/arroba'}
+
+    if ciclo == 'ENGORDA':
+        arrobas = (520.0 * 0.52) / 15.0
+        be = round((90 * 12.0) / arrobas, 2)
+        return {'preco_breakeven': be, 'unidade': 'R$/arroba'}
+
+    # CICLO_COMPLETO
+    total   = float(va.sum()) or 1.0
+    custo   = total * custo_cab_ano
+    units   = total * 0.30 * 16.0
+    return {'preco_breakeven': round(custo / max(units, 1), 2), 'unidade': 'R$/arroba'}
+
+
 CENARIOS = {
     'otimista': {
         'nome': 'Otimista — Melhoria Tecnológica',
@@ -655,7 +981,37 @@ def simular_cenario(
     renov_boi_pct:  float = 20.0,
     venda_bez_pct:  float = 30.0,
     anos:           int   = 5,
+    # Parâmetros por ciclo
+    ciclo:              str   = 'CICLO_COMPLETO',
+    preco_bezerro:      float = 1800.0,
+    desmama_pct:        float = 80.0,
+    peso_entrada_arr:   float = 8.0,
+    peso_saida_arr:     float = 14.0,
+    meses_recria:       int   = 12,
+    custo_cab_mes:      float = 80.0,
+    peso_entrada_kg:    float = 300.0,
+    peso_saida_kg:      float = 520.0,
+    rendimento_carcaca: float = 52.0,
+    custo_cab_dia:      float = 12.0,
+    dias_engorda:       int   = 90,
 ) -> dict:
+    if ciclo == 'CRIA':
+        return _simular_cria(
+            v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
+            preco_bezerro, custo_cab_ano, anos,
+        )
+    if ciclo == 'RECRIA':
+        return _simular_recria(
+            v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
+            meses_recria, custo_cab_mes, anos,
+        )
+    if ciclo == 'ENGORDA':
+        return _simular_engorda(
+            v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
+            rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
+        )
+
+    # CICLO_COMPLETO — lógica original
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
     m   = sc['mods']
@@ -703,15 +1059,4 @@ def simular_cenario(
         femeas_024 = float(r['femeas_024_prox'])
         machos_024 = float(r['machos_024_prox'])
 
-    return {
-        'cenario': cenario,
-        'nome':    sc['nome'],
-        'emoji':   sc['emoji'],
-        'anos':    anos_proj,
-        'acumulado': {
-            'receita':   round(sum(a['receita']   for a in anos_proj), 2),
-            'custo':     round(sum(a['custo']     for a in anos_proj), 2),
-            'resultado': round(sum(a['resultado'] for a in anos_proj), 2),
-        },
-        'delta_rebanho': anos_proj[-1]['total'] - int(total_ini),
-    }
+    return _montar_resultado(cenario, sc, anos_proj, total_ini, 'CICLO_COMPLETO')
