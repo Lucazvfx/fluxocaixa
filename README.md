@@ -141,6 +141,29 @@ O ensemble usa Random Forest + Gradient Boosting com regras híbridas para casos
 
 ---
 
+## ⚡ Novos Recursos (Superpowers)
+
+### 📈 Benchmarks Rondônia
+O sistema agora compara os indicadores da sua fazenda com as médias regionais de Rondônia (Embrapa/SEAGRI). 
+- Identifique se sua natalidade, mortalidade e rendimento de carcaça estão acima ou abaixo da média.
+- Visualize o quanto falta para atingir o próximo nível de eficiência.
+
+### ⚖️ Ponto de Equilíbrio (Breakeven) Interativo
+Simule o impacto das variações de preço do mercado em tempo real.
+- Slider interativo para ajustar o preço da arroba e ver o lucro projetado instantaneamente.
+- Cálculo automático do preço mínimo de venda para não ter prejuízo.
+
+### 🧠 Recomendações Inteligentes
+O motor de análise gera sugestões automáticas baseadas nos dados do seu rebanho:
+- Alertas de prejuízo ou margens apertadas.
+- Identificação de excesso de bois reprodutores.
+- Sugestões técnicas para melhorar a natalidade e conversão alimentar.
+
+### ✅ Validação de Dados em Tempo Real
+Interface aprimorada com validação inline para garantir que os parâmetros zootécnicos e financeiros estejam dentro de limites realistas, evitando erros de simulação.
+
+---
+
 ## Tecnologia
 
 - **Backend:** Python + Flask

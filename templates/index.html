@@ -145,12 +145,6 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 .mv{font-family:var(--fm);font-size:.78rem;color:var(--tx)}
 .mv.g{color:var(--g)}.mv.a{color:var(--am)}.mv.r{color:var(--rd)}.mv.c{color:var(--cy)}
 
-.rec-item{background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
-.rec-ico{font-size:1.3rem;flex-shrink:0;margin-top:1px}
-.rec-txt{font-size:.82rem;color:var(--sb);line-height:1.6}
-.rec-txt strong{color:var(--tx)}
-.rtag{display:inline-block;font-family:var(--fm);font-size:.5rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-bottom:4px}
-
 /* CENÁRIOS */
 .sc-card{background:var(--c2);border:1px solid var(--b);border-radius:var(--r);padding:20px;margin-bottom:10px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
 .sc-card:hover{border-color:var(--b2);transform:translateY(-2px)}
@@ -1290,8 +1284,8 @@ function renderResult(data){
   if(data.breakeven_estimado && data.breakeven_estimado.preco_breakeven){
     document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBreakevenCompactoHTML(data.breakeven_estimado));
   }
-  gerarRecomendacoes();
-}
+  gerarRecomendacoes(calcCiclo());
+  }
 
 const _FAIXA_COR   = {abaixo:'var(--rd)', medio:'var(--am)', bom:'var(--g)', excelente:'#22D3EE'};
 const _FAIXA_LABEL = {abaixo:'Abaixo da média RO', medio:'Média RO', bom:'Bom ✓', excelente:'Excelente ★'};
@@ -1454,73 +1448,187 @@ function validarTudo() {
   if (btnCen) btnCen.disabled = invalido;
 }
 
-function gerarRecomendacoes() {
-  if (!lastVals && !_lastScResult) return;
-  
-  const d = _lastScResult || calcCiclo();
-  const recBody = document.getElementById('rec-body');
-  const recBadge = document.getElementById('rec-badge');
-  if (!recBody) return;
+function gerarRecomendacoes(d) {
+  const body   = document.getElementById('rec-body');
+  const badge  = document.getElementById('rec-badge');
+  if (!body) return;
 
-  let recs = [];
-  let score = 100;
-
-  // Analisa Natalidade
-  const nat = d.nat * 100;
-  if (nat < 65) {
-    recs.push({nivel: 'critico', icon: '⚠️', t: 'Natalidade Crítica', d: `Sua taxa de natalidade (${nat.toFixed(1)}%) está muito abaixo da média de RO (78%). Isso inviabiliza o lucro da cria.`, imp: 'Impacto: Altíssimo'});
-    score -= 40;
-  } else if (nat < 78) {
-    recs.push({nivel: 'atencao', icon: '🔍', t: 'Oportunidade na Cria', d: `Melhore a suplementação das matrizes para atingir a média regional de 78%.`, imp: 'Impacto: Médio'});
-    score -= 15;
+  // Sem rebanho informado — estado inicial
+  if (!d || !d.totReb || d.totReb === 0) {
+    body.innerHTML = '<div style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Preencha os parâmetros para ver a análise.</div>';
+    if (badge) badge.textContent = '';
+    return;
   }
 
-  // Analisa Mortalidade
-  const mort = (parseFloat(document.getElementById('sc-mort')?.value) || 3);
-  if (mort > 5) {
-    recs.push({nivel: 'critico', icon: '☠️', t: 'Mortalidade Elevada', d: `Mortalidade de ${mort}% acima do limite técnico. Revise protocolos sanitários e vacinação.`, imp: 'Impacto: Alto'});
-    score -= 30;
-  }
+  const fR2 = v => 'R$ ' + Math.abs(Math.round(v)).toLocaleString('pt-BR');
+  const recs = [];
 
-  // Analisa Peso Abate (Boi)
-  if (d.pesoBoi < 17) {
-    recs.push({nivel: 'atencao', icon: '⚖️', t: 'Peso de Abate Baixo', d: `Abater bois com menos de 17@ reduz a rentabilidade por carcaça. Considere estender a engorda.`, imp: 'Impacto: Médio'});
-    score -= 10;
-  }
-
-  // Analisa Relação Touro/Matriz
-  if (d.prop > 35) {
-        recs.push({nivel: 'atencao', icon: '🐂', t: 'Poucos Touros', d: `Relação de 1 touro para ${d.prop.toFixed(0)} matrizes pode prejudicar a taxa de prenhez. O ideal é 1:25 a 1:30.`, imp: 'Impacto: Médio'});
-    score -= 10;
-  }
-
-  if (recs.length === 0) {
-    recBody.innerHTML = `<div style="text-align:center;padding:20px;color:var(--g)">
-      <div style="font-size:2rem;margin-bottom:10px">✅</div>
-      <div style="font-family:var(--fn);font-weight:700">Fazenda em Ótimo Estado</div>
-      <div style="font-size:.8rem;color:var(--sb)">Indicadores dentro ou acima das médias regionais de Rondônia.</div>
-    </div>`;
-    if (recBadge) recBadge.textContent = 'SAÚDE: EXCELENTE';
-    if (recBadge) recBadge.style.color = 'var(--g)';
-  } else {
-    recBody.innerHTML = recs.map(r => `
-      <div class="rec-item rec-nivel-${r.nivel}">
-        <div class="rec-icon">${r.icon}</div>
-        <div class="rec-content">
-          <div class="rec-titulo">${r.t}</div>
-          <div class="rec-desc">${r.d}</div>
-          <div class="rec-impacto">${r.imp}</div>
-        </div>
-      </div>
-    `).join('');
-    
-    const status = score > 80 ? 'BOM' : (score > 50 ? 'ATENÇÃO' : 'CRÍTICO');
-    const cor = score > 80 ? 'var(--g)' : (score > 50 ? 'var(--am)' : 'var(--rd)');
-    if (recBadge) {
-      recBadge.textContent = `SAÚDE: ${status} (${score} pts)`;
-      recBadge.style.color = cor;
+  // R1 — Resultado financeiro
+  if (d.rTot > 0) {
+    const margem = d.res / d.rTot;
+    if (d.res < 0) {
+      recs.push({
+        nivel: 'critico',
+        icon: '🔴',
+        titulo: 'Fazenda no prejuízo',
+        desc: `Resultado negativo de ${fR2(d.res)} no período. Custos superam a receita.`,
+        impacto: `Prejuízo: ${fR2(d.res)}`
+      });
+    } else if (margem < 0.10) {
+      recs.push({
+        nivel: 'atencao',
+        icon: '🟡',
+        titulo: 'Margem muito apertada',
+        desc: `Margem de ${(margem*100).toFixed(1)}%. Uma queda de preço ou aumento de custo pode gerar prejuízo.`,
+        impacto: `Margem atual: ${(margem*100).toFixed(1)}%`
+      });
+    } else {
+      recs.push({
+        nivel: 'bom',
+        icon: '🟢',
+        titulo: 'Resultado positivo',
+        desc: `Margem de ${(margem*100).toFixed(1)}%. Fazenda operando com lucro.`,
+        impacto: `Resultado: ${fR2(d.res)}`
+      });
     }
   }
+
+  // R2 — Custo por cabeça vs receita por animal vendido
+  if (d.totReb > 0 && d.totVend > 0) {
+    const custoCab    = d.cTot / d.totReb;
+    const receitaVend = d.rTot / d.totVend;
+    const ratio       = custoCab / receitaVend;
+    if (ratio > 1) {
+      recs.push({
+        nivel: 'critico',
+        icon: '🔴',
+        titulo: 'Custo por cabeça acima da receita',
+        desc: `Custo médio por cabeça (${fR2(custoCab)}) supera a receita por animal vendido (${fR2(receitaVend)}).`,
+        impacto: `Custo = ${(ratio*100).toFixed(0)}% da receita por animal`
+      });
+    } else if (ratio > 0.80) {
+      recs.push({
+        nivel: 'atencao',
+        icon: '🟡',
+        titulo: 'Custo por cabeça elevado',
+        desc: `Custo médio de ${fR2(custoCab)}/cab representa ${(ratio*100).toFixed(0)}% da receita por animal vendido (${fR2(receitaVend)}).`,
+        impacto: `Margem de cobertura: ${((1-ratio)*100).toFixed(0)}%`
+      });
+    }
+  }
+
+  // R3 — Taxa de natalidade vs benchmark RO (75%)
+  const natPct = d.nat;
+  if (d.mat > 0 && natPct < 0.75) {
+    const deficit      = 0.75 - natPct;
+    const intervalos5  = deficit / 0.05;
+    const impactoAno   = intervalos5 * Math.floor(d.mat * 0.05) * d.pBezCab;
+    if (natPct < 0.60) {
+      recs.push({
+        nivel: 'critico',
+        icon: '🔴',
+        titulo: 'Natalidade crítica',
+        desc: `Taxa de ${(natPct*100).toFixed(0)}% está abaixo do mínimo esperado. Média RO é 75%. Cada 5% de melhora gera aproximadamente ${fR2(Math.floor(d.mat * 0.05) * d.pBezCab)} a mais/ano.`,
+        impacto: `Potencial de melhora: ${fR2(impactoAno)}/ano`
+      });
+    } else {
+      recs.push({
+        nivel: 'atencao',
+        icon: '🟡',
+        titulo: 'Natalidade abaixo da média RO',
+        desc: `Taxa de ${(natPct*100).toFixed(0)}% vs média de 75% em Rondônia. Cada 5% de melhora equivale a ${fR2(Math.floor(d.mat * 0.05) * d.pBezCab)}/ano.`,
+        impacto: `Potencial: ${fR2(impactoAno)}/ano`
+      });
+    }
+  }
+
+  // R4 — Excesso de bois
+  if (d.boi > 0 && d.bNec > 0 && d.boi > d.bNec * 1.2) {
+    const excesso      = d.boi - d.bNec;
+    const receitaExtra = excesso * d.pBoi;
+    recs.push({
+      nivel: 'atencao',
+      icon: '🟡',
+      titulo: 'Excesso de bois reprodutores',
+      desc: `${d.boi} bois para ${d.mat} matrizes (proporção 1:${Math.round(d.mat / d.boi)}). O ideal é 1:${d.prop}. Vender ${excesso} bois excedentes geraria ${fR2(receitaExtra)}.`,
+      impacto: `Receita potencial: ${fR2(receitaExtra)}`
+    });
+  }
+
+  // R5 — Breakeven vs preço atual
+  if (_lastScResult && _lastScResult.preco_breakeven && _lastScResult.preco_usado) {
+    const be    = _lastScResult.preco_breakeven;
+    const atual = _lastScResult.preco_usado;
+    const unid  = _lastScResult.preco_breakeven_unidade || 'R$/@';
+    const ratio = be / atual;
+    if (ratio > 1.10) {
+      recs.push({
+        nivel: 'critico',
+        icon: '🔴',
+        titulo: 'Preço mínimo acima do mercado',
+        desc: `Preço mínimo (${fR2(be)} ${unid}) está ${((ratio-1)*100).toFixed(0)}% acima do preço atual (${fR2(atual)} ${unid}).`,
+        impacto: `Gap: ${fR2(be - atual)} ${unid}`
+      });
+    } else if (ratio > 1.0) {
+      recs.push({
+        nivel: 'atencao',
+        icon: '🟡',
+        titulo: 'Preço no limite do breakeven',
+        desc: `Preço mínimo (${fR2(be)}) próximo ao mercado (${fR2(atual)} ${unid}). Margem de segurança pequena.`,
+        impacto: `Gap: ${fR2(be - atual)} ${unid}`
+      });
+    } else {
+      recs.push({
+        nivel: 'bom',
+        icon: '🟢',
+        titulo: 'Preço acima do breakeven',
+        desc: `Preço atual (${fR2(atual)}) acima do mínimo necessário (${fR2(be)} ${unid}).`,
+        impacto: `Folga: ${fR2(atual - be)} ${unid}`
+      });
+    }
+  }
+
+  // Ordenar: crítico → atenção → bom
+  const ordem = { critico: 0, atencao: 1, bom: 2 };
+  recs.sort((a, b) => ordem[a.nivel] - ordem[b.nivel]);
+
+  // Máximo 5 itens
+  const top = recs.slice(0, 5);
+
+  // Badge de resumo
+  const nCrit = top.filter(r => r.nivel === 'critico').length;
+  const nAten = top.filter(r => r.nivel === 'atencao').length;
+  if (badge) {
+    if (nCrit > 0) {
+      badge.textContent = `${nCrit} crítico${nCrit>1?'s':''}`;
+      badge.style.color = 'var(--rd)';
+    } else if (nAten > 0) {
+      badge.textContent = `${nAten} atenção`;
+      badge.style.color = 'var(--am)';
+    } else {
+      badge.textContent = 'tudo certo';
+      badge.style.color = 'var(--g)';
+    }
+  }
+
+  // Renderizar
+  if (top.length === 0 || top.every(r => r.nivel === 'bom')) {
+    body.innerHTML = `<div style="color:var(--g);font-family:var(--fb);font-size:.85rem;display:flex;align-items:center;gap:8px">
+      <span style="font-size:1.2rem">✅</span> Fazenda dentro dos parâmetros esperados.
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = top.map(r => `
+    <div class="rec-item rec-nivel-${r.nivel}">
+      <div class="rec-icon">${r.icon}</div>
+      <div class="rec-content">
+        <div class="rec-titulo">${r.titulo}</div>
+        <div class="rec-desc">${r.desc}</div>
+        ${r.impacto ? `<div class="rec-impacto">${r.impacto}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
 }
 
 function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
@@ -1612,7 +1720,6 @@ function recalcCiclo(){
   if(!document.getElementById('s-cost-tbody')?.children.length) renderCostTableS();
   else hlCostLevel();
   const d=calcCiclo();
-  gerarRecomendacoes();
   const nb=d.niv;
   const nbLbl={baixo:'Baixo',medio:'Médio',alto:'Alto'}[nb];
 
@@ -1673,6 +1780,7 @@ function recalcCiclo(){
   if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
   const resBox=ki('s-res-box');
   if(resBox){const pos=d.res>=0;resBox.innerHTML=`<div class="res-box ${pos?'pos':'neg'}"><div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Líquido Anual</div><div style="font-family:var(--fn);font-weight:800;font-size:2.2rem;line-height:1;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res)}</div></div>${d.totVend>0?`<div style="text-align:right"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-bottom:4px">Por animal vendido</div><div style="font-family:var(--fn);font-weight:700;font-size:1.2rem;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res/d.totVend)}</div></div>`:''}</div>`;}
+  gerarRecomendacoes(d);
 }
 
 function showScSub(id,btn){
@@ -1896,7 +2004,7 @@ function renderSc(d){
     document.getElementById('sc-result').insertAdjacentHTML('beforeend', renderBreakevenHTML(d));
     atualizarSlider(d.preco_usado || d.preco_breakeven);
   }
-  gerarRecomendacoes();
+  gerarRecomendacoes(calcCiclo());
 }
 
 // ── NAVIGATION
