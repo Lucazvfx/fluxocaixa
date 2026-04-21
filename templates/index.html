@@ -310,7 +310,6 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <span id="hdr-indicador" class="ml-acc" style="cursor:default" title="Indicador Scot RO (R$/arroba)">Indicador RO: --</span>
   <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
   <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">? Ajuda</button>
-  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
 </div>
   </div>
 </header>
@@ -505,10 +504,10 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           </div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
+              <div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
+              <div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
+              <div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
             </div>
           </div>
         </div>
@@ -516,7 +515,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
               <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
               <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
               <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
@@ -541,8 +540,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
               <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="350" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Vaca (@)</label><input type="number" id="s-peso-vaca" value="17" step="0.5" min="6" max="25" oninput="recalcCiclo();validarCampo(this,6,25)"></div>
               <div class="field"><label>Preço @ Vaca (R$)</label><input type="number" id="s-preco-arr-vaca" value="290" min="1" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="4" max="15" oninput="recalcCiclo();validarCampo(this,4,15)"></div>
+              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="350" min="1" oninput="recalcCiclo()"></div>
             </div>
             <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
           </div>
@@ -599,7 +598,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         </div>
       </div>
     </div>
-    <button class="btn-p" style="margin-top:16px" onclick="recalcCiclo()"><span>↻ Recalcular Tudo</span></button>
+    <button class="btn-p" style="margin-top:16px" id="btn-recalc-cen" onclick="recalcCiclo()"><span>↻ Recalcular Tudo</span></button>
   </div>
 
   <!-- ── Rebanho ── -->
@@ -697,10 +696,10 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
         <div class="cb">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="320" min="1" oninput="runSc()"></div>
+            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="320" min="1" oninput="runSc();validarCampo(this,1,2000)"></div>
             <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
             <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
-            <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="sc-peso" value="8" min="4" max="20" step="0.5" oninput="runSc()"></div>
+            <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="sc-peso" value="8" min="4" max="20" step="0.5" oninput="runSc();validarCampo(this,4,20)"></div>
           </div>
           <div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">
             Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.
@@ -803,6 +802,8 @@ const fR=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');
 const fP=n=>(n*100).toFixed(1)+'%';
 
 let lastVals=null, curSc='otimista', curCiclo='CICLO_COMPLETO', sliderData=null;
+let _tutStep = 0;
+let _lastScResult = null;
 
 // ── BUILD TABLE
 function buildTable(){
@@ -1098,6 +1099,7 @@ function renderResult(data){
   if(data.breakeven_estimado && data.breakeven_estimado.preco_breakeven){
     document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBreakevenCompactoHTML(data.breakeven_estimado));
   }
+  gerarRecomendacoes();
 }
 
 const _FAIXA_COR   = {abaixo:'var(--rd)', medio:'var(--am)', bom:'var(--g)', excelente:'#22D3EE'};
@@ -1202,22 +1204,6 @@ let CUSTO_S={
   medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220},
   alto:  {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280}
 };
-function validarCampo(el, min, max) {
-  const v = parseFloat(el.value);
-  const ok = !isNaN(v) && v >= min && v <= max;
-  el.style.borderColor = ok ? '' : 'var(--rd)';
-  let msg = el.parentNode.querySelector('.v-err');
-  if (!msg) {
-    msg = document.createElement('div');
-    msg.className = 'v-err';
-    msg.style.cssText = 'font-family:var(--fm);font-size:.55rem;color:var(--rd);margin-top:3px';
-    el.parentNode.appendChild(msg);
-  }
-  msg.textContent = ok ? '' : `Deve ser entre ${min} e ${max}`;
-  validarTudo();
-  return ok;
-}
-
 const _REGRAS_VALIDACAO = [
   ['c-nat',           1,   100],
   ['p-desmama',       1,   100],
@@ -1235,7 +1221,31 @@ const _REGRAS_VALIDACAO = [
   ['p-meses-recria',  1,    36],
   ['s-peso-boi',      8,    30],
   ['s-peso-vaca',     6,    25],
+  ['s-bez-arr',      4,    15],
+  ['s-nat',          1,   100],
+  ['s-mat',          0, 99999],
+  ['s-fem',          0, 99999],
+  ['s-mac',          0, 99999],
+  ['s-boi',          0, 99999],
+  ['sc-preco-arr',   1,  2000],
+  ['sc-peso',        4,    20],
 ];
+
+function validarCampo(el, min, max) {
+  const v = parseFloat(el.value);
+  const ok = !isNaN(v) && v >= min && v <= max;
+  el.style.borderColor = ok ? '' : 'var(--rd)';
+  let msg = el.parentNode.querySelector('.v-err');
+  if (!msg) {
+    msg = document.createElement('div');
+    msg.className = 'v-err';
+    msg.style.cssText = 'font-family:var(--fm);font-size:.55rem;color:var(--rd);margin-top:3px';
+    el.parentNode.appendChild(msg);
+  }
+  msg.textContent = ok ? '' : `Deve ser entre ${min} e ${max}`;
+  validarTudo();
+  return ok;
+}
 
 function validarTudo() {
   let invalido = false;
@@ -1249,6 +1259,77 @@ function validarTudo() {
   });
   const btn = document.getElementById('btn-class');
   if (btn) btn.disabled = invalido;
+  const btnCen = document.getElementById('btn-recalc-cen');
+  if (btnCen) btnCen.disabled = invalido;
+}
+
+function gerarRecomendacoes() {
+  if (!lastVals && !_lastScResult) return;
+  
+  const d = _lastScResult || calcCiclo();
+  const recBody = document.getElementById('rec-body');
+  const recBadge = document.getElementById('rec-badge');
+  if (!recBody) return;
+
+  let recs = [];
+  let score = 100;
+
+  // Analisa Natalidade
+  const nat = d.nat * 100;
+  if (nat < 65) {
+    recs.push({nivel: 'critico', icon: '⚠️', t: 'Natalidade Crítica', d: `Sua taxa de natalidade (${nat.toFixed(1)}%) está muito abaixo da média de RO (78%). Isso inviabiliza o lucro da cria.`, imp: 'Impacto: Altíssimo'});
+    score -= 40;
+  } else if (nat < 78) {
+    recs.push({nivel: 'atencao', icon: '🔍', t: 'Oportunidade na Cria', d: `Melhore a suplementação das matrizes para atingir a média regional de 78%.`, imp: 'Impacto: Médio'});
+    score -= 15;
+  }
+
+  // Analisa Mortalidade
+  const mort = (parseFloat(document.getElementById('sc-mort')?.value) || 3);
+  if (mort > 5) {
+    recs.push({nivel: 'critico', icon: '☠️', t: 'Mortalidade Elevada', d: `Mortalidade de ${mort}% acima do limite técnico. Revise protocolos sanitários e vacinação.`, imp: 'Impacto: Alto'});
+    score -= 30;
+  }
+
+  // Analisa Peso Abate (Boi)
+  if (d.pesoBoi < 17) {
+    recs.push({nivel: 'atencao', icon: '⚖️', t: 'Peso de Abate Baixo', d: `Abater bois com menos de 17@ reduz a rentabilidade por carcaça. Considere estender a engorda.`, imp: 'Impacto: Médio'});
+    score -= 10;
+  }
+
+  // Analisa Relação Touro/Matriz
+  if (d.prop > 35) {
+        recs.push({nivel: 'atencao', icon: '🐂', t: 'Poucos Touros', d: `Relação de 1 touro para ${d.prop.toFixed(0)} matrizes pode prejudicar a taxa de prenhez. O ideal é 1:25 a 1:30.`, imp: 'Impacto: Médio'});
+    score -= 10;
+  }
+
+  if (recs.length === 0) {
+    recBody.innerHTML = `<div style="text-align:center;padding:20px;color:var(--g)">
+      <div style="font-size:2rem;margin-bottom:10px">✅</div>
+      <div style="font-family:var(--fn);font-weight:700">Fazenda em Ótimo Estado</div>
+      <div style="font-size:.8rem;color:var(--sb)">Indicadores dentro ou acima das médias regionais de Rondônia.</div>
+    </div>`;
+    if (recBadge) recBadge.textContent = 'SAÚDE: EXCELENTE';
+    if (recBadge) recBadge.style.color = 'var(--g)';
+  } else {
+    recBody.innerHTML = recs.map(r => `
+      <div class="rec-item rec-nivel-${r.nivel}">
+        <div class="rec-icon">${r.icon}</div>
+        <div class="rec-content">
+          <div class="rec-titulo">${r.t}</div>
+          <div class="rec-desc">${r.d}</div>
+          <div class="rec-impacto">${r.imp}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    const status = score > 80 ? 'BOM' : (score > 50 ? 'ATENÇÃO' : 'CRÍTICO');
+    const cor = score > 80 ? 'var(--g)' : (score > 50 ? 'var(--am)' : 'var(--rd)');
+    if (recBadge) {
+      recBadge.textContent = `SAÚDE: ${status} (${score} pts)`;
+      recBadge.style.color = cor;
+    }
+  }
 }
 
 function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
@@ -1340,6 +1421,7 @@ function recalcCiclo(){
   if(!document.getElementById('s-cost-tbody')?.children.length) renderCostTableS();
   else hlCostLevel();
   const d=calcCiclo();
+  gerarRecomendacoes();
   const nb=d.niv;
   const nbLbl={baixo:'Baixo',medio:'Médio',alto:'Alto'}[nb];
 
@@ -1623,6 +1705,7 @@ function renderSc(d){
     document.getElementById('sc-result').insertAdjacentHTML('beforeend', renderBreakevenHTML(d));
     atualizarSlider(d.preco_usado || d.preco_breakeven);
   }
+  gerarRecomendacoes();
 }
 
 // ── NAVIGATION
@@ -1733,8 +1816,7 @@ const _TUT_STEPS = [
     desc: 'O <b>DASHBOARD</b> atualiza em tempo real conforme você digita. Veja composição do rebanho, animais vendidos, receita por categoria e o resultado financeiro do ano.',
   },
 ];
-let _tutStep = 0;
-let _lastScResult = null;
+
 
 function tutRender() {
   const s = _TUT_STEPS[_tutStep];
@@ -1775,6 +1857,8 @@ document.getElementById('tut-overlay').addEventListener('click', function(e) {
 });
 
 if (!localStorage.getItem('tut_visto')) tutAbrir();
+
+
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
   <p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p>

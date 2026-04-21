@@ -274,7 +274,7 @@ def comparar_modelos(X, y, cv_folds=5):
         
         scores_f1 = cross_val_score(pipeline, X, y, cv=cv, scoring='f1_macro')
         print(f"\n{'='*50}")
-        print(f"📊 {nome}")
+        print(f"[ML] {nome}")
         print(f"F1-macro médio: {scores_f1.mean():.4f} (+/- {scores_f1.std():.4f})")
         
         y_pred = cross_val_predict(pipeline, X, y, cv=cv)
@@ -292,7 +292,7 @@ def comparar_modelos(X, y, cv_folds=5):
         }
     
     melhor_nome = max(resultados, key=lambda k: resultados[k]['f1_mean'])
-    print(f"\n🏆 Melhor modelo: {melhor_nome} (F1={resultados[melhor_nome]['f1_mean']:.4f})")
+    print(f"\nMelhor modelo: {melhor_nome} (F1={resultados[melhor_nome]['f1_mean']:.4f})")
     return resultados[melhor_nome]['pipeline']
 
 
@@ -321,7 +321,7 @@ def treinar_modelo(otimizar_hiperparams=True):
     
     # 2. Hyperparameter tuning (se for XGBoost e solicitado)
     if otimizar_hiperparams and isinstance(melhor_pipeline.named_steps['model'], XGBClassifier):
-        print("\n🔍 Otimizando hiperparâmetros do XGBoost com GridSearchCV...")
+        print("\nOtimizando hiperparametros do XGBoost com GridSearchCV...")
         param_grid = {
             'model__n_estimators': [100, 200, 300],
             'model__max_depth': [3, 5, 7],
@@ -333,10 +333,10 @@ def treinar_modelo(otimizar_hiperparams=True):
         )
         grid.fit(X, y)
         melhor_pipeline = grid.best_estimator_
-        print(f"✅ Melhores parâmetros: {grid.best_params_}")
+        print(f" Melhores parâmetros: {grid.best_params_}")
         print(f"Melhor F1-macro (CV): {grid.best_score_:.4f}")
     elif otimizar_hiperparams and isinstance(melhor_pipeline.named_steps['model'], MLPClassifier):
-        print("\n🔍 Otimizando hiperparâmetros da MLP...")
+        print("\nOtimizando hiperparametros da MLP...")
         param_grid = {
             'model__hidden_layer_sizes': [(50,), (100,), (100, 50)],
             'model__alpha': [0.0001, 0.001, 0.01],
@@ -347,14 +347,14 @@ def treinar_modelo(otimizar_hiperparams=True):
         )
         grid.fit(X, y)
         melhor_pipeline = grid.best_estimator_
-        print(f"✅ Melhores parâmetros: {grid.best_params_}")
+        print(f" Melhores parâmetros: {grid.best_params_}")
         print(f"Melhor F1-macro (CV): {grid.best_score_:.4f}")
     
     _pipeline = melhor_pipeline
     
     # Avaliação final no dataset completo
     y_pred = _pipeline.predict(X)
-    print("\n📈 Relatório final (todos os dados):")
+    print("\nRelatorio final (todos os dados):")
     print(classification_report(y, y_pred, target_names=TIPOS))
     
     # Métricas para salvar
@@ -992,7 +992,7 @@ CENARIOS = {
     'crescimento': {
         'nome': 'Crescimento Gradual',
         'desc': 'Expansão sustentável com reinvestimento de resultados.',
-        'emoji': '📈',
+        'emoji': '',
         'mods': {'nat': 1.03, 'mort': 0.90, 'desc': 0.95, 'preco': 1.02}
     },
     'especulativo': {

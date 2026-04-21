@@ -1,8 +1,7 @@
 """
-Fluxo de Gestão — Servidor Flask
+Fluxo de Gestão - Servidor Flask
 """
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler # IMPORT NOVO: Agendador
 import os, re, tempfile, subprocess, threading
 
@@ -19,48 +18,31 @@ from scraper import obter_precos_arroba
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'fluxo-gestao-dev-secret-2026')
 
-# ── Flask-Login ──────────────────────────────────────────────────────────────
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-login_manager.login_message = 'Faça login para acessar o sistema.'
-
-class User(UserMixin):
-    def __init__(self, data: dict):
-        self.id    = data['id']
-        self.email = data['email']
-        self.nome  = data['nome']
-        self.plano = data.get('plano', 'free')
-
-@login_manager.user_loader
-def load_user(user_id):
-    u = db.buscar_usuario_id(int(user_id))
-    return User(u) if u else None
-
 # ── Startup: carrega modelo do disco ou treina do zero ──────────────────────
 _saved = carregar_modelo()
 if _saved:
     stats = _saved
-    print(f"✅ Modelo carregado do disco | Acurácia: {stats['accuracy_mean']*100:.1f}% | Amostras: {stats['n_samples']}")
+    print(f"Modelo carregado do disco | Acuracia: {stats['accuracy_mean']*100:.1f}% | Amostras: {stats['n_samples']}")
 else:
-    print("🧠 Treinando modelo ML (primeira execução)...")
+    print("Treinando modelo ML (primeira execucao)...")
     stats = treinar_modelo()
-    print(f"✅ Modelo treinado | Acurácia CV: {stats['accuracy_mean']*100:.1f}% ± {stats['accuracy_std']*100:.1f}% | Amostras: {stats['n_samples']}")
+    print(f"Modelo treinado | Acuracia CV: {stats['accuracy_mean']*100:.1f}% ± {stats['accuracy_std']*100:.1f}% | Amostras: {stats['n_samples']}")
 
 db.init_db()
-print("🗃️  Banco SQLite inicializado.")
+print("Banco SQLite inicializado.")
 
 # ── Automação: Cotações Diárias (Scraper) ────────────────────────────────────
 def rotina_diaria_cotacoes():
     """Função executada em background para atualizar preços da arroba."""
-    print("📈 [Scraper] A iniciar a busca automática de cotações...")
+    print("[Scraper] A iniciar a busca automatica de cotacoes...")
     try:
         precos = obter_precos_arroba()
         # Só guarda se os preços forem válidos
         if precos['boi'] > 0 or precos['vaca'] > 0:
             db.guardar_cotacao_diaria(precos)
-            print("✅ [Scraper] Cotações atualizadas no banco de dados.")
+            print("[Scraper] Cotacoes atualizadas no banco de dados.")
     except Exception as e:
-        print(f"❌ [Scraper] Erro na rotina: {e}")
+        print(f"[Scraper] Erro na rotina: {e}")
 
 # Configura e inicia o agendador de tarefas
 scheduler = BackgroundScheduler(daemon=True)
@@ -89,66 +71,18 @@ def _auto_retrain():
             _retraining = False
 
 
-# ── Auth routes ─────────────────────────────────────────────────────────────
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    erro = None
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        senha = request.form.get('senha', '')
-        u = db.verificar_senha(email, senha)
-        if u:
-            login_user(User(u), remember=True)
-            return redirect(url_for('index'))
-        erro = 'E-mail ou senha incorretos.'
-    return render_template('login.html', erro=erro)
-
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'viniciuslukas353@gmail.com')
-
-@app.route('/cadastro', methods=['GET', 'POST'])
-@login_required
-def cadastro():
-    if current_user.email != ADMIN_EMAIL:
-        return redirect(url_for('index'))
-    erro = None
-    ok   = None
-    if request.method == 'POST':
-        nome  = request.form.get('nome', '').strip()
-        email = request.form.get('email', '').strip()
-        senha = request.form.get('senha', '')
-        if not nome or not email or len(senha) < 6:
-            erro = 'Preencha todos os campos. Senha mínima: 6 caracteres.'
-        elif db.buscar_usuario_email(email):
-            erro = 'E-mail já cadastrado.'
-        else:
-            db.criar_usuario(email, nome, senha)
-            ok = f'Usuário {nome} ({email}) criado com sucesso.'
-    return render_template('cadastro.html', erro=erro, ok=ok)
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
-
 # ── Fazendas ─────────────────────────────────────────────────────────────────
 @app.route('/api/fazendas', methods=['GET'])
-@login_required
 def api_listar_fazendas():
-    return jsonify({'fazendas': db.listar_fazendas(current_user.id)})
+    return jsonify({'fazendas': db.listar_fazendas()})
 
 @app.route('/api/fazendas', methods=['POST'])
-@login_required
 def api_criar_fazenda():
     data = request.json
     nome = (data.get('nome') or '').strip()
     if not nome:
         return jsonify({'erro': 'Nome obrigatório'}), 400
     fid = db.criar_fazenda(
-        user_id=current_user.id,
         nome=nome,
         proprietario=data.get('proprietario', ''),
         municipio=data.get('municipio', ''),
@@ -157,27 +91,24 @@ def api_criar_fazenda():
     return jsonify({'ok': True, 'id': fid})
 
 @app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
-@login_required
 def api_historico_fazenda(fid):
-    f = db.buscar_fazenda(fid, current_user.id)
+    f = db.buscar_fazenda(fid)
     if not f:
         return jsonify({'erro': 'Fazenda não encontrada'}), 404
-    hist = db.historico_fazenda(fid, current_user.id)
+    hist = db.historico_fazenda(fid)
     return jsonify({'fazenda': dict(f), 'historico': hist})
 
 
 # ── App principal ─────────────────────────────────────────────────────────────
 @app.route('/')
-@login_required
 def index():
-    fazendas = db.listar_fazendas(current_user.id)
+    fazendas = db.listar_fazendas()
     # Busca as cotações do dia para mandar para o Frontend (index.html)
     cotacoes_dia = db.obter_cotacoes_atuais() 
     return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
-                           usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia)
+                           fazendas=fazendas, cotacoes=cotacoes_dia)
 
 @app.route('/api/classificar', methods=['POST'])
-@login_required
 def api_classificar():
     data = request.json
     v = data.get('valores', [])
@@ -227,7 +158,6 @@ def api_classificar():
                     'breakeven_estimado': breakeven_est})
 
 @app.route('/api/confirmar', methods=['POST'])
-@login_required
 def api_confirmar():
     """Confirma ou corrige a classificação e dispara auto-retreino em background."""
     data = request.json
@@ -246,7 +176,6 @@ def api_confirmar():
         return jsonify({'erro': str(e)}), 400
 
 @app.route('/api/retrain', methods=['POST'])
-@login_required
 def api_retrain():
     """Retreina o modelo com dados base + registros confirmados do BD."""
     global stats
@@ -255,13 +184,11 @@ def api_retrain():
     return jsonify({**stats, 'ok': True})
 
 @app.route('/api/historico', methods=['GET'])
-@login_required
 def api_historico():
     limit = min(int(request.args.get('limit', 60)), 200)
     return jsonify({'registros': db.listar(limit), 'stats': db.stats()})
 
 @app.route('/api/db-stats', methods=['GET'])
-@login_required
 def api_db_stats():
     s = db.stats()
     s['accuracy'] = stats.get('accuracy_mean', 0)
@@ -328,7 +255,6 @@ def api_cenarios():
 
 # ── Rota Nova: Matemática Financeira da Arroba ──────────────────────────────
 @app.route('/api/estimativa-valor', methods=['POST'])
-@login_required
 def api_estimativa_valor():
     """Calcula o valor estimado de um animal baseado no peso, sexo e cotação do dia."""
     data = request.json
@@ -405,7 +331,7 @@ def extrair_texto_pdf(path: str) -> str:
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout
     except FileNotFoundError:
-        pass  # pdftotext não instalado — usa pdfplumber
+        pass  # pdftotext não instalado - usa pdfplumber
 
     try:
         import pdfplumber
@@ -517,7 +443,7 @@ def parsear_indea(text: str) -> dict:
     }
 
 # ─────────────────────────────────────────────
-# PARSER IDARON-RO — extração por tabela (formulário de anotações)
+# PARSER IDARON-RO - extração por tabela (formulário de anotações)
 # ─────────────────────────────────────────────
 _FAIXA_PATS = [
     (r'0\s*[AÀ]\s*0?6\s*(M[EÊ]S)?|ATÉ\s*6|ATE\s*6',           'f00'),
@@ -682,7 +608,7 @@ def _parse_idaron_words(pdf_path: str) -> dict:
         return _animais_vazios()
 
 # ─────────────────────────────────────────────
-# PARSER IDARON-RO — texto linha a linha (fallback)
+# PARSER IDARON-RO - texto linha a linha (fallback)
 # ─────────────────────────────────────────────
 def _parse_idaron_linhas(text: str) -> dict:
     animais = _animais_vazios()
@@ -747,7 +673,7 @@ def _parse_idaron_linhas(text: str) -> dict:
     return animais
 
 # ─────────────────────────────────────────────
-# PARSER IDARON-RO — orquestrador
+# PARSER IDARON-RO - orquestrador
 # ─────────────────────────────────────────────
 def parsear_idaron(text: str, pdf_path: str = None) -> dict:
     fazenda = municipio = proprietario = cpf = data_saldo = ie = ''

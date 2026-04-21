@@ -183,8 +183,8 @@ def verificar_senha(email: str, senha: str) -> dict | None:
 # ─────────────────────────────────────────────
 # FAZENDAS
 # ─────────────────────────────────────────────
-def criar_fazenda(user_id: int, nome: str, proprietario: str = '',
-                  municipio: str = '', estado: str = '') -> int:
+def criar_fazenda(nome: str, proprietario: str = '',
+                  municipio: str = '', estado: str = '', user_id: int = None) -> int:
     ph = _PH
     rid = _exec(
         f'''INSERT INTO fazendas (user_id, nome, proprietario, municipio, estado)
@@ -195,7 +195,7 @@ def criar_fazenda(user_id: int, nome: str, proprietario: str = '',
     )
     return int(rid)
 
-def listar_fazendas(user_id: int) -> list:
+def listar_fazendas() -> list:
     ph = _PH
     rows = _exec(
         f'''SELECT f.id, f.nome, f.proprietario, f.municipio, f.estado,
@@ -204,10 +204,9 @@ def listar_fazendas(user_id: int) -> list:
                    MAX(r.created_at) as ultima_analise
             FROM fazendas f
             LEFT JOIN registros r ON r.fazenda_id = f.id
-            WHERE f.user_id = {ph}
             GROUP BY f.id, f.nome, f.proprietario, f.municipio, f.estado, f.created_at
             ORDER BY ultima_analise DESC NULLS LAST, f.created_at DESC''',
-        (user_id,), fetch='all'
+        (), fetch='all'
     ) or []
     result = []
     for r in rows:
@@ -217,23 +216,22 @@ def listar_fazendas(user_id: int) -> list:
         result.append(d)
     return result
 
-def buscar_fazenda(fazenda_id: int, user_id: int) -> dict | None:
+def buscar_fazenda(fazenda_id: int) -> dict | None:
     ph = _PH
     return _exec(
-        f'SELECT * FROM fazendas WHERE id={ph} AND user_id={ph}',
-        (fazenda_id, user_id), fetch='one'
+        f'SELECT * FROM fazendas WHERE id={ph}',
+        (fazenda_id,), fetch='one'
     )
 
-def historico_fazenda(fazenda_id: int, user_id: int, limit: int = 30) -> list:
+def historico_fazenda(fazenda_id: int, limit: int = 30) -> list:
     ph = _PH
     rows = _exec(
         f'''SELECT r.id, r.valores, r.class_ml, r.class_conf, r.confianca,
                    r.nat_pct, r.created_at
             FROM registros r
-            JOIN fazendas f ON f.id = r.fazenda_id
-            WHERE r.fazenda_id={ph} AND f.user_id={ph}
+            WHERE r.fazenda_id={ph}
             ORDER BY r.created_at DESC LIMIT {ph}''',
-        (fazenda_id, user_id, limit), fetch='all'
+        (fazenda_id, limit), fetch='all'
     ) or []
     result = []
     for r in rows:
@@ -280,23 +278,14 @@ def exportar_treino():
             y.append(TIPOS.index(t))
     return X, y
 
-def listar(limit: int = 60, user_id: int = None) -> list:
+def listar(limit: int = 60) -> list:
     ph = _PH
-    if user_id:
-        rows = _exec(
-            f'''SELECT id, valores, class_ml, class_conf, confianca,
-                       fazenda, municipio, created_at
-                FROM registros WHERE user_id={ph}
-                ORDER BY created_at DESC LIMIT {ph}''',
-            (user_id, limit), fetch='all'
-        ) or []
-    else:
-        rows = _exec(
-            f'''SELECT id, valores, class_ml, class_conf, confianca,
-                       fazenda, municipio, created_at
-                FROM registros ORDER BY created_at DESC LIMIT {ph}''',
-            (limit,), fetch='all'
-        ) or []
+    rows = _exec(
+        f'''SELECT id, valores, class_ml, class_conf, confianca,
+                   fazenda, municipio, created_at
+            FROM registros ORDER BY created_at DESC LIMIT {ph}''',
+        (limit,), fetch='all'
+    ) or []
     result = []
     for r in rows:
         d = dict(r)
@@ -305,20 +294,16 @@ def listar(limit: int = 60, user_id: int = None) -> list:
         result.append(d)
     return result
 
-def stats(user_id: int = None) -> dict:
-    ph = _PH
-    where = f'WHERE user_id={ph}' if user_id else ''
-    params = (user_id,) if user_id else ()
-    total = (_exec(f'SELECT COUNT(*) as n FROM registros {where}',
-                   params, fetch='one') or {}).get('n', 0)
-    conf_where = f'WHERE user_id={ph} AND class_conf IS NOT NULL' if user_id else 'WHERE class_conf IS NOT NULL'
-    conf = (_exec(f'SELECT COUNT(*) as n FROM registros {conf_where}',
-                  params, fetch='one') or {}).get('n', 0)
+def stats() -> dict:
+    total = (_exec(f'SELECT COUNT(*) as n FROM registros',
+                   (), fetch='one') or {}).get('n', 0)
+    conf = (_exec(f'SELECT COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL',
+                  (), fetch='one') or {}).get('n', 0)
     rows = _exec(
         f'''SELECT class_conf, COUNT(*) as n FROM registros
-            {'WHERE user_id='+ph+' AND' if user_id else 'WHERE'} class_conf IS NOT NULL
+            WHERE class_conf IS NOT NULL
             GROUP BY class_conf''',
-        params, fetch='all'
+        (), fetch='all'
     ) or []
     return {
         'total':       int(total),
