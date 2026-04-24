@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fluxo de caixa — Gestão Jaine</title>
+<title>Fluxo de caixa - Bovinos</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="/static/favicon-cow.png">
 <style>
@@ -74,7 +74,6 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 .itbl tbody tr:hover{background:rgba(255,255,255,.02)}
 .itbl td{padding:8px 14px;font-size:.84rem}
 .fc{display:inline-flex;align-items:center;font-family:var(--fm);font-size:.67rem;padding:4px 10px;border-radius:6px;border:1px solid}
-/* CORRIGIDO: sem fundo, fonte igual ao resto */
 .ni{width:110px;background:transparent;border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px;font-family:var(--fb);font-size:.88rem;outline:none;transition:border-color .2s;text-align:center;-moz-appearance:textfield}
 .ni::-webkit-inner-spin-button{-webkit-appearance:none}
 .ni.nf{color:var(--g)}.ni.nm{color:var(--am)}
@@ -330,10 +329,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <div class="toast" id="toast"></div>
 
 <header>
-  <div class="logo"><div class=""></div>Fluxo de caixa<em>— Gestão Jaine</em></div>
+  <div class="logo"><div class=""></div>Fluxo de caixa<em>- Bovinos</em></div>
   <div class="hdr-r">
-  <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
-  <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
   <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi Gordo (R$/arroba)">Boi Gordo: --</span>
   <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca Gorda (R$/arroba)">Vaca Gorda: --</span>
   <span id="hdr-china" class="ml-acc" style="cursor:default" title="Cotação Boi China (R$/arroba)">Boi China: --</span>
@@ -438,15 +435,15 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 
 <!-- ═══ PDF ═══ -->
 <div class="panel" id="panel-pdf">
-  <div class="ptitle">Ler PDF do <em>INDEA</em></div>
+  <div class="ptitle">Ler PDF do <em></em></div>
   <p class="psub">Upload do "Saldo Atual da Exploração".</p>
 
   <div class="upzone" id="dz" onclick="document.getElementById('pdf-inp').click()">
     <span class="upzone-icon"></span>
-    <h2 class="upzone-title">Carregue o PDF<span></span></h2>
-    <p class="upzone-sub">Saldo Atual da Exploração · Arraste ou clique</p>
+    <h2 class="upzone-title">Carregue os PDFs<span></span></h2>
+    <p class="upzone-sub">Saldo Atual da Exploração · Selecione um ou mais · Arraste ou clique</p>
     <button class="btn-sm" style="margin:0 auto" onclick="event.stopPropagation();document.getElementById('pdf-inp').click()">📂 Selecionar PDF</button>
-    <input type="file" id="pdf-inp" accept=".pdf" style="display:none" onchange="lerPDF(this.files[0])">
+    <input type="file" id="pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDF(this.files)">
   </div>
   <div id="pdf-status" style="margin-top:16px;display:none"></div>
 </div>
@@ -486,6 +483,15 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <div class="ptitle" id="cenarios-titulo">Ciclo Completo — <em>Análise Detalhada</em></div>
   <p class="psub" id="cenarios-sub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
 
+  <!-- Presets de ciclo -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-right:4px">Preset:</span>
+    <button class="preset-btn" onclick="aplicarPreset('CRIA')">🐄 Cria</button>
+    <button class="preset-btn" onclick="aplicarPreset('RECRIA')">🐂 Recria</button>
+    <button class="preset-btn" onclick="aplicarPreset('ENGORDA')">🥩 Engorda</button>
+    <button class="preset-btn" onclick="aplicarPreset('CICLO_COMPLETO')">♻️ Ciclo Completo</button>
+  </div>
+
   <!-- Sub-nav -->
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
     <button class="sc-sn act" onclick="showScSub('dash',this)">Dashboard</button>
@@ -497,12 +503,13 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <button class="sc-sn" onclick="showScSub('5anos',this)">Projeção 5 Anos</button>
   </div>
 
-  <!-- KPI sempre visível -->
-  <div id="s-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
+  <!-- KPI sempre visível (agora com 5 cards) -->
+  <div id="s-kpi" style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
     <div class="pjc"><div class="pjc-l">Total Rebanho</div><div class="pjc-v cg" id="s-kpi-reb">—</div></div>
     <div class="pjc"><div class="pjc-l">Bezerros/Ano</div><div class="pjc-v cg" id="s-kpi-bez">—</div></div>
     <div class="pjc"><div class="pjc-l">Total Vendido</div><div class="pjc-v ca" id="s-kpi-vnd">—</div></div>
     <div class="pjc"><div class="pjc-l">Resultado</div><div class="pjc-v" id="s-kpi-res">—</div></div>
+    <div class="pjc"><div class="pjc-l">Taxa de Desfrute</div><div class="pjc-v cy" id="s-kpi-desfrute">—</div><div class="pjc-d">% do rebanho vendido/ano</div></div>
   </div>
 
   <!-- ── Dashboard ── -->
@@ -560,7 +567,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
+              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="65" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
               <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
               <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
               <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
@@ -582,11 +589,11 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="field"><label>Peso Boi (@)</label><input type="number" id="s-peso-boi" value="20" step="0.5" min="8" max="30" oninput="recalcCiclo();validarCampo(this,8,30)"></div>
-              <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="350" min="1" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="340" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Vaca (@)</label><input type="number" id="s-peso-vaca" value="17" step="0.5" min="6" max="25" oninput="recalcCiclo();validarCampo(this,6,25)"></div>
               <div class="field"><label>Preço @ Vaca (R$)</label><input type="number" id="s-preco-arr-vaca" value="290" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="4" max="15" oninput="recalcCiclo();validarCampo(this,4,15)"></div>
-              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="350" min="1" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="340" min="1" oninput="recalcCiclo()"></div>
             </div>
             <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
           </div>
@@ -596,8 +603,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros — CRIA</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Preço Bezerro (R$/cab)</label><input type="number" id="p-preco-bezerro" value="1800" min="1" oninput="runSc();validarCampo(this,1,99999)"></div>
-              <div class="field"><label>Taxa de Desmama (%)</label><input type="number" id="p-desmama" value="80" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
+              <div class="field"><label>Preço Bezerro (R$/cab)</label><input type="number" id="p-preco-bezerro" value="2960" min="1" oninput="runSc();validarCampo(this,1,99999)"></div>
+              <div class="field"><label>Taxa de Desmama (%)</label><input type="number" id="p-desmama" value="75" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
             </div>
           </div>
         </div>
@@ -605,10 +612,10 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Parâmetros — RECRIA</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Peso Entrada (@)</label><input type="number" id="p-peso-ent-arr" value="8" step="0.5" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Peso Saída (@)</label><input type="number" id="p-peso-sai-arr" value="14" step="0.5" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Peso Entrada (@)</label><input type="number" id="p-peso-ent-arr" value="13.33" step="0.5" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Peso Saída (@)</label><input type="number" id="p-peso-sai-arr" value="20" step="0.5" min="1" oninput="runSc()"></div>
               <div class="field"><label>Meses de Recria</label><input type="number" id="p-meses-recria" value="12" min="1" max="36" oninput="runSc();validarCampo(this,1,36)"></div>
-              <div class="field"><label>Custo/Cabeça/Mês (R$)</label><input type="number" id="p-custo-cab-mes" value="80" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
+              <div class="field"><label>Custo/Cabeça/Mês (R$)</label><input type="number" id="p-custo-cab-mes" value="67" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
             </div>
           </div>
         </div>
@@ -616,10 +623,10 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros — ENGORDA</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Peso Entrada (kg)</label><input type="number" id="p-peso-ent-kg" value="300" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Peso Abate (kg)</label><input type="number" id="p-peso-sai-kg" value="520" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Peso Entrada (kg)</label><input type="number" id="p-peso-ent-kg" value="450" min="1" oninput="runSc()"></div>
+              <div class="field"><label>Peso Abate (kg)</label><input type="number" id="p-peso-sai-kg" value="540" min="1" oninput="runSc()"></div>
               <div class="field"><label>Rendimento Carcaça (%)</label><input type="number" id="p-rend-carcaca" value="52" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
-              <div class="field"><label>Custo/Cab/Dia (R$)</label><input type="number" id="p-custo-dia" value="12" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
+              <div class="field"><label>Custo/Cab/Dia (R$)</label><input type="number" id="p-custo-dia" value="13.76" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
               <div class="field"><label>Dias de Engorda</label><input type="number" id="p-dias-engorda" value="90" min="30" max="365" oninput="runSc();validarCampo(this,30,365)"></div>
             </div>
           </div>
@@ -741,9 +748,9 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
         <div class="cb">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="320" min="1" oninput="runSc();validarCampo(this,1,2000)"></div>
-            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
-            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
+            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="340" min="1" oninput="runSc();validarCampo(this,1,2000)"></div>
+            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="4" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
+            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="950" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
             <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="sc-peso" value="8" min="4" max="20" step="0.5" oninput="runSc();validarCampo(this,4,20)"></div>
           </div>
           <div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">
@@ -962,7 +969,7 @@ function buildTable(){
       <td class="tdc"><input type="number" class="ni nm" id="${f.key}_M" value="0" min="0" oninput="upd()"></td>
       <td class="tdc tdtot" id="${f.key}_T">0</td>
       <td class="tdc tdtot" id="${f.key}_P" style="color:var(--mu)">0%</td>
-    </tr>`;
+    </table>`;
   });
   upd();
 }
@@ -1104,12 +1111,14 @@ function toggleConds(){
 }
 
 // ── PDF
-async function lerPDF(file){
-  if(!file)return;
-  showLoading('Lendo PDF no servidor Python...');
-  const fd=new FormData();fd.append('pdf',file);
+async function lerPDF(files){
+  if(!files||!files.length)return;
+  const n=files.length;
+  showLoading(n>1?`Lendo ${n} PDFs no servidor Python...`:'Lendo PDF no servidor Python...');
+  const fd=new FormData();
+  for(const f of files)fd.append('pdf',f);
   try{
-    const res=await fetch('/api/ler-pdf',{method:'POST',body:fd});
+    const res=await fetch('/api/ler-pdfs',{method:'POST',body:fd});
     const data=await res.json();
     if(data.erro){toast(data.erro,true);return}
     mostrarPDFPreview(data);
@@ -1138,7 +1147,7 @@ function mostrarPDFPreview(data){
       </div>
     </div>
     <button class="btn-p" style="margin-top:16px" onclick="classificarPDF(${JSON.stringify(v)},${JSON.stringify(data)})"><span>🧠 Classificar com Machine Learning</span></button>`;
-  document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">PDF carregado: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outro</p><input type="file" id="pdf-inp" accept=".pdf" style="display:none" onchange="lerPDF(this.files[0])">`;
+  const _np=data.pdfs_processados||1;document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">${_np>1?_np+' PDFs carregados':'PDF carregado'}: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outros</p><input type="file" id="pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDF(this.files)">`;
 }
 
 async function classificarPDF(v,meta){
@@ -1191,6 +1200,14 @@ function renderResult(data){
     </div>`;
   }).join('');
 
+  // Estimativa de taxa de desfrute com base no tipo de ciclo
+  const desfruteEstimado = {
+    'CRIA': 0.30,
+    'RECRIA': 0.50,
+    'ENGORDA': 0.70,
+    'CICLO_COMPLETO': 0.40
+  }[tipo] * 100;
+
   document.getElementById('result-wrap').innerHTML=`
     <div class="rhero" style="border-color:${col}40;background:${col}08">
       <div class="rhero-grid">
@@ -1228,6 +1245,7 @@ function renderResult(data){
           ${mr('Razão ♀/♂',ind.ratio_fm,ind.ratio_fm>1?'g':'r')}
           ${mr('Bezerros estimados/ano',fN(ind.bezerros_est)+' cab.','g')}
           ${mr('% Matrizes',fP(ind.pct_matrizes/100),'c')}
+          ${mr('Taxa de Desfrute (estimada)', desfruteEstimado.toFixed(1) + '%', 'c')}
         </div>
       </div>
     </div>
@@ -1285,7 +1303,7 @@ function renderResult(data){
     document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBreakevenCompactoHTML(data.breakeven_estimado));
   }
   gerarRecomendacoes(calcCiclo());
-  }
+}
 
 const _FAIXA_COR   = {abaixo:'var(--rd)', medio:'var(--am)', bom:'var(--g)', excelente:'#22D3EE'};
 const _FAIXA_LABEL = {abaixo:'Abaixo da média RO', medio:'Média RO', bom:'Bom ✓', excelente:'Excelente ★'};
@@ -1385,9 +1403,9 @@ function getRecs(tipo,ind){
 
 // ── CICLO COMPLETO ENGINE ────────────────────────────────────────────────
 let CUSTO_S={
-  baixo: {matrizes:800,bois:600,femeas:400,machos:380,bezerros:180},
-  medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220},
-  alto:  {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280}
+  baixo: {matrizes:800, bois:600, femeas:400, machos:380, bezerros:180},
+  medio: {matrizes:950, bois:700, femeas:500, machos:450, bezerros:250},
+  alto:  {matrizes:1100, bois:850, femeas:600, machos:550, bezerros:320}
 };
 const _REGRAS_VALIDACAO = [
   ['c-nat',           1,   100],
@@ -1672,13 +1690,13 @@ function hlCostLevel(){
 
 function calcCiclo(){
   const mat=gS('s-mat'),fem=gS('s-fem'),mac=gS('s-mac'),boi=gS('s-boi');
-  const nat=gS('s-nat')/100||0.75;
+  const nat=gS('s-nat')/100||0.65;
   const prop=gS('s-propboi')||30;
   const rb=gS('s-renovboi')/100||0.2;
   const des=gS('s-desc')/100||0.3;
   const vbp=gS('s-vendbez')/100||0.3;
   const niv=document.getElementById('s-nivel')?.value||'medio';
-  const pArr=gS('s-preco-arr')||350;
+  const pArr=gS('s-preco-arr')||340;
   const pArrBoi=gS('s-preco-arr-boi')||pArr;
   const pArrVaca=gS('s-preco-arr-vaca')||pArr;
   const pesoBoi=gS('s-peso-boi')||20;
@@ -1701,12 +1719,13 @@ function calcCiclo(){
   const cresc=femR-desQ;
   const totReb=mat+fem+mac+boi+totBez;
   const totVend=bVend+desQ+bezV+bezMV;
+  const taxaDesfrute = totReb > 0 ? (totVend / totReb) * 100 : 0;
   const pBezCab=pBezArr*pArr;
   const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rBezM=bezMV*pBezCab,rTot=rBoi+rMat+rBez+rBezM;
   const cn=CUSTO_S[niv];
   const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez;
   const res=rTot-cTot;
-  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pesoBoi,pesoVaca,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pesoBoi,pesoVaca,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res, taxaDesfrute};
 }
 
 function makeBarsS(items,maxV,colors){
@@ -1742,6 +1761,8 @@ function recalcCiclo(){
   if(ki('s-kpi-vnd')) ki('s-kpi-vnd').textContent=fN(d.totVend)+' cab.';
   const resEl=ki('s-kpi-res');
   if(resEl){resEl.textContent=fR(d.res);resEl.className='pjc-v '+(d.res>=0?'cg':'cr');}
+  const desfruteEl=document.getElementById('s-kpi-desfrute');
+  if(desfruteEl) desfruteEl.textContent = d.taxaDesfrute.toFixed(1) + '%';
 
   // Dashboard bars
   const maxReb=Math.max(d.mat,d.fem,d.macRest,d.bNec,d.totBez,1);
@@ -1770,7 +1791,7 @@ function recalcCiclo(){
 
   // Vendas tab
   const tVnd=document.querySelector('#s-tbl-vendas tbody');
-  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`],['Bezerros M.',d.bezMV,`${fN(d.bezM)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
+  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`],['Bezerros M.',d.bezMV,`${fN(d.bezM)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<td><td style="font-family:var(--fn);font-weight:700">${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
 
   // Financeiro tab
   const tRec=document.querySelector('#s-tbl-rec tbody');
@@ -2021,7 +2042,7 @@ function resetApp(){clearAll();document.getElementById('tab-res').style.display=
 const dz2=document.getElementById('dz');
 dz2.addEventListener('dragover',e=>{e.preventDefault();dz2.classList.add('drag')});
 dz2.addEventListener('dragleave',()=>dz2.classList.remove('drag'));
-dz2.addEventListener('drop',e=>{e.preventDefault();dz2.classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.name.toLowerCase().endsWith('.pdf'))lerPDF(f)});
+dz2.addEventListener('drop',e=>{e.preventDefault();dz2.classList.remove('drag');const fs=Array.from(e.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.pdf'));if(fs.length)lerPDF(fs)});
 
 // ── UTILS
 function showLoading(t){document.getElementById('loading-ov').classList.add('show');document.getElementById('loading-txt').textContent=t}
