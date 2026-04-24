@@ -383,7 +383,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px">
           <button class="btn-sm" style="border-color:var(--g);color:var(--g)" onclick="criarFazenda()">＋ Criar</button>
-          <button class="btn-sm" onclick="document.getElementById('f_sel_faz').value='';carregarFazenda('');document.getElementById('nova-faz-form').style.display='none'">✕</button>
+          <button class="btn-sm" onclick="cancelarNovaFazenda()">✕</button>
         </div>
       </div>
       <div class="field" style="margin-top:14px"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
@@ -1015,7 +1015,7 @@ let lastRegistroId=null;
 async function carregarFazenda(fid){
   const nff=document.getElementById('nova-faz-form');
   if(fid==='__nova'){nff.style.display='flex';document.getElementById('nova-faz-nome').focus();return}
-  nff.style.display='none';
+  nff.style.display='none';document.getElementById('nova-faz-nome').value='';
   if(!fid){
     document.getElementById('f_faz').value='';
     document.getElementById('f_mun').value='';
@@ -1066,7 +1066,14 @@ async function criarFazenda(){
     document.getElementById('nova-faz-form').style.display='none';
     document.getElementById('nova-faz-nome').value='';
     toast('Fazenda "'+nome+'" criada');
+  }catch(e){toast('Erro ao criar fazenda. Tente novamente.',true)
   }finally{hideLoading()}
+}
+function cancelarNovaFazenda(){
+  document.getElementById('f_sel_faz').value='';
+  document.getElementById('f_id_faz').value='';
+  document.getElementById('nova-faz-form').style.display='none';
+  document.getElementById('nova-faz-nome').value='';
 }
 
 async function classificar(){
