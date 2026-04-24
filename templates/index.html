@@ -388,7 +388,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <button class="btn-sm" onclick="fillEx('recria')">Recria</button>
         <button class="btn-sm" onclick="fillEx('engorda')">Engorda</button>
         <button class="btn-sm" onclick="document.getElementById('insr-pdf-inp').click()">📂 Ler PDF</button>
-        <input type="file" id="insr-pdf-inp" accept=".pdf" style="display:none" onchange="lerPDFInserir(this.files[0]);this.value=''">
+        <input type="file" id="insr-pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDFInserir(this.files);this.value=''">
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
       </div>
     </div>
@@ -1084,12 +1084,14 @@ async function classificar(){
 }
 
 // ── PDF NO INSERIR DADOS
-async function lerPDFInserir(file){
-  if(!file)return;
-  showLoading('Lendo PDF...');
-  const fd=new FormData();fd.append('pdf',file);
+async function lerPDFInserir(files){
+  if(!files||!files.length)return;
+  const n=files.length;
+  showLoading(n>1?`Lendo ${n} PDFs...`:'Lendo PDF...');
+  const fd=new FormData();
+  for(const f of files)fd.append('pdf',f);
   try{
-    const res=await fetch('/api/ler-pdf',{method:'POST',body:fd});
+    const res=await fetch('/api/ler-pdfs',{method:'POST',body:fd});
     const data=await res.json();
     if(data.erro){toast(data.erro,true);return}
     FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=data.valores[i*2];document.getElementById(f.key+'_M').value=data.valores[i*2+1]});
@@ -1097,7 +1099,8 @@ async function lerPDFInserir(file){
     document.getElementById('f_mun').value=data.municipio||'';
     document.getElementById('f_prop').value=data.proprietario||'';
     upd();
-    toast('PDF carregado: '+(data.fazenda||'Exploração')+' ('+fN(data.total)+' animais)');
+    const _np=data.pdfs_processados||1;
+    toast((_np>1?_np+' PDFs carregados':'PDF carregado')+': '+(data.fazenda||'Exploração')+' ('+fN(data.total)+' animais)');
   }finally{hideLoading()}
 }
 
