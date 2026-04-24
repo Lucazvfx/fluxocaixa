@@ -557,7 +557,7 @@ def parsear_indea(text: str) -> dict:
         up = line.upper()
         if 'BOVINO' not in up:
             continue
-        m_qtd = re.search(r'(\d{2,6})\s*$', line.strip())
+        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
         if not m_qtd:
             continue
         qtd = int(m_qtd.group(1))
@@ -758,7 +758,7 @@ def _parse_idaron_linhas(text: str) -> dict:
         up = line.upper()
         if 'BOVINO' not in up:
             continue
-        m_qtd = re.search(r'(\d{2,6})\s*$', line.strip())
+        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
         if not m_qtd:
             continue
         qtd = int(m_qtd.group(1))
@@ -798,7 +798,7 @@ def _parse_idaron_linhas(text: str) -> dict:
         up = line.upper()
         if 'BOVINO' not in up:
             continue
-        m_qtd = re.search(r'(\d{2,6})\s*$', line.strip())
+        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
         if not m_qtd:
             continue
         qtd = int(m_qtd.group(1))
