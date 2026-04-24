@@ -412,6 +412,7 @@ def api_ler_pdfs():
         if not f.filename.lower().endswith('.pdf'):
             erros.append(f'{f.filename}: não é PDF')
             continue
+        tmp_path = None
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             tmp_path = tmp.name
             f.save(tmp_path)
@@ -426,8 +427,9 @@ def api_ler_pdfs():
                 dados = parsear_idaron(text, pdf_path=tmp_path)
                 if dados['total'] == 0:
                     dados = parsear_indea(text)
-            for i, v in enumerate(dados['valores']):
-                valores_acc[i] += v
+            for i, v in enumerate(dados.get('valores', [])):
+                if i < len(valores_acc):
+                    valores_acc[i] += v
             for campo in ('fazenda', 'municipio', 'proprietario', 'cpf', 'ie', 'data_saldo'):
                 if not meta[campo] and dados.get(campo):
                     meta[campo] = dados[campo]
@@ -435,10 +437,11 @@ def api_ler_pdfs():
         except Exception as e:
             erros.append(f'{f.filename}: {e}')
         finally:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     if processados == 0:
         return jsonify({'erro': 'Nenhum PDF válido processado', 'erros': erros}), 400
