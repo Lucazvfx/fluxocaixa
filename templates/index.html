@@ -1147,7 +1147,7 @@ function mostrarPDFPreview(data){
       </div>
     </div>
     <button class="btn-p" style="margin-top:16px" onclick="classificarPDF(${JSON.stringify(v)},${JSON.stringify(data)})"><span>🧠 Classificar com Machine Learning</span></button>`;
-  const _np=data.pdfs_processados||1;document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">${_np>1?_np+' PDFs carregados':'PDF carregado'}: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outros</p><input type="file" id="pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDF(this.files)">`;
+  const _np=data.pdfs_processados||1;document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">${_np>1?_np+' PDFs carregados':'PDF carregado'}: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outros</p><button class="btn-sm" style="margin:0 auto" onclick="event.stopPropagation();document.getElementById('pdf-inp').click()">📂 Selecionar PDFs</button><input type="file" id="pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDF(this.files)">`;
 }
 
 async function classificarPDF(v,meta){
