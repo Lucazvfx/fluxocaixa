@@ -396,6 +396,61 @@ def api_ler_pdf():
         except OSError:
             pass
 
+@app.route('/api/ler-pdfs', methods=['POST'])
+@login_required
+def api_ler_pdfs():
+    arquivos = request.files.getlist('pdf')
+    if not arquivos:
+        return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
+
+    valores_acc = [0] * 10
+    meta = {'fazenda': '', 'municipio': '', 'proprietario': '', 'cpf': '', 'ie': '', 'data_saldo': ''}
+    processados = 0
+    erros = []
+
+    for f in arquivos:
+        if not f.filename.lower().endswith('.pdf'):
+            erros.append(f'{f.filename}: não é PDF')
+            continue
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+            tmp_path = tmp.name
+            f.save(tmp_path)
+        try:
+            text = extrair_texto_pdf(tmp_path)
+            orig = detectar_origem(text)
+            if orig == 'IDARON':
+                dados = parsear_idaron(text, pdf_path=tmp_path)
+            elif orig == 'INDEA':
+                dados = parsear_indea(text)
+            else:
+                dados = parsear_idaron(text, pdf_path=tmp_path)
+                if dados['total'] == 0:
+                    dados = parsear_indea(text)
+            for i, v in enumerate(dados['valores']):
+                valores_acc[i] += v
+            for campo in ('fazenda', 'municipio', 'proprietario', 'cpf', 'ie', 'data_saldo'):
+                if not meta[campo] and dados.get(campo):
+                    meta[campo] = dados[campo]
+            processados += 1
+        except Exception as e:
+            erros.append(f'{f.filename}: {e}')
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    if processados == 0:
+        return jsonify({'erro': 'Nenhum PDF válido processado', 'erros': erros}), 400
+
+    return jsonify({
+        **meta,
+        'valores': valores_acc,
+        'total': sum(valores_acc),
+        'pdfs_processados': processados,
+        'erros': erros,
+    })
+
 @app.route('/api/modelo-info', methods=['GET'])
 @login_required
 def api_modelo_info():
