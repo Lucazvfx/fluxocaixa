@@ -1151,6 +1151,15 @@ async function lerPDFInserir(files){
     document.getElementById('f_mun').value=data.municipio||'';
     document.getElementById('f_prop').value=data.proprietario||'';
     upd();
+    const _sel=document.getElementById('f_sel_faz');
+    const _nomePDF=(data.fazenda||'').trim().toLowerCase();
+    if(_nomePDF&&_sel){
+      let _found='';
+      for(const _o of _sel.options){
+        if(_o.value&&_o.value!=='__nova'&&_o.textContent.toLowerCase().includes(_nomePDF)){_found=_o.value;break}
+      }
+      if(_found){_sel.value=_found;document.getElementById('f_id_faz').value=_found}
+    }
     const _np=data.pdfs_processados||1;
     toast((_np>1?_np+' PDFs carregados':'PDF carregado')+': '+(data.fazenda||'Exploração')+' ('+fN(data.total)+' animais)');
   }finally{hideLoading()}
