@@ -351,6 +351,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
   <button class="tab-btn" onclick="showTab('custos',this)">Custo/Cab.</button>
+  <button class="tab-btn" onclick="showTab('fazendas',this);abrirFazendas()">🏡 Fazendas</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -898,6 +899,14 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
       </div>
     </div>
   </div>
+</div>
+
+<!-- ═══ MINHAS FAZENDAS ═══ -->
+<div class="panel" id="panel-fazendas">
+  <div class="ptitle">Minhas <em>Fazendas</em></div>
+  <p class="psub">Histórico de análises por propriedade.</p>
+  <div id="faz-lista-wrap"></div>
+  <div id="faz-hist-wrap" style="display:none"></div>
 </div>
 
 <script>
@@ -2072,6 +2081,72 @@ function renderSc(d){
     atualizarSlider(d.preco_usado || d.preco_breakeven);
   }
   gerarRecomendacoes(calcCiclo());
+}
+
+// ── MINHAS FAZENDAS
+async function abrirFazendas(){
+  const lw=document.getElementById('faz-lista-wrap');
+  const hw=document.getElementById('faz-hist-wrap');
+  hw.style.display='none';hw.innerHTML='';
+  lw.style.display='block';
+  lw.innerHTML='<p style="color:var(--mu);padding:20px 0">Carregando...</p>';
+  try{
+    const res=await fetch('/api/fazendas');
+    const data=await res.json();
+    if(data.erro){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas.</p>';return}
+    const fzs=data.fazendas;
+    if(!fzs.length){lw.innerHTML='<p style="color:var(--mu);padding:20px 0">Nenhuma fazenda cadastrada ainda. Classifique um rebanho vinculando a uma fazenda para começar.</p>';return}
+    lw.innerHTML='<div style="display:grid;gap:12px">'+fzs.map(f=>`
+      <div class="card">
+        <div class="ch">
+          <div class="ct"><div class="cd"></div>${f.nome}</div>
+          <button class="btn-sm" onclick="verHistoricoFazenda(${f.id},'${f.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">Ver histórico</button>
+        </div>
+        <div class="cb" style="padding:12px 22px;font-size:.84rem;color:var(--sb)">
+          ${f.municipio||'—'} · <strong style="color:var(--tx)">${f.total_analises}</strong> análise${f.total_analises!==1?'s':''} · Última: ${f.ultima_analise?f.ultima_analise.slice(0,10):'—'}
+        </div>
+      </div>`).join('')+'</div>';
+  }catch(e){lw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>'}
+}
+
+async function verHistoricoFazenda(id,nome){
+  const lw=document.getElementById('faz-lista-wrap');
+  const hw=document.getElementById('faz-hist-wrap');
+  lw.style.display='none';
+  hw.style.display='block';
+  hw.innerHTML='<p style="color:var(--mu);padding:20px 0">Carregando histórico...</p>';
+  try{
+    const res=await fetch(`/api/fazendas/${id}/historico`);
+    const data=await res.json();
+    if(data.erro){hw.innerHTML='<p style="color:var(--rd)">Erro: '+data.erro+'</p>';return}
+    const hist=data.historico;
+    hw.innerHTML=`
+      <button class="btn-sm" style="margin-bottom:18px" onclick="abrirFazendas()">← Voltar</button>
+      <div class="ptitle" style="font-size:1.8rem;margin-bottom:6px;margin-top:4px">${nome}</div>
+      ${!hist.length
+        ?'<p style="color:var(--mu);padding:20px 0">Nenhuma análise salva ainda para esta fazenda.</p>'
+        :`<div class="card"><table class="ytbl">
+          <thead><tr><th>Data</th><th>Tipo</th><th class="r">Animais</th><th class="r">Confiança</th><th></th></tr></thead>
+          <tbody>${hist.map(r=>`<tr>
+            <td style="color:var(--sb);font-family:var(--fm);font-size:.78rem">${r.created_at.slice(0,10)}</td>
+            <td><span style="font-family:var(--fn);font-weight:700;font-size:.85rem;color:${TC[r.class_ml]}">${TE[r.class_ml]||''} ${TL[r.class_ml]||r.class_ml}</span></td>
+            <td class="r">${fN(r.valores.reduce((a,b)=>a+b,0))}</td>
+            <td class="r" style="color:var(--sb)">${r.confianca}%</td>
+            <td style="text-align:right"><button class="btn-sm" onclick="recarregarAnalise(${JSON.stringify(r.valores)},${r.nat_pct||75})">↩ Recarregar</button></td>
+          </tr>`).join('')}</tbody>
+        </table></div>`}`;
+  }catch(e){hw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>'}
+}
+
+function recarregarAnalise(valores,natPct){
+  FAIXAS.forEach((f,i)=>{
+    document.getElementById(f.key+'_F').value=valores[i*2];
+    document.getElementById(f.key+'_M').value=valores[i*2+1];
+  });
+  if(natPct)document.getElementById('c-nat').value=natPct;
+  upd();
+  showTab('entrada',document.querySelectorAll('.tab-btn')[0]);
+  toast('Análise recarregada no formulário');
 }
 
 // ── NAVIGATION
