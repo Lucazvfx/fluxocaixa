@@ -2092,6 +2092,7 @@ async function abrirFazendas(){
   lw.innerHTML='<p style="color:var(--mu);padding:20px 0">Carregando...</p>';
   try{
     const res=await fetch('/api/fazendas');
+    if(!res.ok){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas ('+res.status+').</p>';return}
     const data=await res.json();
     if(data.erro){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas.</p>';return}
     const fzs=data.fazendas;
@@ -2120,9 +2121,10 @@ async function verHistoricoFazenda(id,nome){
     const data=await res.json();
     if(data.erro){hw.innerHTML='<p style="color:var(--rd)">Erro: '+data.erro+'</p>';return}
     const hist=data.historico;
+    const _nomeEsc=nome.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     hw.innerHTML=`
       <button class="btn-sm" style="margin-bottom:18px" onclick="abrirFazendas()">← Voltar</button>
-      <div class="ptitle" style="font-size:1.8rem;margin-bottom:6px;margin-top:4px">${nome}</div>
+      <div class="ptitle" style="font-size:1.8rem;margin-bottom:6px;margin-top:4px">${_nomeEsc}</div>
       ${!hist.length
         ?'<p style="color:var(--mu);padding:20px 0">Nenhuma análise salva ainda para esta fazenda.</p>'
         :`<div class="card"><table class="ytbl">
@@ -2143,7 +2145,7 @@ function recarregarAnalise(valores,natPct){
     document.getElementById(f.key+'_F').value=valores[i*2];
     document.getElementById(f.key+'_M').value=valores[i*2+1];
   });
-  if(natPct)document.getElementById('c-nat').value=natPct;
+  document.getElementById('c-nat').value=natPct??75;
   upd();
   showTab('entrada',document.querySelectorAll('.tab-btn')[0]);
   toast('Análise recarregada no formulário');
