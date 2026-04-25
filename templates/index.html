@@ -601,11 +601,11 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
               <div class="field"><label>Peso Boi (@)</label><input type="number" id="s-peso-boi" value="20" step="0.5" min="8" max="30" oninput="recalcCiclo();validarCampo(this,8,30)"></div>
-              <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="340" min="1" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="0" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Vaca (@)</label><input type="number" id="s-peso-vaca" value="17" step="0.5" min="6" max="25" oninput="recalcCiclo();validarCampo(this,6,25)"></div>
-              <div class="field"><label>Preço @ Vaca (R$)</label><input type="number" id="s-preco-arr-vaca" value="290" min="1" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço @ Vaca (R$)</label><input type="number" id="s-preco-arr-vaca" value="0" min="1" oninput="recalcCiclo()"></div>
               <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="4" max="15" oninput="recalcCiclo();validarCampo(this,4,15)"></div>
-              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="340" min="1" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="0" min="1" oninput="recalcCiclo()"></div>
             </div>
             <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
           </div>
@@ -760,7 +760,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
         <div class="cb">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="340" min="1" oninput="runSc();validarCampo(this,1,2000)"></div>
+            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="0" min="1" oninput="runSc();validarCampo(this,1,2000)"></div>
             <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="4" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
             <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="950" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
             <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="sc-peso" value="8" min="4" max="20" step="0.5" oninput="runSc();validarCampo(this,4,20)"></div>
@@ -950,6 +950,13 @@ async function atualizarPrecos(){
 document.addEventListener('DOMContentLoaded', ()=>{
   atualizarPrecos();
   setInterval(atualizarPrecos, 1000 * 60 * 30);
+  if(_COTACOES_FALLBACK.boi>0){
+    _setBadgeCotacao('s-preco-arr-boi',_COTACOES_FALLBACK.boi);
+    _setBadgeCotacao('s-preco-arr',_COTACOES_FALLBACK.boi);
+    _setBadgeCotacao('sc-preco-arr',_COTACOES_FALLBACK.boi);
+    recalcCiclo();runSc();
+  }
+  if(_COTACOES_FALLBACK.vaca>0)_setBadgeCotacao('s-preco-arr-vaca',_COTACOES_FALLBACK.vaca);
 });
 </script>
 
@@ -2447,6 +2454,21 @@ function calcCustos(){
       <div style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-top:4px">${pArr>0&&custoArr>0?(pArr>custoArr?'Lucrando R$'+(pArr-custoArr).toFixed(2)+'/@ acima do ponto':'Prejuizo R$'+(custoArr-pArr).toFixed(2)+'/@ abaixo do ponto'):'informe o preco atual'}</div>
     </div>
   </div>`;
+}
+
+function _setBadgeCotacao(inputId,valor){
+  const el=document.getElementById(inputId);
+  if(!el||(parseFloat(el.value)||0)!==0)return;
+  el.value=valor.toFixed(2);
+  const field=el.closest('.field');
+  if(!field)return;
+  const bid='badge-cot-'+inputId;
+  if(document.getElementById(bid))return;
+  const span=document.createElement('span');
+  span.id=bid;span.textContent='↑ cotação hoje';
+  span.style.cssText='font-family:var(--fm);font-size:.52rem;color:var(--g);letter-spacing:1px';
+  field.appendChild(span);
+  el.addEventListener('input',()=>span.remove(),{once:true});
 }
 
 // Intercepta atualizarPrecos para verificar alertas e preencher calculadora
