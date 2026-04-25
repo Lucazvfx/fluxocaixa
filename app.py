@@ -121,6 +121,9 @@ rotina_diaria_cotacoes()
 _retraining = False
 _retrain_lock = threading.Lock()
 
+RETRAIN_A_CADA = 10              # retreina a cada N confirmações novas
+_confirmacoes_desde_retrain = 0  # contador em memória (zera no restart)
+
 def _auto_retrain():
     global stats, _retraining
     with _retrain_lock:
@@ -233,7 +236,8 @@ def api_classificar():
 @app.route('/api/confirmar', methods=['POST'])
 @login_required
 def api_confirmar():
-    """Confirma ou corrige a classificação e dispara auto-retreino em background."""
+    """Confirma ou corrige a classificação. Retreina a cada RETRAIN_A_CADA confirmações."""
+    global _confirmacoes_desde_retrain
     data = request.json
     rid  = data.get('registro_id')
     cls  = data.get('classificacao', '').strip().upper()
@@ -242,10 +246,20 @@ def api_confirmar():
     try:
         db.confirmar(int(rid), cls)
         s = db.stats()
-        # Dispara retreino em background se não houver um em andamento
-        if not _retraining:
+        _confirmacoes_desde_retrain += 1
+        if _confirmacoes_desde_retrain >= RETRAIN_A_CADA and not _retraining:
+            _confirmacoes_desde_retrain = 0
             threading.Thread(target=_auto_retrain, daemon=True).start()
-        return jsonify({'ok': True, 'stats': s, 'retraining': True})
+            retraining_agora = True
+        else:
+            retraining_agora = False
+        return jsonify({
+            'ok': True,
+            'stats': s,
+            'retraining': retraining_agora,
+            'confirmacoes_ate_retrain': RETRAIN_A_CADA - _confirmacoes_desde_retrain,
+            'limite_retrain': RETRAIN_A_CADA,
+        })
     except ValueError as e:
         return jsonify({'erro': str(e)}), 400
 
@@ -253,9 +267,10 @@ def api_confirmar():
 @login_required
 def api_retrain():
     """Retreina o modelo com dados base + registros confirmados do BD."""
-    global stats
+    global stats, _confirmacoes_desde_retrain
     X_extra, y_extra = db.exportar_treino()
     stats = retrain_com_dados(X_extra, y_extra)
+    _confirmacoes_desde_retrain = 0
     return jsonify({**stats, 'ok': True})
 
 @app.route('/api/historico', methods=['GET'])
