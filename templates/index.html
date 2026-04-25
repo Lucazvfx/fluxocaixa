@@ -2481,6 +2481,13 @@ window.atualizarPrecos=async function(){
       _precoAtual=d.precos;
       const cc=document.getElementById('cc-preco-arr');
       if(cc&&(parseFloat(cc.value)||0)===0&&d.precos.boi>0){cc.value=d.precos.boi.toFixed(2);calcCustos();}
+      if(d.precos.boi>0){
+        _setBadgeCotacao('s-preco-arr-boi',d.precos.boi);
+        _setBadgeCotacao('s-preco-arr',d.precos.boi);
+        _setBadgeCotacao('sc-preco-arr',d.precos.boi);
+        recalcCiclo();runSc();
+      }
+      if(d.precos.vaca>0)_setBadgeCotacao('s-preco-arr-vaca',d.precos.vaca);
       _alertasVerificar(d.precos);
     }
   }catch(e){}
