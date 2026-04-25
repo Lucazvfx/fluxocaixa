@@ -174,7 +174,7 @@
       <button class="btn-p" onclick="confirmarClassificacao()" style="flex-shrink:0"><span>✓ Confirmar</span></button>
     </div>
     <div style="padding:0 22px 16px;font-family:var(--fm);font-size:.65rem;color:var(--mu)">
-      Cada confirmação melhora o modelo. Após acumular dados, clique em <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.
+      Cada confirmação melhora o modelo. O retreino ocorre <strong style="color:var(--tx)">automaticamente a cada 10 confirmações</strong> ou manualmente pelo botão <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.
     </div>
   </div>
 </div>
@@ -1888,10 +1888,15 @@ async function confirmarClassificacao(){
     if(data.erro){toast(data.erro,true);return}
     const sv=document.getElementById('conf-saved');
     if(sv){sv.style.display='inline';setTimeout(()=>sv.style.display='none',3000)}
-    toast('✓ Confirmado! Modelo atualizando em segundo plano...');
+    if(data.retraining){
+      toast('✓ Confirmado! Retreinando modelo automaticamente…');
+      setTimeout(()=>atualizarDbStats(),35000);
+    }else{
+      const faltam=data.confirmacoes_ate_retrain??'?';
+      const limite=data.limite_retrain??10;
+      toast('✓ Confirmado! Faltam '+faltam+'/'+limite+' para retreino automático');
+    }
     atualizarDbStats(data.stats);
-    // Verifica acurácia atualizada após ~35s (tempo estimado do retreino)
-    setTimeout(()=>atualizarDbStats(),35000);
   }catch(e){toast('Erro ao confirmar: '+e.message,true)}
 }
 
