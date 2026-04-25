@@ -1,0 +1,978 @@
+/* ============================================================
+   BOVIML — Folha de Estilos Principal
+   Arquivo: static/style.css
+   Referenciado por: templates/index.html
+
+   ÍNDICE DE SEÇÕES:
+   1.  Variáveis (Design Tokens)
+   2.  Reset & Base
+   3.  Layout (header, main, fundo animado)
+   4.  Navegação por Abas (tab-bar)
+   5.  Sistema de Painéis (panel)
+   6.  Cards (card, .ch, .ct, .cb)
+   7.  Grids Utilitários (.g2, .g3, .g13)
+   8.  Títulos de Página (.ptitle, .psub)
+   9.  Tabela de Entrada de Dados (.itbl, .ni)
+   10. Strip de Totais (.tstrip, .tsc)
+   11. Cores Utilitárias (.cg, .ca, .cc, .cr, .cp)
+   12. Formulários (.fgrid, .field)
+   13. Zona de Upload de PDF (.upzone)
+   14. Botões (.btn-p, .btn-sm)
+   15. Painel de Resultado da Classificação (.rhero, .cbar, .sstrip)
+   16. Pirâmide Etária (.pyrvis, .pyr)
+   17. Linhas de Métricas (.mrow)
+   18. Cenários de Projeção (.sc-card, .proj-strip)
+   19. Tabelas de Dados (.ytbl)
+   20. Cards de Tipo de Exploração (.tc-grid, .tc)
+   21. Toast (Notificações Temporárias)
+   22. Loading Overlay (Tela de Carregamento)
+   23. Recomendações Técnicas (.rec-item)
+   24. Ciclo Completo Engine (.sc-sn, .brow, .flow, .cetbl, .res-box)
+   25. Modal Tutorial (#tut-overlay)
+   26. Modal Alertas de Mercado (#alerta-overlay)
+   27. Calculadora de Custo por Cabeça (.kpi-custos, .custo-row)
+   28. Scrollbar Customizada
+   29. Responsividade (Media Queries)
+   ============================================================ */
+
+
+/* ============================================================
+   1. VARIÁVEIS (DESIGN TOKENS)
+   Para mudar o visual do app, edite apenas esta seção.
+   ============================================================ */
+:root {
+  /* Cores de fundo — do mais escuro ao mais claro */
+  --bg:  #060810;   /* fundo da página */
+  --s:   #0C0F18;   /* superfície nível 1 */
+  --c:   #111520;   /* superfície nível 2 (cards) */
+  --c2:  #161B2A;   /* superfície nível 3 (inputs, badges) */
+
+  /* Bordas */
+  --b:   #1E2535;   /* borda principal */
+  --b2:  #28304A;   /* borda secundária (inputs) */
+
+  /* Cores de destaque */
+  --g:   #4ADE80;   /* verde — positivo, confirmado, principal */
+  --cy:  #4ADE80;   /* ciano (alias de verde, pode diferenciar se quiser) */
+  --am:  #FBBF24;   /* âmbar — atenção, especulativo */
+  --rd:  #F87171;   /* vermelho — negativo, crítico, engorda */
+  --pu:  #A78BFA;   /* roxo — neutro, adultos */
+
+  /* Texto */
+  --tx:  #E8ECF5;   /* texto principal */
+  --mu:  #4A5570;   /* texto desativado / rótulos */
+  --sb:  #8892AA;   /* texto secundário */
+
+  /* Tipografia */
+  --fn: 'Barlow Condensed', sans-serif;  /* títulos, labels, botões */
+  --fb: 'Barlow', sans-serif;            /* texto corrido */
+  --fm: 'DM Mono', monospace;            /* números, códigos, badges */
+
+  /* Border-radius */
+  --r:  16px;   /* cards, modais, botão principal */
+  --rs: 10px;   /* inputs, badges, botões menores */
+}
+
+
+/* ============================================================
+   2. RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--fb);
+  background: var(--bg);
+  color: var(--tx);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+
+/* ============================================================
+   3. LAYOUT (HEADER, MAIN, FUNDO ANIMADO)
+   ============================================================ */
+
+/* Gradiente decorativo fixo no fundo da página */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 10%, rgba(74,222,128,.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 85% 85%, rgba(34,211,238,.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Barra de topo fixa */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: rgba(6,8,16,.93);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--b);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36px;
+}
+
+/* Logo */
+.logo {
+  font-family: var(--fn);
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: -.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-mk {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4ADE80, #4ADE80);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem;
+}
+.logo em {
+  font-style: normal;
+  background: linear-gradient(90deg, #4ADE80, #4ADE80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Lado direito do header (badges, botões) */
+.hdr-r { display: flex; align-items: center; gap: 12px; }
+
+/* Badge estilo pill no header (ex: acurácia do modelo) */
+.ml-badge {
+  font-family: var(--fm); font-size: .54rem; letter-spacing: 2px;
+  background: rgba(74,222,128,.1); color: var(--g);
+  border: 1px solid rgba(74,222,128,.25);
+  padding: 4px 12px; border-radius: 20px;
+}
+
+/* Badge compacto no header (cotações, botões de ação) */
+.ml-acc {
+  font-family: var(--fm); font-size: .58rem; color: var(--g);
+  background: rgba(74,222,128,.07);
+  border: 1px solid rgba(74,222,128,.2);
+  padding: 4px 10px; border-radius: 8px;
+}
+
+/* Área de conteúdo principal */
+main {
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 44px 36px 120px;
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ============================================================
+   4. NAVEGAÇÃO POR ABAS (TAB-BAR)
+   As abas controlam qual painel está visível.
+   Para adicionar uma aba: inclua um <button class="tab-btn">
+   ============================================================ */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: var(--c);
+  border: 1px solid var(--b);
+  border-radius: var(--r);
+  padding: 4px;
+  margin-bottom: 36px;
+  width: fit-content;
+}
+
+.tab-btn {
+  font-family: var(--fn); font-weight: 700;
+  font-size: .76rem; letter-spacing: 1.5px; text-transform: uppercase;
+  background: none; border: none; cursor: pointer;
+  color: var(--mu);
+  padding: 10px 20px; border-radius: 12px;
+  transition: all .2s;
+  display: flex; align-items: center; gap: 7px;
+}
+.tab-btn:hover { color: var(--tx); background: var(--b); }
+.tab-btn.active { background: var(--g); color: #000; }
+
+
+/* ============================================================
+   5. SISTEMA DE PAINÉIS
+   Cada painel corresponde a uma aba. Apenas o .active é visível.
+   ============================================================ */
+.panel { display: none; animation: rise .35s cubic-bezier(.22,1,.36,1); }
+.panel.active { display: block; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ============================================================
+   6. CARDS
+   Bloco de conteúdo com cabeçalho e corpo.
+   .card > .ch (cabeçalho) + .cb (corpo)
+   ============================================================ */
+.card {
+  background: var(--c);
+  border: 1px solid var(--b);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+/* Cabeçalho do card */
+.ch {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--b);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* Título dentro do cabeçalho */
+.ct {
+  font-family: var(--fn); font-weight: 700;
+  font-size: .78rem; letter-spacing: 1.5px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* Bolinha colorida ao lado do título do card */
+.cd {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--g);
+  flex-shrink: 0;
+}
+
+/* Corpo do card */
+.cb { padding: 22px; }
+
+
+/* ============================================================
+   7. GRIDS UTILITÁRIOS
+   Para criar layouts de 2 ou 3 colunas dentro de cards.
+   ============================================================ */
+.g2  { display: grid; grid-template-columns: 1fr 1fr;     gap: 16px; margin-bottom: 16px; }
+.g3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.g13 { display: grid; grid-template-columns: 1fr 3fr;     gap: 16px; margin-bottom: 16px; }
+
+
+/* ============================================================
+   8. TÍTULOS DE PÁGINA
+   Usados no topo de cada painel principal.
+   ============================================================ */
+.ptitle {
+  font-family: var(--fn); font-weight: 800;
+  font-size: 2.8rem; letter-spacing: -1px; line-height: 1;
+  margin-bottom: 6px;
+}
+/* Palavra em destaque (verde degradê) dentro do título */
+.ptitle em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--g), var(--cy));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Subtítulo abaixo do título principal */
+.psub { font-size: .9rem; color: var(--sb); margin-bottom: 28px; }
+
+
+/* ============================================================
+   9. TABELA DE ENTRADA DE DADOS
+   Usada no painel "Inserir Dados" para digitar a composição
+   do rebanho por faixa etária.
+   ============================================================ */
+.itbl { width: 100%; border-collapse: collapse; }
+
+.itbl thead th {
+  font-family: var(--fm); font-size: .57rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--mu);
+  padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--b);
+}
+.itbl thead th.c { text-align: center; }
+
+.itbl tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,.03);
+  transition: background .15s;
+}
+.itbl tbody tr:hover { background: rgba(255,255,255,.02); }
+.itbl td { padding: 8px 14px; font-size: .84rem; }
+
+/* Badge colorida para identificar a faixa etária */
+.fc {
+  display: inline-flex; align-items: center;
+  font-family: var(--fm); font-size: .67rem;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid;
+}
+
+/* Input numérico dentro da tabela de dados */
+.ni {
+  width: 110px;
+  background: transparent;
+  border: 1px solid var(--b2);
+  border-radius: var(--rs);
+  padding: 8px 12px;
+  font-family: var(--fb); font-size: .88rem;
+  outline: none; transition: border-color .2s;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.ni::-webkit-inner-spin-button { -webkit-appearance: none; }
+.ni.nf { color: var(--g); }   /* fêmeas — verde */
+.ni.nm { color: var(--am); }  /* machos — âmbar */
+.ni:focus {
+  border-color: var(--g);
+  box-shadow: 0 0 0 3px rgba(74,222,128,.1);
+}
+
+/* Células de total e porcentagem */
+.tdc  { text-align: center; }
+.tdtot { font-family: var(--fm); font-size: .8rem; color: var(--tx); text-align: center; font-weight: 600; }
+
+
+/* ============================================================
+   10. STRIP DE TOTAIS
+   Barra de resumo (Total Geral, Fêmeas, Machos, Cria, Recria)
+   que aparece abaixo da tabela de entrada de dados.
+   ============================================================ */
+.tstrip {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 1px; background: var(--b);
+  border-radius: var(--rs); overflow: hidden;
+  border: 1px solid var(--b); margin-top: 18px;
+}
+.tsc { background: var(--c2); padding: 14px 16px; }
+.tsc-l {
+  font-family: var(--fm); font-size: .52rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--mu); margin-bottom: 5px;
+}
+.tsc-v {
+  font-family: var(--fn); font-weight: 800;
+  font-size: 1.5rem; letter-spacing: -.5px; line-height: 1;
+}
+
+
+/* ============================================================
+   11. CORES UTILITÁRIAS
+   Classes de cor aplicadas em textos e números.
+   ============================================================ */
+.cg { color: var(--g); }   /* verde */
+.ca { color: var(--am); }  /* âmbar */
+.cc { color: var(--cy); }  /* ciano */
+.cr { color: var(--rd); }  /* vermelho */
+.cp { color: var(--pu); }  /* roxo */
+
+
+/* ============================================================
+   12. FORMULÁRIOS
+   Grid de campos (Fazenda, Município, Proprietário, etc.)
+   ============================================================ */
+
+/* Grade de 3 colunas para os campos do formulário */
+.fgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* Campo individual: label em cima, input embaixo */
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.field label {
+  font-family: var(--fm); font-size: .55rem;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--mu);
+}
+
+.field input, .field select {
+  background: var(--c2);
+  border: 1px solid var(--b2);
+  border-radius: var(--rs);
+  padding: 10px 14px;
+  color: var(--tx);
+  font-family: var(--fb); font-size: .88rem;
+  outline: none; transition: border-color .2s;
+}
+.field input:focus,
+.field select:focus { border-color: var(--g); }
+.field select option { background: var(--c); }
+
+
+/* ============================================================
+   13. ZONA DE UPLOAD DE PDF
+   Área de arrastar e soltar PDFs (painel "Ler PDF" e
+   também o botão "📂 Ler PDF" no painel "Inserir Dados").
+   ============================================================ */
+.upzone {
+  border: 2px dashed var(--b2);
+  border-radius: var(--r);
+  padding: 52px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .3s;
+  background: var(--c);
+}
+.upzone:hover, .upzone.drag {
+  border-color: var(--g);
+  background: rgba(74,222,128,.04);
+}
+
+.upzone-icon  { font-size: 3rem; margin-bottom: 14px; display: block; }
+.upzone-title { font-family: var(--fn); font-weight: 800; font-size: 1.6rem; letter-spacing: -.5px; margin-bottom: 6px; }
+.upzone-title span { color: var(--g); }
+.upzone-sub   { font-size: .85rem; color: var(--mu); margin-bottom: 18px; }
+
+
+/* ============================================================
+   14. BOTÕES
+   .btn-p — botão primário grande (verde, largura total)
+   .btn-sm — botão secundário pequeno (contornado)
+   ============================================================ */
+
+/* Botão primário — ex: "Classificar", "Recalcular Tudo" */
+.btn-p {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; margin-top: 20px;
+  background: linear-gradient(135deg, #4ADE80, #4ADE80);
+  border: none; border-radius: var(--r);
+  padding: 16px 40px;
+  font-family: var(--fn); font-weight: 800;
+  font-size: 1rem; letter-spacing: 2px; text-transform: uppercase;
+  color: #000; cursor: pointer;
+  transition: all .3s;
+  position: relative; overflow: hidden;
+}
+.btn-p::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, #4ADE80, #4ADE80);
+  opacity: 0; transition: opacity .3s;
+}
+.btn-p:hover::before { opacity: 1; }
+.btn-p:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(74,222,128,.3); }
+.btn-p:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-p span { position: relative; z-index: 1; }
+
+/* Botão secundário — ex: "↺ Sincronizar", "Ver histórico" */
+.btn-sm {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none;
+  border: 1px solid var(--b2);
+  border-radius: var(--rs);
+  padding: 7px 14px;
+  font-family: var(--fn); font-weight: 700;
+  font-size: .7rem; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--mu); cursor: pointer; transition: all .2s;
+}
+.btn-sm:hover { border-color: var(--g); color: var(--g); }
+
+
+/* ============================================================
+   15. PAINEL DE RESULTADO DA CLASSIFICAÇÃO
+   Aparece após o usuário clicar em "Classificar".
+   .rhero  — hero com tipo (CRIA, ENGORDA, etc.)
+   .cbar   — barra de confiança por tipo
+   .sstrip — strip de 6 indicadores zootécnicos
+   ============================================================ */
+
+/* Hero de resultado */
+.rhero {
+  border-radius: var(--r); padding: 44px;
+  margin-bottom: 18px;
+  position: relative; overflow: hidden; border: 1px solid;
+}
+.rhero-grid { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: center; }
+.rhero-ey   { font-family: var(--fm); font-size: .6rem; letter-spacing: 3px; text-transform: uppercase; opacity: .6; margin-bottom: 10px; }
+.rhero-tipo { font-family: var(--fn); font-weight: 800; font-size: 4.5rem; line-height: .9; letter-spacing: -2px; text-transform: uppercase; }
+.rhero-sub  { font-family: var(--fm); font-size: .78rem; margin-top: 10px; opacity: .6; }
+.rhero-em   { font-size: 7rem; opacity: .15; line-height: 1; }
+
+/* Barra de confiança (probabilidade por tipo) */
+.cbar   { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.cbar-l { font-family: var(--fm); font-size: .6rem; letter-spacing: 1px; width: 120px; flex-shrink: 0; text-transform: uppercase; }
+.cbar-t { flex: 1; height: 7px; background: rgba(255,255,255,.06); border-radius: 4px; overflow: hidden; }
+.cbar-f { height: 100%; border-radius: 4px; transition: width 1.3s cubic-bezier(.34,1.4,.64,1); }
+.cbar-p { font-family: var(--fm); font-size: .62rem; width: 44px; text-align: right; }
+
+/* Strip de 6 indicadores (Total Rebanho, Fêmeas, Machos...) */
+.sstrip {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: 1px; background: var(--b); border: 1px solid var(--b);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 16px;
+}
+.sc2   { background: var(--c); padding: 18px 16px; }
+.sc2-l { font-family: var(--fm); font-size: .52rem; letter-spacing: 2px; text-transform: uppercase; color: var(--mu); margin-bottom: 5px; }
+.sc2-v { font-family: var(--fn); font-weight: 800; font-size: 1.4rem; letter-spacing: -.5px; line-height: 1; }
+
+
+/* ============================================================
+   16. PIRÂMIDE ETÁRIA
+   Visualização horizontal da distribuição do rebanho
+   por faixa etária e sexo.
+   ============================================================ */
+.pyrvis  { display: flex; flex-direction: column; gap: 7px; }
+.pyr-row { display: flex; align-items: center; gap: 10px; }
+.pyr-l   { font-family: var(--fm); font-size: .57rem; color: var(--mu); width: 90px; flex-shrink: 0; text-align: right; }
+.pyr-t   { flex: 1; display: flex; gap: 3px; height: 30px; }
+.pyr-seg {
+  height: 100%; border-radius: 4px;
+  display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;
+  min-width: 0; overflow: hidden;
+  transition: width 1.2s cubic-bezier(.34,1.4,.64,1);
+}
+.pyr-seg span {
+  font-family: var(--fm); font-size: .57rem;
+  color: rgba(0,0,0,.8); font-weight: 600; white-space: nowrap;
+}
+
+
+/* ============================================================
+   17. LINHAS DE MÉTRICAS (.mrow)
+   Usadas nos cards de "Indicadores Zootécnicos" e similares.
+   Cada linha é: [rótulo] [valor colorido]
+   ============================================================ */
+.mrow { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.mrow:last-child { border-bottom: none; }
+.mk { font-size: .82rem; color: var(--sb); }
+.mv { font-family: var(--fm); font-size: .78rem; color: var(--tx); }
+.mv.g { color: var(--g); }
+.mv.a { color: var(--am); }
+.mv.r { color: var(--rd); }
+.mv.c { color: var(--cy); }
+
+
+/* ============================================================
+   18. CENÁRIOS DE PROJEÇÃO
+   Painel "Projeção 5 Anos".
+   .sc-card  — card clicável de seleção de cenário
+   .proj-strip — strip de 4 KPIs do resultado projetado
+   ============================================================ */
+
+/* Card de seleção de cenário (Otimista, Crescimento...) */
+.sc-card {
+  background: var(--c2); border: 1px solid var(--b);
+  border-radius: var(--r); padding: 20px;
+  margin-bottom: 10px; cursor: pointer;
+  transition: all .25s; position: relative; overflow: hidden;
+}
+.sc-card:hover { border-color: var(--b2); transform: translateY(-2px); }
+.sc-card.sel   { border-color: var(--g); background: rgba(74,222,128,.05); }
+.sc-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+
+/* Cores da barra lateral por tipo de cenário */
+.sc-opt::before  { background: var(--g); }
+.sc-cres::before { background: var(--cy); }
+.sc-spec::before { background: var(--am); }
+.sc-cons::before { background: var(--rd); }
+
+.sc-name { font-family: var(--fn); font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+.sc-desc { font-size: .82rem; color: var(--sb); line-height: 1.5; }
+
+/* Strip de 4 KPIs de resultado (Rebanho Ano 5, Receita, Custo, Resultado) */
+.proj-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--b); border: 1px solid var(--b);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 16px;
+}
+.pjc   { background: var(--c); padding: 18px 16px; }
+.pjc-l { font-family: var(--fm); font-size: .52rem; letter-spacing: 2px; text-transform: uppercase; color: var(--mu); margin-bottom: 5px; }
+.pjc-v { font-family: var(--fn); font-weight: 800; font-size: 1.5rem; letter-spacing: -.5px; line-height: 1; }
+.pjc-d { font-family: var(--fm); font-size: .6rem; margin-top: 4px; }
+
+
+/* ============================================================
+   19. TABELAS DE DADOS (.ytbl)
+   Usadas em: Histórico, Vendas, Receitas, Custos, etc.
+   ============================================================ */
+.ytbl { width: 100%; border-collapse: collapse; }
+.ytbl th {
+  font-family: var(--fm); font-size: .56rem; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--mu); padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--b);
+}
+.ytbl th.r { text-align: right; }
+.ytbl td { padding: 11px 14px; font-size: .84rem; border-bottom: 1px solid rgba(255,255,255,.03); }
+.ytbl td.r  { text-align: right; font-family: var(--fm); font-size: .78rem; }
+.ytbl td.g  { color: var(--g);  font-family: var(--fm); font-size: .78rem; text-align: right; }
+.ytbl td.a  { color: var(--am); font-family: var(--fm); font-size: .78rem; text-align: right; }
+.ytbl td.r2 { color: var(--rd); font-family: var(--fm); font-size: .78rem; text-align: right; }
+.ytbl tbody tr:hover td { background: rgba(255,255,255,.02); }
+
+
+/* ============================================================
+   20. CARDS DE TIPO DE EXPLORAÇÃO (.tc-grid, .tc)
+   Grid de 4 cards exibindo CRIA, RECRIA, ENGORDA, CICLO COMPLETO
+   após a classificação.
+   ============================================================ */
+.tc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.tc {
+  border-radius: var(--rs); padding: 16px;
+  border: 1px solid var(--b); background: var(--c2);
+  position: relative;
+}
+
+/* Label "← IDENTIFICADO" no canto do card selecionado */
+.tc-sel {
+  position: absolute; top: 10px; right: 10px;
+  font-family: var(--fm); font-size: .48rem; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 3px;
+}
+
+.tc-ico  { font-size: 1.7rem; margin-bottom: 7px; display: block; }
+.tc-name { font-family: var(--fn); font-weight: 700; font-size: .8rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+.tc-desc { font-size: .73rem; color: var(--mu); line-height: 1.5; }
+
+
+/* ============================================================
+   21. TOAST (NOTIFICAÇÕES TEMPORÁRIAS)
+   Aparece no canto inferior direito com mensagens de sucesso
+   ou erro por 3,5 segundos.
+   ============================================================ */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: var(--c2); border: 1px solid var(--b2);
+  border-radius: var(--rs);
+  padding: 14px 20px;
+  font-family: var(--fm); font-size: .75rem;
+  z-index: 999;
+  opacity: 0; transform: translateY(20px); transition: all .3s;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.err  { border-color: rgba(248,113,113,.4); color: var(--rd); }
+
+
+/* ============================================================
+   22. LOADING OVERLAY (TELA DE CARREGAMENTO)
+   Cobre toda a tela com blur enquanto processa.
+   Ativado via JS: showLoading() / hideLoading()
+   ============================================================ */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: rgba(6,8,16,.85);
+  z-index: 300;
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+  backdrop-filter: blur(8px);
+}
+.loading-overlay.show { display: flex; }
+
+/* Spinner animado */
+.lspin {
+  width: 50px; height: 50px;
+  border: 3px solid var(--b2);
+  border-top-color: var(--g);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ltxt { font-family: var(--fn); font-size: 1rem; letter-spacing: .5px; }
+
+
+/* ============================================================
+   23. RECOMENDAÇÕES TÉCNICAS (.rec-item)
+   Lista de recomendações que aparece no painel Resultado
+   e no Dashboard de Cenários.
+   Níveis: rec-nivel-critico, rec-nivel-atencao, rec-nivel-bom
+   ============================================================ */
+.rec-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--b);
+}
+.rec-item:last-child { border-bottom: none; padding-bottom: 0; }
+.rec-icon    { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+.rec-content { flex: 1; }
+.rec-titulo  { font-family: var(--fn); font-weight: 700; font-size: .85rem; letter-spacing: .3px; margin-bottom: 3px; }
+.rec-desc    { font-family: var(--fb); font-size: .78rem; color: var(--sb); line-height: 1.5; }
+.rec-impacto { font-family: var(--fm); font-size: .7rem; margin-top: 4px; font-weight: 600; }
+
+/* Cores por nível de urgência */
+.rec-nivel-critico .rec-titulo  { color: var(--rd); }
+.rec-nivel-critico .rec-impacto { color: var(--rd); }
+.rec-nivel-atencao .rec-titulo  { color: var(--am); }
+.rec-nivel-atencao .rec-impacto { color: var(--am); }
+.rec-nivel-bom .rec-titulo      { color: var(--g); }
+.rec-nivel-bom .rec-impacto     { color: var(--g); }
+
+
+/* ============================================================
+   24. CICLO COMPLETO ENGINE
+   Estilos do painel "Simular Cenários" (sub-abas, barras,
+   fluxo de bois, tabela de custos, caixa de resultado).
+   ============================================================ */
+
+/* Sub-abas horizontais (Dashboard, Parâmetros, Rebanho...) */
+.sc-sn {
+  font-family: var(--fn); font-weight: 700;
+  font-size: .68rem; letter-spacing: 1.5px; text-transform: uppercase;
+  background: none; border: 1px solid var(--b2);
+  border-radius: var(--rs); padding: 7px 14px;
+  color: var(--mu); cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.sc-sn:hover { border-color: var(--am); color: var(--am); }
+.sc-sn.act   { background: var(--am); border-color: var(--am); color: #000; }
+
+/* Sub-painéis (um ativo por vez) */
+.sc-spanel      { display: none; }
+.sc-spanel.act  { display: block; animation: rise .3s cubic-bezier(.22,1,.36,1); }
+
+/* Barra horizontal de proporção (usada no Dashboard) */
+.brow   { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.brow-l { font-family: var(--fm); font-size: .58rem; color: var(--mu); width: 120px; flex-shrink: 0; text-align: right; }
+.brow-t { flex: 1; height: 26px; background: var(--c2); border-radius: 4px; overflow: hidden; border: 1px solid var(--b); }
+.brow-f {
+  height: 100%; border-radius: 3px;
+  display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;
+  transition: width 1s cubic-bezier(.34,1.4,.64,1);
+}
+.brow-f span { font-family: var(--fm); font-size: .57rem; color: rgba(0,0,0,.8); font-weight: 600; white-space: nowrap; }
+
+/* Fluxo de renovação de bois (setas + boxes) */
+.flow-wrap { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.flow-step { background: var(--c2); border: 1px solid var(--b); border-radius: var(--rs); padding: 12px 16px; text-align: center; min-width: 80px; }
+.flow-arr  { color: var(--mu); font-size: 1rem; padding: 0 2px; align-self: center; }
+.flow-n    { font-family: var(--fn); font-weight: 800; font-size: 1.4rem; line-height: 1; }
+.flow-l    { font-family: var(--fm); font-size: .52rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mu); margin-top: 3px; }
+
+/* Badge de nível tecnológico (Baixo / Médio / Alto) */
+.lvl-badge { font-family: var(--fm); font-size: .54rem; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; }
+.lvl-badge.baixo { background: rgba(248,113,113,.15); color: var(--rd); border: 1px solid rgba(248,113,113,.25); }
+.lvl-badge.medio { background: rgba(251,191,36,.15);  color: var(--am); border: 1px solid rgba(251,191,36,.25); }
+.lvl-badge.alto  { background: rgba(74,222,128,.15);  color: var(--g);  border: 1px solid rgba(74,222,128,.25); }
+
+/* Tabela de custos por nível tecnológico */
+.cetbl { width: 100%; border-collapse: collapse; }
+.cetbl th { font-family: var(--fm); font-size: .54rem; letter-spacing: 2px; text-transform: uppercase; color: var(--mu); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--b); }
+.cetbl td { padding: 7px 12px; font-size: .84rem; border-bottom: 1px solid rgba(255,255,255,.03); }
+.cetbl input[type=number] {
+  background: var(--c2); border: 1px solid var(--b2); border-radius: 6px;
+  padding: 5px 8px; color: var(--tx);
+  font-family: var(--fm); font-size: .78rem;
+  width: 85px; text-align: center; outline: none;
+  transition: border-color .2s; -moz-appearance: textfield;
+}
+.cetbl input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+.cetbl input[type=number]:focus { border-color: var(--g); }
+
+/* Caixa de resultado (positivo/negativo) */
+.res-box {
+  border-radius: var(--r); padding: 20px 24px; margin-top: 16px;
+  border: 1px solid;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; flex-wrap: wrap;
+}
+.res-box.pos { border-color: rgba(74,222,128,.3); background: rgba(74,222,128,.06); }
+.res-box.neg { border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.06); }
+
+
+/* ============================================================
+   25. MODAL TUTORIAL
+   Exibido na primeira visita. Pode ser reaberto pelo botão
+   "? Ajuda" no header.
+   ============================================================ */
+#tut-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; backdrop-filter: blur(4px);
+}
+#tut-box {
+  background: var(--c); border: 1px solid var(--b2);
+  border-radius: 20px; width: 100%; max-width: 480px;
+  overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+#tut-head {
+  background: var(--g); padding: 20px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#tut-head h2   { font-family: var(--fn); font-weight: 800; font-size: 1.1rem; letter-spacing: .5px; color: #000; }
+#tut-head span { font-family: var(--fm); font-size: .65rem; color: rgba(0,0,0,.6); }
+#tut-body { padding: 28px 24px 20px; }
+.tut-step-num   { font-family: var(--fm); font-size: .6rem; color: var(--g); letter-spacing: 2px; margin-bottom: 8px; }
+.tut-step-title { font-family: var(--fn); font-weight: 700; font-size: 1.3rem; color: var(--tx); margin-bottom: 10px; line-height: 1.2; }
+.tut-step-desc  { font-family: var(--fb); font-size: .85rem; color: var(--sb); line-height: 1.6; }
+.tut-step-desc b { color: var(--am); font-weight: 600; }
+.tut-step-icon  { font-size: 2.2rem; margin-bottom: 16px; }
+#tut-prog { display: flex; gap: 6px; margin: 20px 0 24px; }
+.tut-dot     { width: 28px; height: 3px; border-radius: 2px; background: var(--b2); transition: background .3s; }
+.tut-dot.act { background: var(--g); }
+#tut-foot { display: flex; align-items: center; justify-content: space-between; padding: 0 24px 24px; }
+.tut-skip      { font-family: var(--fb); font-size: .78rem; color: var(--mu); cursor: pointer; background: none; border: none; padding: 0; }
+.tut-skip:hover { color: var(--sb); }
+.tut-nav { display: flex; gap: 8px; }
+.tut-btn { font-family: var(--fn); font-weight: 700; font-size: .72rem; letter-spacing: 1px; padding: 10px 22px; border-radius: 10px; border: none; cursor: pointer; transition: all .2s; }
+.tut-btn.sec       { background: var(--b2); color: var(--tx); }
+.tut-btn.sec:hover { background: var(--b); }
+.tut-btn.pri       { background: var(--g); color: #000; }
+.tut-btn.pri:hover { opacity: .9; }
+
+
+/* ============================================================
+   26. MODAL ALERTAS DE MERCADO
+   Configuração de alertas de preço mínimo/máximo
+   para boi gordo, vaca gorda e boi China.
+   ============================================================ */
+#alerta-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); z-index: 1000;
+  display: none; align-items: center; justify-content: center;
+  padding: 20px; backdrop-filter: blur(4px);
+}
+#alerta-overlay.show { display: flex; }
+#alerta-box {
+  background: var(--c); border: 1px solid var(--b2);
+  border-radius: 20px; width: 100%; max-width: 520px;
+  overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.5);
+}
+#alerta-head {
+  background: linear-gradient(135deg, rgba(251,191,36,.2), rgba(248,113,113,.1));
+  border-bottom: 1px solid var(--b2);
+  padding: 20px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#alerta-head h2 { font-family: var(--fn); font-weight: 800; font-size: 1.1rem; color: var(--am); }
+#alerta-body { padding: 24px; }
+.alerta-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; align-items: center;
+  margin-bottom: 14px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--b);
+}
+.alerta-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.alerta-label { font-family: var(--fm); font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--sb); }
+.alerta-input {
+  background: var(--c2); border: 1px solid var(--b2);
+  border-radius: var(--rs); padding: 8px 12px;
+  color: var(--tx); font-family: var(--fm); font-size: .82rem;
+  width: 100%; outline: none; transition: border-color .2s;
+  -moz-appearance: textfield;
+}
+.alerta-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.alerta-input:focus       { border-color: var(--am); }
+.alerta-input::placeholder { color: var(--mu); }
+
+/* Badge de status do alerta */
+.alerta-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--fm); font-size: .55rem;
+  padding: 3px 10px; border-radius: 4px;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.alerta-badge.ativo  { background: rgba(74,222,128,.15); color: var(--g);  border: 1px solid rgba(74,222,128,.25); }
+.alerta-badge.inativo { background: rgba(74,74,100,.15); color: var(--mu); border: 1px solid var(--b2); }
+
+/* Bolinha pulsante que indica alertas ativos */
+.alerta-ativo-indicator {
+  width: 5px; height: 5px; border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+
+/* ============================================================
+   27. CALCULADORA DE CUSTO POR CABEÇA
+   Painel "Custo/Cab." — KPIs e linhas de custos anuais.
+   ============================================================ */
+
+/* Grid de 4 KPIs no topo */
+.kpi-custos {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--b); border: 1px solid var(--b);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 16px;
+}
+.kpi-c   { background: var(--c); padding: 20px 18px; }
+.kpi-c-l { font-family: var(--fm); font-size: .52rem; letter-spacing: 2px; text-transform: uppercase; color: var(--mu); margin-bottom: 6px; }
+.kpi-c-v { font-family: var(--fn); font-weight: 800; font-size: 1.6rem; letter-spacing: -.5px; line-height: 1; }
+.kpi-c-d { font-family: var(--fm); font-size: .6rem; color: var(--mu); margin-top: 4px; }
+
+/* Linha de custo (rótulo + input + unidade) */
+.custo-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.custo-row:last-child { border-bottom: none; }
+.custo-key { font-size: .84rem; color: var(--sb); }
+
+/* Input numérico alinhado à direita */
+.custo-input {
+  background: var(--c2); border: 1px solid var(--b2);
+  border-radius: 8px; padding: 7px 12px;
+  color: var(--tx); font-family: var(--fm); font-size: .82rem;
+  width: 130px; text-align: right; outline: none;
+  transition: border-color .2s; -moz-appearance: textfield;
+}
+.custo-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.custo-input:focus { border-color: var(--g); }
+
+/* Unidade de medida (R$/cab, @/ano, etc.) */
+.custo-tag { font-family: var(--fm); font-size: .58rem; color: var(--mu); margin-left: 8px; min-width: 60px; }
+
+
+/* ============================================================
+   28. SCROLLBAR CUSTOMIZADA
+   ============================================================ */
+::-webkit-scrollbar       { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--b2); border-radius: 3px; }
+
+
+/* ============================================================
+   29. RESPONSIVIDADE (MEDIA QUERIES)
+   Adaptações para telas menores (tablet e mobile).
+   ============================================================ */
+
+/* Tablet — até 900px */
+@media (max-width: 900px) {
+  .g2, .g3, .g13, .fgrid, .sstrip, .tc-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  main, header { padding-left: 20px; padding-right: 20px; }
+  .rhero-tipo { font-size: 3rem; }
+  .rhero-em   { display: none; }
+  .tstrip     { grid-template-columns: repeat(3, 1fr); }
+  .kpi-custos { grid-template-columns: 1fr 1fr; }
+}
+
+/* Mobile — até 600px */
+@media (max-width: 600px) {
+  .g2, .g3, .sstrip, .tc-grid { grid-template-columns: 1fr; }
+  .kpi-custos { grid-template-columns: 1fr; }
+
+  /* Tab-bar: botões em linha com quebra */
+  .tab-bar { flex-wrap: wrap; width: 100%; }
+  .tab-btn { font-size: .65rem; padding: 8px 12px; flex: 1 1 auto; text-align: center; }
+
+  /* Grids inline dos cards de parâmetros (Cenários) */
+  [style*="grid-template-columns:1fr 1fr"]   { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:repeat(4"]  { grid-template-columns: 1fr 1fr !important; }
+  [style*="grid-template-columns:repeat(3"]  { grid-template-columns: 1fr 1fr !important; }
+  [style*="grid-template-columns:repeat(6"]  { grid-template-columns: 1fr 1fr !important; }
+
+  /* KPI de cenários em 2 colunas */
+  #s-kpi { grid-template-columns: 1fr 1fr !important; }
+
+  /* Hero de resultado em coluna única */
+  .rhero-grid { grid-template-columns: 1fr !important; }
+
+  main          { padding: 24px 16px 80px; }
+  header        { padding: 0 16px; }
+  .tab-bar      { margin-bottom: 20px; }
+  .sc-sn        { font-size: .6rem; padding: 6px 10px; }
+}
+
+/* Mobile muito pequeno — até 400px */
+@media (max-width: 400px) {
+  #s-kpi { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+}
