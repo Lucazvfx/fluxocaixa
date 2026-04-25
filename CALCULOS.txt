@@ -1,0 +1,473 @@
+================================================================
+FLUXO DE CAIXAS — MEMORIAL DE CÁLCULOS
+  Documento de referência para comparação com outras metodologias
+  Gerado em: 2026-04-21
+================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. VETOR DE ENTRADA (rebanho)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O sistema recebe 10 categorias animais (v[0] a v[9]):
+
+  v[0]  Fêmeas  0–5 meses    (bezerras)
+  v[1]  Machos  0–5 meses    (bezerros)
+  v[2]  Fêmeas  5–13 meses   (garrotes fêmea)
+  v[3]  Machos  5–13 meses   (garrotes macho)
+  v[4]  Fêmeas  13–25 meses  (novilhas)
+  v[5]  Machos  13–25 meses  (novilhos)
+  v[6]  Fêmeas  acima de 25m (vacas/matrizes jovens)
+  v[7]  Machos  acima de 25m (bois jovens)
+  v[8]  Fêmeas  acima de 36m (matrizes adultas)
+  v[9]  Machos  acima de 36m (touros/bois adultos)
+
+Agrupamentos usados nos cálculos:
+
+  matrizes   = v[6] + v[8]           (fêmeas adultas reprodutoras)
+  bois        = v[7] + v[9]           (machos adultos)
+  femeas_024  = v[0] + v[2] + v[4]   (fêmeas jovens)
+  machos_024  = v[1] + v[3] + v[5]   (machos jovens)
+  total       = soma de todos os 10 valores
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. INDICADORES ZOOTÉCNICOS (calculados do rebanho)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  % Cria       = (v[0]+v[1]+v[2]+v[3]) / total × 100
+  % Recria     = (v[4]+v[5]) / total × 100
+  % Adultos    = (matrizes + bois) / total × 100
+  % Matrizes   = matrizes / total × 100
+  Relação F/M  = (femeas_024 + matrizes) / max(machos_024 + bois, 1)
+  Bezerros est = matrizes × 0,75   (estimativa sem taxa de natalidade real)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. BENCHMARKS REGIONAIS — RONDÔNIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada indicador é classificado em: ABAIXO / MÉDIO / BOM / EXCELENTE
+
+  NATALIDADE (CRIA, CICLO_COMPLETO)
+    Abaixo  < 65%
+    Médio   65% a 78%
+    Bom     78% a 88%
+    Excelente >= 88%
+
+  MORTALIDADE GERAL (todos os ciclos) — indicador inverso
+    Excelente <= 1,5%
+    Bom       1,5% a 3,0%
+    Médio     3,0% a 5,0%
+    Abaixo    > 5,0%
+
+  TAXA DE DESMAMA (CRIA, CICLO_COMPLETO)
+    Abaixo  < 70%
+    Médio   70% a 82%
+    Bom     82% a 90%
+    Excelente >= 90%
+
+  RELAÇÃO FÊMEAS/MACHO ADULTO (CRIA, CICLO_COMPLETO)
+    Abaixo  < 1,8 fêmeas por touro
+    Médio   1,8 a 2,2
+    Bom     2,2 a 2,8
+    Excelente >= 2,8
+
+  % MATRIZES NO REBANHO (CRIA, CICLO_COMPLETO)
+    Abaixo  < 28%
+    Médio   28% a 35%
+    Bom     35% a 42%
+    Excelente >= 42%
+
+  GANHO DE PESO — @/mês (RECRIA)
+    Abaixo  < 0,5 @/mês
+    Médio   0,5 a 0,7
+    Bom     0,7 a 0,9
+    Excelente >= 0,9
+
+  RENDIMENTO DE CARCAÇA (ENGORDA, CICLO_COMPLETO)
+    Abaixo  < 50%
+    Médio   50% a 52%
+    Bom     52% a 54%
+    Excelente >= 54%
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. MODIFICADORES DE CENÁRIO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Cada cenário aplica multiplicadores sobre os parâmetros base:
+
+                    nat    mort   desc   preco
+  Otimista         ×1,08  ×0,70  ×0,90  ×1,05
+  Crescimento      ×1,03  ×0,90  ×0,95  ×1,02
+  Especulativo     ×1,00  ×1,00  ×1,20  ×1,10
+  Conservador      ×0,95  ×1,10  ×0,80  ×0,95
+
+  nat   = fator sobre taxa de natalidade
+  mort  = fator sobre taxa de mortalidade
+  desc  = fator sobre taxa de descarte
+  preco = fator sobre preço de mercado
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. SIMULAÇÃO — CICLO CRIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Produto vendido: bezerro desmamado (R$/cabeça)
+Parâmetros padrão: nat=75%, mort=3%, desmama=80%, venda_bez=60%,
+                   preco_bezerro=R$1.800, custo_cab_ano=R$850
+
+FLUXO POR ANO:
+
+  nat_efetivo   = min(nat_pct × mod_nat, 95%)
+  mort_efetivo  = mort_pct × mod_mort
+
+  nascidos      = matrizes × nat_efetivo
+  desmamados    = nascidos × taxa_desmama × (1 − mort_efetivo)
+  vez_vendidos  = desmamados × pct_venda_bezerros
+    machos_vend   = vez_vendidos × 0,5
+    femeas_vend   = vez_vendidos × 0,5
+  bezerras_ret  = (desmamados − vez_vendidos) × 0,5
+  descarte_mat  = matrizes × 0,15
+  matrizes_prox = max(matrizes + bezerras_ret − descarte_mat,
+                      matrizes × 0,7)
+
+RECEITA:
+  Receita = vez_vendidos × (preco_bezerro × mod_preco)
+
+CUSTO:
+  Custo = (matrizes + femeas_recria) × custo_cab_ano
+
+RESULTADO:
+  Resultado = Receita − Custo
+
+BREAKEVEN:
+  Preco_min (R$/cabeça) = Custo_ano1 / vez_vendidos_ano1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. SIMULAÇÃO — CICLO RECRIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Produto vendido: novilho (peso na saída × R$/arroba)
+Parâmetros padrão: mort=3%, preco_arroba=R$320, peso_entrada=10@,
+                   peso_saida=18@, meses=12, custo_cab_mes=R$80
+
+FLUXO POR ANO:
+
+  animais    = machos 5–25 meses (v[3]+v[5])
+  mortes     = animais × mort_efetivo
+  animais_sai = animais − mortes
+  ganho_arr  = peso_saida_arrobas − peso_entrada_arrobas
+
+RECEITA:
+  Receita = animais_sai × peso_saida_arrobas × (preco_arroba × mod_preco)
+
+  Observação: a receita é calculada sobre o PESO TOTAL na saída,
+  não apenas sobre o ganho. Isso reflete a prática de mercado onde
+  o comprador paga pelo peso vivo do animal ao sair.
+
+CUSTO:
+  Custo = animais × meses_recria × custo_cab_mes
+
+RESULTADO:
+  Resultado = Receita − Custo
+
+BREAKEVEN:
+  arrobas_totais = animais_sai × peso_saida_arrobas
+  Preco_min (R$/arroba) = Custo_ano1 / arrobas_totais
+
+CRESCIMENTO DO LOTE (ano seguinte):
+  animais_prox = animais × (1 + 0,04 × mod_nat)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. SIMULAÇÃO — CICLO ENGORDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Produto vendido: boi gordo — arroba de CARCAÇA (não peso vivo)
+Parâmetros padrão: mort=2%, preco_arroba=R$320, peso_entrada=300kg,
+                   peso_saida=520kg, rendimento=52%, custo_cab_dia=R$12,
+                   dias_engorda=90
+
+CONVERSÃO DE PESO:
+  1 arroba = 15 kg   (padrão brasileiro)
+  arrobas_por_boi = (peso_saida_kg × rendimento_carcaca%) / 15
+
+  Exemplo: 520kg × 0,52 / 15 = 18,03 @/boi
+
+LOTES POR ANO:
+  lotes_ano = inteiro(365 / dias_engorda)
+  Exemplo: 365 / 90 = 4 lotes/ano
+
+FLUXO POR ANO:
+  bois      = machos adultos (v[7]+v[9])
+  bois_no_ano = bois × lotes_ano
+  mortes    = bois_no_ano × mort_efetivo
+  bois_abatidos = bois_no_ano − mortes
+
+RECEITA:
+  Receita = bois_abatidos × arrobas_por_boi × (preco_arroba × mod_preco)
+
+CUSTO:
+  Custo = bois_no_ano × dias_engorda × custo_cab_dia
+
+RESULTADO:
+  Resultado = Receita − Custo
+
+BREAKEVEN:
+  arrobas_totais = bois_abatidos × arrobas_por_boi
+  Preco_min (R$/arroba) = Custo_ano1 / arrobas_totais
+
+CRESCIMENTO DO LOTE (ano seguinte):
+  bois_prox = bois × (1 + 0,04 × mod_nat)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. SIMULAÇÃO — CICLO COMPLETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Combina as três fases. Cada fase roda separadamente e os resultados
+são somados.
+
+RECEITA_TOTAL   = Receita_cria + Receita_recria + Receita_engorda
+CUSTO_TOTAL     = Custo_cria + Custo_recria + Custo_engorda
+RESULTADO_TOTAL = Resultado_cria + Resultado_recria + Resultado_engorda
+
+Para o breakeven do ciclo completo, o preço de venda varia por
+categoria de animal vendido:
+
+  Peso médio ponderado = (bois_vend × peso_boi +
+                          vacas_vend × peso_vaca +
+                          machos_024_vend × peso_arroba)
+                         / total_vendidos
+
+  Preco_min (R$/arroba) = Custo_total / arrobas_totais_ponderadas
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. BREAKEVEN SIMPLIFICADO (estimativa rápida)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Usado para exibir um breakeven antes do usuário configurar a simulação.
+Usa parâmetros fixos médios de Rondônia.
+
+  CRIA
+    custo_cab_ano = R$850
+    natalidade    = 75%
+    desmama       = 80%
+    venda_bez     = 60%
+    bezerros      = matrizes × 0,75 × 0,80 × 0,60
+    Preco_min     = (total × 850) / bezerros        [R$/cabeça]
+
+  RECRIA
+    custo_cab_mes = R$80   meses = 12   peso_saida = 14@
+    Preco_min     = (12 × 80) / 14 = R$68,57/arroba
+
+  ENGORDA
+    peso_saida = 520kg   rendimento = 52%   dias = 90   custo/dia = R$12
+    arrobas    = (520 × 0,52) / 15 = 18,03@
+    Preco_min  = (90 × 12) / 18,03 = R$59,90/arroba
+
+  CICLO_COMPLETO
+    custo_cab_ano = R$850
+    arrobas_est   = total × 0,30 × 16@
+    Preco_min     = (total × 850) / arrobas_est     [R$/arroba]
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. ACUMULADO 5 ANOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Receita_acum   = soma das receitas dos 5 anos
+  Custo_acum     = soma dos custos dos 5 anos
+  Resultado_acum = soma dos resultados dos 5 anos
+  Delta_rebanho  = total_ano5 − total_inicial
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. ESTIMATIVA DE VALOR DO ANIMAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  valor = peso_vivo_kg × fator_categoria × preco_arroba / 15
+
+  Fator por categoria:
+    boi gordo   = 1,00
+    novilho     = 0,92
+    bezerra     = 0,80
+    vaca gorda  = 0,88
+    touro       = 1,05
+
+  Exemplo: boi de 520kg com arroba a R$320
+    valor = 520 × 1,00 × 320 / 15 = R$11.093
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. PREMISSAS E LIMITAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- 1 arroba = 15 kg (padrão oficial Brasil)
+- Benchmarks baseados em médias de Rondônia (não nacionais)
+- Custos por cabeça são médias regionais — variam por manejo,
+  pastagem, suplementação e raça
+- A simulação não considera impostos, financiamentos ou frete
+- Mortalidade é aplicada uniformemente a todas as categorias
+- Crescimento do lote em RECRIA e ENGORDA é de 4% ao ano × mod_nat
+  (simplificação — não incorpora reposição real de animais)
+- Rendimento de carcaça padrão: 52% (varia por raça e manejo)
+- RECRIA receita calculada sobre peso total na saída (não ganho),
+  pois o mercado paga pelo peso do animal, não pelo ganho obtido
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. CLASSIFICAÇÃO ML — COMO O SISTEMA DECIDE O TIPO DE CICLO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O sistema usa um ENSEMBLE de 4 algoritmos + regras híbridas.
+
+ALGORITMOS COMBINADOS (VotingClassifier — votação suave):
+  - RandomForest        (100 árvores)
+  - GradientBoosting    (100 árvores)
+  - XGBoost             (300 rounds)
+  - MLP Neural Network  (camadas 64-32)
+
+CLASSES DE SAÍDA: CRIA / RECRIA / ENGORDA / CICLO_COMPLETO
+  Código: 0=CRIA, 1=RECRIA, 2=ENGORDA, 3=CICLO_COMPLETO
+
+ENGENHARIA DE FEATURES (37 derivadas de 10 entradas):
+  Proporções brutas:
+    p_femeas_024  = (v[0]+v[2]+v[4]) / total
+    p_machos_024  = (v[1]+v[3]+v[5]) / total
+    p_matrizes    = (v[6]+v[8]) / total
+    p_bois        = (v[7]+v[9]) / total
+
+  Sinais binários:
+    has_matrizes  = 1 se p_matrizes > 0,08 (tem rebanho reprodutor)
+    engorda_sig   = 1 se (p_bois > 0,20 E p_matrizes < 0,15)
+    cria_sig      = 1 se (p_matrizes > 0,20 E bezerros > 0,15)
+
+  Score de ciclo completo (0 a 1):
+    ciclo_score   = 1 se TODOS os 4 critérios abaixo forem verdadeiros:
+      - p_matrizes  > 0
+      - machos_024  > 0
+      - p_bois      > 0
+      - p_matrizes  > 0,05
+
+  Features de fluxo (5):
+    eficiencia_reprodutiva = bezerros_0_24 / max(producao_esperada, 1)
+    taxa_transicao         = bois_25_36 / max(bezerros_0_24, 1)
+    intensidade_engorda    = bois_vendidos / total
+    intensidade_cria       = bezerros_vendidos / total
+
+REGRAS HÍBRIDAS (aplicadas ANTES ou DEPOIS do ML):
+
+  1. CICLO_COMPLETO forçado (índice ≥ 4/4):
+     indice_ciclo = soma de condições verdadeiras:
+       + p_matrizes  > 0,15
+       + p_mac_13_24 > 0,10
+       + p_bois      > 0,01
+       + p_bez       > 0,10
+     Se indice_ciclo = 4 → tipo = CICLO_COMPLETO (confiança mín. 85%)
+
+  2. ENGORDA descartada se intensidade_engorda < 0,10:
+     Se ML sugeriu ENGORDA mas há poucos bois adultos,
+     o sistema substitui pelo segundo mais provável (CRIA ou RECRIA)
+
+  3. Caso geral: ML decide pelo argmax das probabilidades
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+14. ESTIMATIVA DE VALOR DO ANIMAL (endpoint /api/estimativa-valor)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Método simplificado — usa cotação do dia e peso vivo informado.
+
+FÓRMULA:
+  peso_carcaca_arrobas = peso_vivo_kg / 30,0
+  valor_estimado       = peso_carcaca_arrobas × preco_arroba
+
+  Onde:
+    preco_arroba = cotação boi gordo (macho) ou vaca gorda (fêmea)
+                   buscada no banco de dados no momento da consulta
+
+EXEMPLO:
+  Animal macho, 480 kg, arroba do boi = R$ 320,00
+  peso_carcaca = 480 / 30 = 16 arrobas
+  valor        = 16 × 320 = R$ 5.120,00
+
+DIFERENÇA em relação à fórmula completa da ENGORDA:
+  - Fórmula ENGORDA: peso_kg × rendimento% / 15
+  - Fórmula rápida:  peso_kg / 30
+  As duas são equivalentes quando rendimento = 50%
+  (pois: peso × 0,50 / 15 = peso / 30)
+  A fórmula rápida é uma aproximação conservadora para uso no campo.
+
+NOTA: se a cotação estiver indisponível no banco (zero ou vazia),
+a API retorna erro 503 — não usa valor padrão para evitar distorção.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+15. EXEMPLOS NUMÉRICOS PRÁTICOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXEMPLO 1 — CRIA (rebanho de 500 cabeças)
+  Rebanho: 150 matrizes, 50 fêmeas jovens, 60 bezerros, 40 bezerras
+  Parâmetros: nat=75%, desmama=80%, venda_bez=60%, preco_bez=R$1.800
+
+  nascidos     = 150 × 0,75 = 112 bezerros
+  desmamados   = 112 × 0,80 × (1-0,03) = 86,9 ≈ 87 animais
+  vez_vendidos = 87 × 0,60 = 52 cabeças
+  Receita      = 52 × R$1.800 = R$93.600
+  Custo        = (150 + 50) × R$850 = R$170.000
+  Resultado    = R$93.600 − R$170.000 = −R$76.400  (prejuízo)
+  Breakeven    = R$170.000 / 52 = R$3.269/cabeça
+
+EXEMPLO 2 — ENGORDA (100 bois, 90 dias, 4 lotes/ano)
+  Parâmetros: peso_saida=520kg, rendimento=52%, custo/dia=R$12, arroba=R$320
+
+  arrobas_por_boi = 520 × 0,52 / 15 = 18,03 @
+  bois_no_ano     = 100 × 4 = 400 bois/ano
+  mortes          = 400 × 0,02 = 8
+  bois_abatidos   = 392
+  Receita         = 392 × 18,03 × R$320 = R$2.260.070
+  Custo           = 400 × 90 × R$12 = R$432.000
+  Resultado       = R$1.828.070
+  Breakeven       = R$432.000 / (392 × 18,03) = R$61,20/arroba
+
+EXEMPLO 3 — BENCHMARK (classificação de indicador)
+  Natalidade informada: 72%
+  Faixa "Abaixo" < 65% → não
+  Faixa "Médio"  65%–78% → SIM → classificado como MÉDIO
+  Próximo nível: BOM (78%)
+  Falta: 78 − 72 = 6 pontos percentuais
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+16. PARÂMETROS PADRÃO DO SISTEMA (valores default)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Taxa de natalidade          75,0%
+  Taxa de mortalidade          3,0%
+  Taxa de descarte matrizes   30,0%
+  Proporção touro/matrizes    1:30 (1 touro para 30 matrizes)
+  Renovação de touros         20,0% ao ano
+  Venda de bezerros           60,0% da produção
+  Custo por cabeça/ano       R$ 850,00
+  Custo por cabeça/mês       R$  80,00
+  Custo por cabeça/dia       R$  12,00
+  Preço da arroba            R$ 320,00
+  Preço do bezerro           R$ 1.800,00
+  Peso do boi                20 arrobas (300 kg vivo)
+  Peso da vaca descarte      17 arrobas (255 kg vivo)
+  Peso da bezerra             8 arrobas (120 kg vivo)
+  Peso entrada RECRIA        10 arrobas
+  Peso saída RECRIA          18 arrobas
+  Meses de RECRIA            12 meses
+  Peso entrada ENGORDA       300 kg
+  Peso saída ENGORDA         520 kg
+  Rendimento de carcaça      52%
+  Dias de confinamento        90 dias
+  Horizonte de simulação      5 anos
+
+================================================================

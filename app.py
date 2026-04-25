@@ -169,6 +169,21 @@ def api_historico_fazenda(fid):
     hist = db.historico_fazenda(fid, user_id=current_user.id)
     return jsonify({'fazenda': dict(f), 'historico': hist})
 
+@app.route('/api/fazendas/<int:fid>/delete', methods=['POST'])
+@login_required
+def api_excluir_fazenda(fid):
+    f = db.buscar_fazenda(fid, user_id=current_user.id)
+    if not f:
+        return jsonify({'erro': 'Fazenda não encontrada'}), 404
+    db.excluir_fazenda(fid, user_id=current_user.id)
+    return jsonify({'ok': True})
+
+@app.route('/api/registros/<int:rid>/delete', methods=['POST'])
+@login_required
+def api_excluir_registro(rid):
+    db.excluir_registro(rid, user_id=current_user.id)
+    return jsonify({'ok': True})
+
 
 # ── App principal ─────────────────────────────────────────────────────────────
 @app.route('/')

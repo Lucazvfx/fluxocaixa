@@ -253,6 +253,22 @@ def historico_fazenda(fazenda_id: int, user_id: int = None, limit: int = 30) -> 
         result.append(d)
     return result
 
+def excluir_registro(registro_id: int, user_id: int) -> bool:
+    ph = _PH
+    _exec(f'DELETE FROM registros WHERE id={ph} AND user_id={ph}',
+          (registro_id, user_id), commit=True)
+    return True
+
+def excluir_fazenda(fazenda_id: int, user_id: int) -> bool:
+    ph = _PH
+    # Primeiro apaga registros vinculados para limpar histórico
+    _exec(f'DELETE FROM registros WHERE fazenda_id={ph} AND user_id={ph}',
+          (fazenda_id, user_id), commit=True)
+    _exec(f'DELETE FROM fazendas WHERE id={ph} AND user_id={ph}',
+          (fazenda_id, user_id), commit=True)
+    return True
+
+
 # ─────────────────────────────────────────────
 # CLASSIFICAÇÕES
 # ─────────────────────────────────────────────

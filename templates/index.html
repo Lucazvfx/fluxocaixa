@@ -24,11 +24,11 @@
   <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca Gorda (R$/arroba)">Vaca Gorda: --</span>
   <span id="hdr-china" class="ml-acc" style="cursor:default" title="Cotação Boi China (R$/arroba)">Boi China: --</span>
   <span id="hdr-indicador" class="ml-acc" style="cursor:default" title="Indicador Scot RO (R$/arroba)">Indicador RO: --</span>
-  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
-  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">? Ajuda</button>
+  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">RETREINAR</button>
+  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">AJUDA</button>
   <span style="width:1px;height:18px;background:var(--b2);display:inline-block;margin:0 4px;vertical-align:middle"></span>
   <button id="btn-alertas" class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 12px;border-radius:8px;border:1px solid rgba(248,113,113,.3);display:flex;align-items:center;gap:5px" onclick="alertasAbrir()"><span style="font-size:.7rem"></span>Alertas</button>
-  <span class="ml-acc" style="border-color:var(--b2);color:var(--tx);padding:4px 12px">👤 {{ current_user.nome }}</span>
+  <span class="ml-acc" style="border-color:var(--b2);color:var(--tx);padding:4px 12px">USUÁRIO: {{ current_user.nome }}</span>
   <a href="{{ url_for('logout') }}" class="ml-acc" style="text-decoration:none;background:rgba(248,113,113,.1);color:var(--rd);border-color:rgba(248,113,113,.3);padding:4px 12px">Sair</a>
 </div>
   </div>
@@ -40,7 +40,7 @@
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
   <button class="tab-btn" onclick="showTab('custos',this)">Custo/Cab.</button>
-  <button class="tab-btn" onclick="showTab('fazendas',this);abrirFazendas()">🏡 Fazendas</button>
+  <button class="tab-btn" onclick="showTab('fazendas',this);abrirFazendas()">Fazendas</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -183,15 +183,6 @@
 <div class="panel" id="panel-cenarios">
   <div class="ptitle" id="cenarios-titulo">Ciclo Completo — <em>Análise Detalhada</em></div>
   <p class="psub" id="cenarios-sub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
-
-  <!-- Presets de ciclo -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-    <span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-right:4px">Preset:</span>
-    <button class="preset-btn" onclick="aplicarPreset('CRIA')">🐄 Cria</button>
-    <button class="preset-btn" onclick="aplicarPreset('RECRIA')">🐂 Recria</button>
-    <button class="preset-btn" onclick="aplicarPreset('ENGORDA')">🥩 Engorda</button>
-    <button class="preset-btn" onclick="aplicarPreset('CICLO_COMPLETO')">♻️ Ciclo Completo</button>
-  </div>
 
   <!-- Sub-nav -->
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
@@ -592,10 +583,12 @@
 
 <!-- ═══ MINHAS FAZENDAS ═══ -->
 <div class="panel" id="panel-fazendas">
-  <div class="ptitle">Minhas <em>Fazendas</em></div>
-  <p class="psub">Histórico de análises por propriedade.</p>
-  <div id="faz-lista-wrap"></div>
-  <div id="faz-hist-wrap" style="display:none"></div>
+  <div style="max-width:1280px; margin:0 auto; padding:0 20px">
+    <div class="ptitle">Minhas <em>Fazendas</em></div>
+    <p class="psub">Histórico de análises por propriedade.</p>
+    <div id="faz-lista-wrap"></div>
+    <div id="faz-hist-wrap" style="display:none"></div>
+  </div>
 </div>
 
 <script>
@@ -1788,31 +1781,68 @@ function renderSc(d){
   gerarRecomendacoes(calcCiclo());
 }
 
-// ── MINHAS FAZENDAS
+// ── MINHAS FAZENDAS (REDESIGN PREMIUM)
 async function abrirFazendas(){
   const lw=document.getElementById('faz-lista-wrap');
   const hw=document.getElementById('faz-hist-wrap');
   hw.style.display='none';hw.innerHTML='';
   lw.style.display='block';
-  lw.innerHTML='<p style="color:var(--mu);padding:20px 0">Carregando...</p>';
+  lw.innerHTML='<div style="display:flex;justify-content:center;padding:40px"><div class="lspin"></div></div>';
+  
   try{
     const res=await fetch('/api/fazendas');
     if(!res.ok){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas ('+res.status+').</p>';return}
     const data=await res.json();
     if(data.erro){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas.</p>';return}
-    const fzs=data.fazendas;
-    if(!fzs.length){lw.innerHTML='<p style="color:var(--mu);padding:20px 0">Nenhuma fazenda cadastrada ainda. Classifique um rebanho vinculando a uma fazenda para começar.</p>';return}
-    lw.innerHTML='<div style="display:grid;gap:12px">'+fzs.map(f=>`
-      <div class="card">
-        <div class="ch">
-          <div class="ct"><div class="cd"></div>${f.nome}</div>
-          <button class="btn-sm" onclick="verHistoricoFazenda(${f.id},'${f.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">Ver histórico</button>
-        </div>
-        <div class="cb" style="padding:12px 22px;font-size:.84rem;color:var(--sb)">
-          ${f.municipio||'—'} · <strong style="color:var(--tx)">${f.total_analises}</strong> análise${f.total_analises!==1?'s':''} · Última: ${f.ultima_analise?f.ultima_analise.slice(0,10):'—'}
-        </div>
-      </div>`).join('')+'</div>';
-  }catch(e){lw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>'}
+    const fzs = data.fazendas;
+    
+    if(!fzs.length){
+      lw.innerHTML=`
+        <div style="text-align:center;padding:60px 20px;background:var(--c2);border:1px dashed var(--b2);border-radius:var(--r);max-width:600px;margin:40px auto">
+          <div style="font-size:3rem;margin-bottom:16px;opacity:.5">FAZENDA</div>
+          <h3 style="font-family:var(--fn);font-size:1.4rem;margin-bottom:8px">Nenhuma fazenda cadastrada</h3>
+          <p style="color:var(--mu);margin-bottom:24px;font-size:.9rem">Vincule suas análises a uma fazenda para começar a construir seu histórico.</p>
+          <button class="btn-sm" onclick="showTab('entrada',document.querySelectorAll('.tab-btn')[0])">Ir para Inserir Dados</button>
+        </div>`;
+      return;
+    }
+
+    lw.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-family:var(--fm);font-size:.6rem;color:var(--sb);letter-spacing:1px;text-transform:uppercase">${fzs.length} Propriedade${fzs.length!==1?'s':''}</div>
+        <button class="btn-sm" onclick="showTab('entrada',document.querySelectorAll('.tab-btn')[0])" style="border-color:var(--g);color:var(--g)">＋ Nova Fazenda</button>
+      </div>
+      <div class="faz-grid">${fzs.map(f=>`
+        <div class="faz-card" onclick="verHistoricoFazenda(${f.id},'${f.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
+          <div class="faz-card-head">
+            <div style="flex:1; min-width:0">
+              <div class="faz-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.nome}</div>
+              <div class="faz-loc">${f.municipio || 'Localização não informada'}</div>
+            </div>
+            <div style="font-family:var(--fm);font-size:.8rem;color:var(--g);font-weight:700">${f.total_analises}</div>
+          </div>
+          <div class="faz-body">
+            <div class="faz-stat-row">
+              <span class="faz-stat-l">Análises Realizadas</span>
+              <span class="faz-stat-v">${f.total_analises}</span>
+            </div>
+            <div class="faz-stat-row">
+              <span class="faz-stat-l">Última Análise</span>
+              <span class="faz-stat-v">${f.ultima_analise ? f.ultima_analise.slice(0,10).split('-').reverse().join('/') : '—'}</span>
+            </div>
+            <div class="faz-stat-row" style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.03)">
+              <span class="faz-stat-l">Proprietário</span>
+              <span class="faz-stat-v" style="font-size:.78rem;color:var(--sb)">${f.proprietario || '—'}</span>
+            </div>
+          </div>
+          <div class="faz-foot">
+             <button class="btn-del-link" onclick="event.stopPropagation(); excluirFazenda(${f.id}, '${f.nome.replace(/'/g,"\\'")}')">Excluir</button>
+             <button class="btn-view-link">Ver Histórico</button>
+          </div>
+        </div>`).join('')}</div>`;
+  }catch(e){
+    lw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>';
+  }
 }
 
 async function verHistoricoFazenda(id,nome){
@@ -1820,29 +1850,119 @@ async function verHistoricoFazenda(id,nome){
   const hw=document.getElementById('faz-hist-wrap');
   lw.style.display='none';
   hw.style.display='block';
-  hw.innerHTML='<p style="color:var(--mu);padding:20px 0">Carregando histórico...</p>';
+  hw.innerHTML='<div style="display:flex;justify-content:center;padding:40px"><div class="lspin"></div></div>';
+  
   try{
     const res=await fetch(`/api/fazendas/${id}/historico`);
     const data=await res.json();
     if(data.erro){hw.innerHTML='<p style="color:var(--rd)">Erro: '+data.erro+'</p>';return}
     const hist=data.historico;
-    const _nomeEsc=nome.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const faz=data.fazenda;
+    
     hw.innerHTML=`
-      <button class="btn-sm" style="margin-bottom:18px" onclick="abrirFazendas()">← Voltar</button>
-      <div class="ptitle" style="font-size:1.8rem;margin-bottom:6px;margin-top:4px">${_nomeEsc}</div>
-      ${!hist.length
-        ?'<p style="color:var(--mu);padding:20px 0">Nenhuma análise salva ainda para esta fazenda.</p>'
-        :`<div class="card"><table class="ytbl">
-          <thead><tr><th>Data</th><th>Tipo</th><th class="r">Animais</th><th class="r">Confiança</th><th></th></tr></thead>
-          <tbody>${hist.map(r=>`<tr>
-            <td style="color:var(--sb);font-family:var(--fm);font-size:.78rem">${r.created_at.slice(0,10)}</td>
-            <td><span style="font-family:var(--fn);font-weight:700;font-size:.85rem;color:${TC[r.class_ml]}">${TE[r.class_ml]||''} ${TL[r.class_ml]||r.class_ml}</span></td>
-            <td class="r">${fN(r.valores.reduce((a,b)=>a+b,0))}</td>
-            <td class="r" style="color:var(--sb)">${r.confianca}%</td>
-            <td style="text-align:right"><button class="btn-sm" onclick="recarregarAnalise(${JSON.stringify(r.valores)},${r.nat_pct||75})">↩ Recarregar</button></td>
-          </tr>`).join('')}</tbody>
-        </table></div>`}`;
-  }catch(e){hw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>'}
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+        <button class="btn-icon-sm" onclick="abrirFazendas()" title="Voltar">VOLTAR</button>
+        <div>
+          <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;color:var(--mu);text-transform:uppercase">Histórico de Propriedade</div>
+          <h1 class="ptitle" style="font-size:2.2rem;margin-bottom:0">${nome}</h1>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><div class="ct"><div class="cd"></div>Informações Gerais</div></div>
+          <div class="cb">
+            <div class="mrow"><span class="mk">Localização</span><span class="mv">${faz.municipio || '—'}</span></div>
+            <div class="mrow"><span class="mk">Proprietário</span><span class="mv">${faz.proprietario || '—'}</span></div>
+            <div class="mrow"><span class="mk">Total de Análises</span><span class="mv">${hist.length}</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Resumo de Performance</div></div>
+          <div class="cb">
+             <div style="color:var(--mu);font-size:.85rem">Abaixo estão as análises arquivadas para esta fazenda. Você pode recarregar qualquer uma delas para os simuladores.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Análises Arquivadas</div></div>
+        <div style="overflow-x:auto">
+          <table class="ytbl">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo Identificado</th>
+                <th class="r">Total Animais</th>
+                <th class="r">Confiança</th>
+                <th style="padding-right:24px; text-align:right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${!hist.length ? '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu)">Nenhuma análise salva.</td></tr>' : 
+                hist.map(r=>`
+                <tr id="row-analise-${r.id}">
+                  <td style="color:var(--sb);font-family:var(--fm);font-size:.78rem">${r.created_at.slice(0,10).split('-').reverse().join('/')}</td>
+                  <td>
+                    <div class="hist-type-badge" style="background:${TC[r.class_ml]}15;color:${TC[r.class_ml]}">
+                      ${TE[r.class_ml] || ''} ${TL[r.class_ml] || r.class_ml}
+                    </div>
+                  </td>
+                  <td class="r">${fN(r.valores.reduce((a,b)=>a+b,0))}</td>
+                  <td class="r" style="color:var(--mu)">${r.confianca}%</td>
+                  <td style="text-align:right; padding-right:12px; display:flex; gap:6px; justify-content:flex-end; padding-top:12px">
+                    <button class="btn-icon-sm reload" onclick="recarregarAnalise(${JSON.stringify(r.valores)},${r.nat_pct||75})" title="Recarregar" style="font-size:.65rem;width:auto;padding:0 8px">RECARREGAR</button>
+                    <button class="btn-icon-sm del" onclick="excluirRegistro(${r.id})" title="Excluir">X</button>
+                  </td>
+                </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }catch(e){
+    hw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>';
+  }
+}
+
+async function excluirRegistro(id) {
+  if(!confirm('Deseja excluir esta análise?')) return;
+  try {
+    const res = await fetch(`/api/registros/${id}/delete`, { method: 'POST' });
+    if(res.ok) {
+      const row = document.getElementById(`row-analise-${id}`);
+      if(row) {
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+      }
+      toast('Análise excluída');
+    } else {
+      const err = await res.json();
+      console.error('Erro ao excluir registro:', err);
+      toast('Erro ao excluir: ' + (err.erro || 'Erro desconhecido'), true);
+    }
+  } catch(e) {
+    console.error('Erro na requisição excluirRegistro:', e);
+    toast('Erro de rede ao excluir', true);
+  }
+}
+
+async function excluirFazenda(id, nome) {
+  if(!confirm(`Deseja EXCLUIR "${nome}" e todo o histórico?`)) return;
+  try {
+    const res = await fetch(`/api/fazendas/${id}/delete`, { method: 'POST' });
+    if(res.ok) {
+      toast(`Fazenda excluída`);
+      abrirFazendas();
+    } else {
+      const err = await res.json();
+      console.error('Erro ao excluir fazenda:', err);
+      toast('Erro ao excluir fazenda', true);
+    }
+  } catch(e) {
+    console.error('Erro na requisição excluirFazenda:', e);
+    toast('Erro de rede', true);
+  }
 }
 
 function recarregarAnalise(valores,natPct){

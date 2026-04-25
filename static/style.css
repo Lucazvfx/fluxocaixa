@@ -976,3 +976,114 @@ main {
   #s-kpi { grid-template-columns: 1fr !important; }
   [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
 }
+
+/* ============================================================
+   30. MINHAS FAZENDAS — REDESIGN PREMIUM
+   ============================================================ */
+.faz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.faz-card {
+  background: var(--c2) !important;
+  border: 1px solid var(--b) !important;
+  border-radius: var(--rs) !important;
+  padding: 0 !important;
+  transition: all .2s !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.faz-card:hover { border-color: var(--g) !important; transform: translateY(-2px); }
+
+.faz-card-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--b);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.faz-name { font-family: var(--fn); font-weight: 700; font-size: 1.05rem; color: var(--tx); letter-spacing: .5px; }
+.faz-loc  { font-size: .72rem; color: var(--mu); margin-top: 2px; }
+
+.faz-body { padding: 16px 20px; flex-grow: 1; }
+.faz-stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: .8rem; }
+.faz-stat-l { color: var(--sb); }
+.faz-stat-v { color: var(--tx); font-weight: 600; font-family: var(--fm); }
+
+.faz-foot {
+  padding: 12px 20px;
+  background: rgba(0,0,0,.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--b);
+}
+
+.btn-del-link { color: var(--mu); background: none; border: none; cursor: pointer; font-size: .8rem; transition: color .2s; }
+.btn-del-link:hover { color: var(--rd); }
+
+.btn-view-link {
+  font-family: var(--fn); font-weight: 700; font-size: .72rem;
+  color: var(--g); background: none; border: none; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.btn-view-link:hover { text-decoration: underline; }
+
+.btn-view:hover {
+  opacity: .9;
+  transform: scale(1.03);
+}
+
+/* Histórico Improvements */
+.hist-table-wrap {
+  background: var(--c);
+  border-radius: var(--r);
+  border: 1px solid var(--b);
+  overflow: hidden;
+}
+
+.hist-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--fm);
+  font-size: .7rem;
+  font-weight: 600;
+}
+
+.btn-icon-sm {
+  background: none;
+  border: 1px solid var(--b2);
+  color: var(--mu);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.btn-icon-sm.del:hover {
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--rd);
+  border-color: var(--rd);
+}
+
+.btn-icon-sm.reload:hover {
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--g);
+  border-color: var(--g);
+}
+
+@media (max-width: 480px) {
+  .faz-grid { grid-template-columns: 1fr; }
+}

@@ -262,7 +262,7 @@ r = requests.post('http://localhost:5050/api/cenario', json={
 
 ```bash
 git add .
-git commit -m "Descrição das alterações"
+git commit -m "ATT"
 git push origin main
 ```
 
