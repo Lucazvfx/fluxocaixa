@@ -7,7 +7,7 @@ Sistema Python com Machine Learning para classificar o tipo de exploração bovi
 
 ## Os Quatro Ciclos da Pecuária
 
-### 🐄 CRIA
+### CRIA
 
 **O que é:** A fazenda mantém matrizes (vacas) para produzir bezerros. O produto final vendido é o **bezerro desmamado**, vendido por cabeça.
 
@@ -36,7 +36,7 @@ Receita = Bezerros vendidos × Preço por cabeça (R$/cab)
 
 ---
 
-### 🐂 RECRIA
+### RECRIA
 
 **O que é:** A fazenda **compra bezerros desmamados** (ou usa os próprios) e os cria até o ponto de venda como garrote/novilho. Ela **não produz bezerros nem abate** — seu produto é o animal mais pesado.
 
@@ -66,7 +66,7 @@ Receita = Animais vendidos × Peso de saída (arrobas) × Preço arroba novilho
 
 ---
 
-### 🥩 ENGORDA
+### ENGORDA
 
 **O que é:** A fazenda recebe animais já recriados (garrotes/novilhos pesados) e os **termina para o abate**. O produto final é o **boi gordo**, vendido por arroba de carcaça.
 
@@ -98,7 +98,7 @@ Receita = Bois abatidos × Arrobas por boi × Preço arroba boi gordo
 
 ---
 
-### 🔄 CICLO COMPLETO
+### CICLO COMPLETO
 
 **O que é:** A fazenda realiza **as três fases** — cria, recria e engorda — dentro da mesma propriedade. É o modelo mais complexo e o que exige mais capital e gestão.
 
@@ -141,25 +141,25 @@ O ensemble usa Random Forest + Gradient Boosting com regras híbridas para casos
 
 ---
 
-## ⚡ Novos Recursos (Superpowers)
+## Novos Recursos (Superpowers)
 
-### 📈 Benchmarks Rondônia
+### Benchmarks Rondônia
 O sistema agora compara os indicadores da sua fazenda com as médias regionais de Rondônia (Embrapa/SEAGRI). 
 - Identifique se sua natalidade, mortalidade e rendimento de carcaça estão acima ou abaixo da média.
 - Visualize o quanto falta para atingir o próximo nível de eficiência.
 
-### ⚖️ Ponto de Equilíbrio (Breakeven) Interativo
+### Ponto de Equilíbrio (Breakeven) Interativo
 Simule o impacto das variações de preço do mercado em tempo real.
 - Slider interativo para ajustar o preço da arroba e ver o lucro projetado instantaneamente.
 - Cálculo automático do preço mínimo de venda para não ter prejuízo.
 
-### 🧠 Recomendações Inteligentes
+### Recomendações Inteligentes
 O motor de análise gera sugestões automáticas baseadas nos dados do seu rebanho:
 - Alertas de prejuízo ou margens apertadas.
 - Identificação de excesso de bois reprodutores.
 - Sugestões técnicas para melhorar a natalidade e conversão alimentar.
 
-### ✅ Validação de Dados em Tempo Real
+### Validação de Dados em Tempo Real
 Interface aprimorada com validação inline para garantir que os parâmetros zootécnicos e financeiros estejam dentro de limites realistas, evitando erros de simulação.
 
 ---
