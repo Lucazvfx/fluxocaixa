@@ -205,6 +205,9 @@ def index():
 @app.route('/api/classificar', methods=['POST'])
 @login_required
 def api_classificar():
+    from ml_engine import _pipeline
+    if _pipeline is None:
+        return jsonify({'erro': 'Modelo ainda carregando, aguarde alguns segundos e tente novamente.'}), 503
     data = request.json
     v = data.get('valores', [])
     if len(v) != 10 or sum(v) < 10:
