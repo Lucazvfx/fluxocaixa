@@ -150,19 +150,34 @@ def init_db():
     _add_column_safe('registros', 'user_id',    'INTEGER')
     _add_column_safe('registros', 'fazenda_id', 'INTEGER')
     _add_column_safe('cotacao_arroba', 'preco_boi_china', 'REAL')
+    _add_column_safe('usuarios', 'security_question', 'TEXT DEFAULT \'\'')
+    _add_column_safe('usuarios', 'security_answer_hash', 'TEXT DEFAULT \'\'')
 
 
 # ─────────────────────────────────────────────
 # USUÁRIOS
 # ─────────────────────────────────────────────
-def criar_usuario(email: str, nome: str, senha: str) -> int:
+def criar_usuario(email: str, nome: str, senha: str,
+                  security_question: str = '', security_answer: str = '') -> int:
     ph = _PH
     rid = _exec(
-        f'INSERT INTO usuarios (email, nome, senha_hash) VALUES ({ph},{ph},{ph})',
-        (email.lower().strip(), nome.strip(), generate_password_hash(senha)),
+        f'INSERT INTO usuarios (email, nome, senha_hash, security_question, security_answer_hash) VALUES ({ph},{ph},{ph},{ph},{ph})',
+        (email.lower().strip(), nome.strip(), generate_password_hash(senha),
+         security_question, generate_password_hash(security_answer.lower().strip()) if security_answer else ''),
         fetch='lastrow', commit=True
     )
     return int(rid)
+
+def resetar_senha(email: str, nova_senha: str):
+    ph = _PH
+    _exec(f'UPDATE usuarios SET senha_hash={ph} WHERE email={ph}',
+          (generate_password_hash(nova_senha), email.lower().strip()), commit=True)
+
+def verificar_resposta_seguranca(email: str, resposta: str) -> bool:
+    u = buscar_usuario_email(email)
+    if not u or not u.get('security_answer_hash'):
+        return False
+    return check_password_hash(u['security_answer_hash'], resposta.lower().strip())
 
 def buscar_usuario_email(email: str) -> dict | None:
     ph = _PH

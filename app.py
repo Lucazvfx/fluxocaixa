@@ -75,18 +75,59 @@ def register():
         
     if request.method == 'POST':
         email = request.form.get('email')
-        nome = request.form.get('nome')
+        nome  = request.form.get('nome')
         senha = request.form.get('senha')
-        
+        pergunta = request.form.get('security_question', '')
+        resposta  = request.form.get('security_answer', '')
+
         if db.buscar_usuario_email(email):
             flash('Email já cadastrado', 'error')
+        elif not pergunta or not resposta:
+            flash('Escolha uma pergunta de segurança e informe a resposta', 'error')
         else:
-            uid = db.criar_usuario(email, nome, senha)
+            uid = db.criar_usuario(email, nome, senha, pergunta, resposta)
             user_obj = User(uid, email, nome)
-            login_user(user_obj)
+            login_user(user_obj, remember=True)
             return redirect(url_for('index'))
-            
+
     return render_template('register.html')
+
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def esqueci_senha():
+    etapa = request.args.get('etapa', '1')
+    email = request.args.get('email', '')
+
+    if request.method == 'POST':
+        etapa = request.form.get('etapa', '1')
+        email = request.form.get('email', '').lower().strip()
+
+        if etapa == '1':
+            u = db.buscar_usuario_email(email)
+            if not u or not u.get('security_question'):
+                flash('Email não encontrado ou sem pergunta de segurança cadastrada', 'error')
+                return render_template('esqueci_senha.html', etapa='1')
+            return render_template('esqueci_senha.html', etapa='2',
+                                   email=email, pergunta=u['security_question'])
+
+        elif etapa == '2':
+            resposta = request.form.get('resposta', '')
+            if not db.verificar_resposta_seguranca(email, resposta):
+                flash('Resposta incorreta', 'error')
+                u = db.buscar_usuario_email(email)
+                return render_template('esqueci_senha.html', etapa='2',
+                                       email=email, pergunta=u['security_question'])
+            return render_template('esqueci_senha.html', etapa='3', email=email)
+
+        elif etapa == '3':
+            nova = request.form.get('nova_senha', '')
+            if len(nova) < 6:
+                flash('Senha deve ter pelo menos 6 caracteres', 'error')
+                return render_template('esqueci_senha.html', etapa='3', email=email)
+            db.resetar_senha(email, nova)
+            flash('Senha alterada com sucesso! Faça login.', 'success')
+            return redirect(url_for('login'))
+
+    return render_template('esqueci_senha.html', etapa='1')
 
 @app.route('/logout')
 @login_required
