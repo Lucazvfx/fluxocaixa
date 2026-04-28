@@ -440,7 +440,7 @@
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
         <div class="cb">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="0" min="1" oninput="runSc();validarCampo(this,1,2000)"></div>
+            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="0" min="0" oninput="runSc();validarCampo(this,0,2000)"></div>
             <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="4" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
             <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="950" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
             <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="sc-peso" value="8" min="4" max="20" step="0.5" oninput="runSc();validarCampo(this,4,20)"></div>
@@ -1183,7 +1183,7 @@ const _REGRAS_VALIDACAO = [
   ['s-fem',          0, 99999],
   ['s-mac',          0, 99999],
   ['s-boi',          0, 99999],
-  ['sc-preco-arr',   1,  2000],
+  ['sc-preco-arr',   0,  2000],
   ['sc-peso',        4,    20],
 ];
 
