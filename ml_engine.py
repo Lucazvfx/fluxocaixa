@@ -9,8 +9,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import cross_val_score, RepeatedStratifiedKFold, cross_val_predict
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import cross_val_score
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
@@ -135,12 +134,17 @@ def extrair_features(
 # ==================================================================
 def _build_model():
     """Cria pipeline com ensemble RandomForest + GradientBoosting."""
+    # Em produção (sem GPU, RAM limitada) usa configuração mais leve
+    prod = bool(os.environ.get('DATABASE_URL'))
     rf = RandomForestClassifier(
-        n_estimators=300, max_depth=12, min_samples_leaf=2,
-        random_state=42, n_jobs=-1, class_weight='balanced'
+        n_estimators=100 if prod else 300,
+        max_depth=10 if prod else 12,
+        min_samples_leaf=2,
+        random_state=42, n_jobs=1, class_weight='balanced'
     )
     gb = GradientBoostingClassifier(
-        n_estimators=200, learning_rate=0.05, max_depth=4,
+        n_estimators=80 if prod else 200,
+        learning_rate=0.05, max_depth=4,
         subsample=0.8, random_state=42
     )
     ensemble = VotingClassifier(
@@ -165,24 +169,12 @@ def treinar_modelo():
     y = np.array(y_csv)
     
     print(f"Treinando com {len(X)} amostras e {X.shape[1]} features.")
-    
-    # Validação cruzada repetida para avaliar estabilidade
-    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=42)
-    pipeline = _build_model()
-    scores_f1 = cross_val_score(pipeline, X, y, cv=cv, scoring='f1_macro')
-    print(f"F1-macro médio: {scores_f1.mean():.4f} (+/- {scores_f1.std():.4f})")
-    
-    # Treina modelo final
-    _pipeline = pipeline
+
+    _pipeline = _build_model()
     _pipeline.fit(X, y)
-    
-    # Métricas finais
-    y_pred = _pipeline.predict(X)
-    print("\nRelatório final (todos os dados):")
-    print(classification_report(y, y_pred, target_names=TIPOS))
-    
-    cv_acc = cross_val_score(_pipeline, X, y, cv=5, scoring='accuracy')
-    cv_f1 = cross_val_score(_pipeline, X, y, cv=5, scoring='f1_macro')
+
+    cv_acc = cross_val_score(_pipeline, X, y, cv=3, scoring='accuracy')
+    cv_f1  = cross_val_score(_pipeline, X, y, cv=3, scoring='f1_macro')
     result = {
         'accuracy_mean': round(float(cv_acc.mean()), 4),
         'accuracy_std': round(float(cv_acc.std()), 4),
