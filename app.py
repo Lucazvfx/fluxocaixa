@@ -17,7 +17,12 @@ import database as db
 from scraper import obter_precos_arroba
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'fluxo-gestao-dev-secret-2026')
+_secret = os.environ.get('SECRET_KEY')
+if not _secret:
+    if os.environ.get('DATABASE_URL'):
+        raise RuntimeError("SECRET_KEY deve ser definida como variável de ambiente em produção.")
+    _secret = 'fluxo-gestao-dev-secret-2026'
+app.secret_key = _secret
 
 # ── Autenticação ─────────────────────────────────────────────────────────────
 login_manager = LoginManager()
