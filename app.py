@@ -24,6 +24,11 @@ if not _secret:
     _secret = 'fluxo-gestao-dev-secret-2026'
 app.secret_key = _secret
 
+if os.environ.get('DATABASE_URL'):
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # ── Autenticação ─────────────────────────────────────────────────────────────
 login_manager = LoginManager()
 login_manager.login_view = 'login'
