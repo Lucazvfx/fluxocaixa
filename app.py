@@ -3,7 +3,8 @@ Fluxo de Gestão - Servidor Flask
 """
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from apscheduler.schedulers.background import BackgroundScheduler # IMPORT NOVO: Agendador
+from werkzeug.middleware.proxy_fix import ProxyFix
+from apscheduler.schedulers.background import BackgroundScheduler
 import os, re, tempfile, subprocess, threading
 
 from ml_engine import (
@@ -17,6 +18,7 @@ import database as db
 from scraper import obter_precos_arroba
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 _secret = os.environ.get('SECRET_KEY')
 if not _secret:
     if os.environ.get('DATABASE_URL'):
