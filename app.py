@@ -82,18 +82,25 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-# ── Startup: carrega modelo do disco ou treina do zero ──────────────────────
-_saved = carregar_modelo()
-if _saved:
-    stats = _saved
-    print(f"Modelo carregado do disco | Acuracia: {stats['accuracy_mean']*100:.1f}% | Amostras: {stats['n_samples']}")
-else:
-    print("Treinando modelo ML (primeira execucao)...")
-    stats = treinar_modelo()
-    print(f"Modelo treinado | Acuracia CV: {stats['accuracy_mean']*100:.1f}% ± {stats['accuracy_std']*100:.1f}% | Amostras: {stats['n_samples']}")
-
+# ── Startup: DB primeiro (rápido), ML em background (lento) ──────────────────
 db.init_db()
-print("Banco SQLite inicializado.")
+print("Banco inicializado.")
+
+stats = {'accuracy_mean': 0, 'accuracy_std': 0, 'f1_macro_mean': 0,
+         'f1_macro_std': 0, 'n_samples': 0, 'n_features': 0, 'n_csv': 0}
+
+def _startup_ml():
+    global stats
+    _saved = carregar_modelo()
+    if _saved:
+        stats = _saved
+        print(f"[ML] Modelo carregado | Acurácia: {stats['accuracy_mean']*100:.1f}%")
+    else:
+        print("[ML] Treinando modelo pela primeira vez...")
+        stats = treinar_modelo()
+        print(f"[ML] Treinamento concluído | Acurácia: {stats['accuracy_mean']*100:.1f}%")
+
+threading.Thread(target=_startup_ml, daemon=True).start()
 
 # ── Automação: Cotações Diárias (Scraper) ────────────────────────────────────
 def rotina_diaria_cotacoes():
@@ -110,11 +117,10 @@ def rotina_diaria_cotacoes():
 
 # Configura e inicia o agendador de tarefas
 scheduler = BackgroundScheduler(daemon=True)
-scheduler.add_job(rotina_diaria_cotacoes, 'cron', hour=8, minute=0) # Roda todo dia às 08h00
+scheduler.add_job(rotina_diaria_cotacoes, 'cron', hour=8, minute=0)
 scheduler.start()
 
-# Opcional: Roda uma vez assim que o servidor liga para garantir que a tabela não fica vazia
-rotina_diaria_cotacoes()
+threading.Thread(target=rotina_diaria_cotacoes, daemon=True).start()
 
 
 # ── Auto-retreino em background ──────────────────────────────────────────────
