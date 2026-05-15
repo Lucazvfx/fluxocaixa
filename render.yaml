@@ -1,16 +1,13 @@
 services:
   - type: web
-    name: fluxo-caixa
+    name: fluxocaixa
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: /bin/sh -c "/opt/render/project/src/.venv/bin/gunicorn app:app --bind 0.0.0.0:$PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: bovi-ml-db
+          name: fluxocaixa-db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
-
-databases:
-  - name: fluxo-caixa-db
