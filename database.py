@@ -146,6 +146,14 @@ def init_db():
         )
     ''', commit=True)
 
+    # KV genérica para contadores e flags (multi-worker safe)
+    _exec(f'''
+        CREATE TABLE IF NOT EXISTS meta (
+            chave  TEXT PRIMARY KEY,
+            valor  TEXT NOT NULL
+        )
+    ''', commit=True)
+
     # Colunas adicionadas de forma segura (retrocompatibilidade)
     _add_column_safe('registros', 'user_id',    'INTEGER')
     _add_column_safe('registros', 'fazenda_id', 'INTEGER')
@@ -411,3 +419,70 @@ def obter_cotacoes_atuais() -> dict:
         
     # Preços de segurança (fallback) caso o banco esteja vazio
     return {'boi': 0.0, 'vaca': 0.0, 'boi_china': 0.0}
+
+
+# ─────────────────────────────────────────────
+# META (KV genérica — multi-worker safe)
+# ─────────────────────────────────────────────
+def get_meta(chave: str, default: str = '0') -> str:
+    ph = _PH
+    row = _exec(f'SELECT valor FROM meta WHERE chave={ph}', (chave,), fetch='one')
+    if row is None:
+        return default
+    return str(row['valor'])
+
+
+def set_meta(chave: str, valor) -> None:
+    ph = _PH
+    valor_str = str(valor)
+    if _USE_PG:
+        _exec(
+            f'''INSERT INTO meta (chave, valor) VALUES ({ph},{ph})
+                ON CONFLICT (chave) DO UPDATE SET valor=EXCLUDED.valor''',
+            (chave, valor_str), commit=True
+        )
+    else:
+        _exec(
+            f'INSERT OR REPLACE INTO meta (chave, valor) VALUES ({ph},{ph})',
+            (chave, valor_str), commit=True
+        )
+
+
+def incr_meta(chave: str, delta: int = 1) -> int:
+    """Incrementa atomicamente um contador inteiro e retorna o novo valor.
+
+    Em PostgreSQL usa UPDATE atômico. Em SQLite (single-writer) usa
+    transação simples — suficiente porque SQLite serializa writes.
+    """
+    ph = _PH
+    if _USE_PG:
+        # UPSERT atômico via INSERT ... ON CONFLICT
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f'''INSERT INTO meta (chave, valor) VALUES ({ph},{ph})
+                        ON CONFLICT (chave) DO UPDATE
+                        SET valor = (CAST(meta.valor AS BIGINT) + {ph})::TEXT
+                        RETURNING valor''',
+                    (chave, str(delta), delta)
+                )
+                novo = cur.fetchone()[0]
+                conn.commit()
+                return int(novo)
+    else:
+        with get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f'SELECT valor FROM meta WHERE chave={ph}', (chave,))
+            row = cur.fetchone()
+            atual = int(row['valor']) if row else 0
+            novo = atual + delta
+            cur.execute(
+                f'INSERT OR REPLACE INTO meta (chave, valor) VALUES ({ph},{ph})',
+                (chave, str(novo))
+            )
+            conn.commit()
+            return novo
+
+
+def reset_meta(chave: str) -> None:
+    set_meta(chave, '0')

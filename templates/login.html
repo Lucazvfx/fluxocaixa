@@ -28,7 +28,8 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
-        <form method="POST">
+                <form method="POST">
+                    <!-- CSRF token not injected: app does not require Flask-WTF by default -->
             <div class="form-group">
                 <label>Email</label>
                 <input type="email" name="email" required autofocus>
@@ -40,7 +41,7 @@
             <button type="submit">Entrar</button>
         </form>
         <div class="links">
-            Não tem uma conta? <a href="{{ url_for('register') }}">Cadastre-se</a><br>
+            Não tem uma conta? <a href="{{ url_for('cadastro') }}">Cadastre-se</a><br>
             <a href="{{ url_for('esqueci_senha') }}" style="color:#e67e22">Esqueceu a senha?</a>
         </div>
     </div>

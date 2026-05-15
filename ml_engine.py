@@ -326,13 +326,121 @@ def classificar(
         f"intensidade_cria={intensidade_cria:.3f}, indice_ciclo={indice_ciclo}"
     )
 
+    # ── Detecção de ciclo misto (CRIA+RECRIA, RECRIA+ENGORDA, etc.) ──
+    misto = _detectar_ciclo_misto(
+        tipo_principal=tipo,
+        prob_dict=prob_dict,
+        p_matrizes=p_matrizes_h,
+        p_mac_recria=p_mac_13_24_h,
+        p_bois=p_bois_h,
+        p_bez=p_bez_h,
+        intensidade_engorda=intensidade_engorda,
+    )
+    if misto:
+        explicacao.append(
+            f"Ciclo misto detectado: {misto['combinacao']} "
+            f"(secundário {misto['tipo_secundario']} = {misto['confianca_secundaria']}%)"
+        )
+
     return {
         'classificacao': tipo,
         'tipo': tipo,
         'confianca': confianca,
         'probabilidades': prob_dict,
         'explicacao': explicacao,
+        'tipo_secundario':       (misto or {}).get('tipo_secundario'),
+        'combinacao':            (misto or {}).get('combinacao', tipo),
+        'confianca_secundaria':  (misto or {}).get('confianca_secundaria', 0.0),
     }
+
+
+# ==================================================================
+# 5b. CICLOS MISTOS (pós-processamento)
+# ==================================================================
+# Combinações plausíveis de fases convivendo na mesma fazenda.
+# CICLO_COMPLETO já cobre as 3 fases — não geramos misto a partir dele.
+_PARES_VALIDOS = {
+    ('CRIA',    'RECRIA'),
+    ('RECRIA',  'CRIA'),
+    ('RECRIA',  'ENGORDA'),
+    ('ENGORDA', 'RECRIA'),
+    ('CRIA',    'ENGORDA'),   # raro mas possível (cria + termina, sem recria)
+    ('ENGORDA', 'CRIA'),
+}
+
+# Limiar mínimo de probabilidade do 2º tipo para considerar misto
+_MISTO_PROB_MIN = 25.0
+
+# Diferença máxima entre o 1º e o 2º tipo: se a diferença for muito grande,
+# o classificador está confiante em uma única classe.
+_MISTO_GAP_MAX  = 50.0
+
+
+def _detectar_ciclo_misto(
+    tipo_principal: str,
+    prob_dict: dict,
+    p_matrizes: float,
+    p_mac_recria: float,
+    p_bois: float,
+    p_bez: float,
+    intensidade_engorda: float,
+) -> dict | None:
+    """Retorna dict {tipo_secundario, combinacao, confianca_secundaria}
+    ou None se a fazenda for monoculo. CICLO_COMPLETO nunca vira misto."""
+    if tipo_principal == 'CICLO_COMPLETO':
+        return None
+
+    # 2º tipo mais provável (que não seja o principal nem CICLO_COMPLETO)
+    candidatos = [
+        (t, p) for t, p in prob_dict.items()
+        if t != tipo_principal and t != 'CICLO_COMPLETO'
+    ]
+    if not candidatos:
+        return None
+    secundario, prob_sec = max(candidatos, key=lambda x: x[1])
+
+    if prob_sec < _MISTO_PROB_MIN:
+        return None
+    if (prob_dict[tipo_principal] - prob_sec) > _MISTO_GAP_MAX:
+        return None
+    if (tipo_principal, secundario) not in _PARES_VALIDOS:
+        return None
+
+    # Validação por composição: confirma que os indicadores realmente
+    # suportam a presença das duas fases.
+    if not _composicao_suporta(tipo_principal, secundario,
+                                p_matrizes, p_mac_recria, p_bois,
+                                p_bez, intensidade_engorda):
+        return None
+
+    par_ord = '+'.join(sorted([tipo_principal, secundario]))
+    return {
+        'tipo_secundario': secundario,
+        'combinacao': par_ord,
+        'confianca_secundaria': round(float(prob_sec), 1),
+    }
+
+
+def _composicao_suporta(principal, secundario,
+                         p_matrizes, p_mac_recria, p_bois,
+                         p_bez, intensidade_engorda) -> bool:
+    """Cada combinação exige que ambas as fases tenham massa real
+    no rebanho — não basta o ML achar a probabilidade alta."""
+    par = frozenset([principal, secundario])
+
+    if par == frozenset(['CRIA', 'RECRIA']):
+        # Precisa de matrizes (cria) E machos jovens (recria)
+        return p_matrizes > 0.10 and p_mac_recria > 0.05
+
+    if par == frozenset(['RECRIA', 'ENGORDA']):
+        # Precisa de machos jovens E bois adultos / engorda real
+        return p_mac_recria > 0.05 and (p_bois > 0.05 or intensidade_engorda > 0.05)
+
+    if par == frozenset(['CRIA', 'ENGORDA']):
+        # Precisa de matrizes E bois adultos, sem recria predominante
+        return p_matrizes > 0.10 and p_bois > 0.05 and p_mac_recria < 0.15
+
+    return False
 
 # ==================================================================
 # 6. INDICADORES ZOOTÉCNICOS

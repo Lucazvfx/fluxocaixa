@@ -35,7 +35,8 @@
 
     {% if etapa == '1' %}
     <p class="step">Passo 1 de 3 — Informe seu email</p>
-    <form method="POST">
+        <form method="POST">
+            <!-- CSRF token not injected: app does not require Flask-WTF by default -->
         <input type="hidden" name="etapa" value="1">
         <div class="form-group">
             <label>Email cadastrado</label>
@@ -46,7 +47,8 @@
 
     {% elif etapa == '2' %}
     <p class="step">Passo 2 de 3 — Responda a pergunta de segurança</p>
-    <form method="POST">
+        <form method="POST">
+            <!-- CSRF token not injected: app does not require Flask-WTF by default -->
         <input type="hidden" name="etapa" value="2">
         <input type="hidden" name="email" value="{{ email }}">
         <div class="pergunta">{{ pergunta }}</div>
@@ -59,7 +61,8 @@
 
     {% elif etapa == '3' %}
     <p class="step">Passo 3 de 3 — Defina a nova senha</p>
-    <form method="POST">
+        <form method="POST">
+            <!-- CSRF token not injected: app does not require Flask-WTF by default -->
         <input type="hidden" name="etapa" value="3">
         <input type="hidden" name="email" value="{{ email }}">
         <div class="form-group">

@@ -3,11 +3,232 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fluxo de caixa - Bovinos</title>
+<title>Fluxo de caixa — Gestão Jaine</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="/static/favicon-cow.png">
-<!-- Estilos separados em arquivo externo para facilitar manutenção -->
-<link rel="stylesheet" href="/static/style.css">
+<style>
+:root{
+--bg:#060810;
+  --s:#0C0F18;
+  --c:#111520;
+  --c2:#161B2A;
+  --b:#1E2535;
+  --b2:#28304A;
+  --g:#4ADE80;
+  --cy:#4ADE80;
+  --am:#FBBF24;
+  --rd:#F87171;
+  --pu:#A78BFA;
+  --tx:#E8ECF5;
+  --mu:#4A5570;
+  --sb:#8892AA;
+  --fn: 'Barlow Condensed', sans-serif;--fb: 'Barlow', sans-serif;--fm:'DM Mono', monospace;
+  --r:16px;--rs:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 60% 40% at 15% 10%,rgba(74,222,128,.05) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 30% at 85% 85%,rgba(34,211,238,.04) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
+
+header{position:sticky;top:0;z-index:200;background:rgba(6,8,16,.93);backdrop-filter:blur(24px);border-bottom:1px solid var(--b);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
+.logo{font-family:var(--fn);font-weight:800;font-size:1.4rem;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+.logo-mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#4ADE80,#4ADE80);display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.logo em{font-style:normal;background:linear-gradient(90deg,#4ADE80,#4ADE80);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr-r{display:flex;align-items:center;gap:12px}
+.ml-badge{font-family:var(--fm);font-size:.54rem;letter-spacing:2px;background:rgba(74,222,128,.1);color:var(--g);border:1px solid rgba(74,222,128,.25);padding:4px 12px;border-radius:20px}
+.ml-acc{font-family:var(--fm);font-size:.58rem;color:var(--g);background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);padding:4px 10px;border-radius:8px}
+
+main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-index:1}
+
+.tab-bar{display:flex;gap:4px;background:var(--c);border:1px solid var(--b);border-radius:var(--r);padding:4px;margin-bottom:36px;width:fit-content}
+.tab-btn{font-family:var(--fn);font-weight:700;font-size:.76rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--mu);padding:10px 20px;border-radius:12px;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tab-btn:hover{color:var(--tx);background:var(--b)}
+.tab-btn.active{background:var(--g);color:#000}
+
+.panel{display:none;animation:rise .35s cubic-bezier(.22,1,.36,1)}
+.panel.active{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--c);border:1px solid var(--b);border-radius:var(--r);overflow:hidden}
+.ch{padding:16px 22px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between}
+.ct{font-family:var(--fn);font-weight:700;font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.cd{width:5px;height:5px;border-radius:50%;background:var(--g);flex-shrink:0}
+.cb{padding:22px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g13{display:grid;grid-template-columns:1fr 3fr;gap:16px;margin-bottom:16px}
+
+.ptitle{font-family:var(--fn);font-weight:800;font-size:2.8rem;letter-spacing:-1px;line-height:1;margin-bottom:6px}
+.ptitle em{font-style:normal;background:linear-gradient(90deg,var(--g),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.psub{font-size:.9rem;color:var(--sb);margin-bottom:28px}
+
+/* INPUT TABLE */
+.itbl{width:100%;border-collapse:collapse}
+.itbl thead th{font-family:var(--fm);font-size:.57rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:10px 14px;text-align:left;border-bottom:1px solid var(--b)}
+.itbl thead th.c{text-align:center}
+.itbl tbody tr{border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s}
+.itbl tbody tr:hover{background:rgba(255,255,255,.02)}
+.itbl td{padding:8px 14px;font-size:.84rem}
+.fc{display:inline-flex;align-items:center;font-family:var(--fm);font-size:.67rem;padding:4px 10px;border-radius:6px;border:1px solid}
+/* CORRIGIDO: sem fundo, fonte igual ao resto */
+.ni{width:110px;background:transparent;border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px;font-family:var(--fb);font-size:.88rem;outline:none;transition:border-color .2s;text-align:center;-moz-appearance:textfield}
+.ni::-webkit-inner-spin-button{-webkit-appearance:none}
+.ni.nf{color:var(--g)}.ni.nm{color:var(--am)}
+.ni:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(74,222,128,.1)}
+.tdc{text-align:center}
+.tdtot{font-family:var(--fm);font-size:.8rem;color:var(--tx);text-align:center;font-weight:600}
+
+.tstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--b);border-radius:var(--rs);overflow:hidden;border:1px solid var(--b);margin-top:18px}
+.tsc{background:var(--c2);padding:14px 16px}
+.tsc-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
+.tsc-v{font-family:var(--fn);font-weight:800;font-size:1.5rem;letter-spacing:-.5px;line-height:1}
+.cg{color:var(--g)}.ca{color:var(--am)}.cc{color:var(--cy)}.cr{color:var(--rd)}.cp{color:var(--pu)}
+
+.fgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)}
+.field input,.field select{background:var(--c2);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 14px;color:var(--tx);font-family:var(--fb);font-size:.88rem;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--g)}
+.field select option{background:var(--c)}
+
+/* UPLOAD */
+.upzone{border:2px dashed var(--b2);border-radius:var(--r);padding:52px 32px;text-align:center;cursor:pointer;transition:all .3s;background:var(--c)}
+.upzone:hover,.upzone.drag{border-color:var(--g);background:rgba(74,222,128,.04)}
+.upzone-icon{font-size:3rem;margin-bottom:14px;display:block}
+.upzone-title{font-family:var(--fn);font-weight:800;font-size:1.6rem;letter-spacing:-.5px;margin-bottom:6px}
+.upzone-title span{color:var(--g)}
+.upzone-sub{font-size:.85rem;color:var(--mu);margin-bottom:18px}
+
+/* BUTTONS */
+.btn-p{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;margin-top:20px;background:linear-gradient(135deg,#4ADE80,#4ADE80);border:none;border-radius:var(--r);padding:16px 40px;font-family:var(--fn);font-weight:800;font-size:1rem;letter-spacing:2px;text-transform:uppercase;color:#000;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.btn-p::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#4ADE80,#4ADE80);opacity:0;transition:opacity .3s}
+.btn-p:hover::before{opacity:1}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(74,222,128,.3)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-p span{position:relative;z-index:1}
+.btn-sm{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;font-family:var(--fn);font-weight:700;font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);cursor:pointer;transition:all .2s}
+.btn-sm:hover{border-color:var(--g);color:var(--g)}
+
+/* RESULT */
+.rhero{border-radius:var(--r);padding:44px;margin-bottom:18px;position:relative;overflow:hidden;border:1px solid}
+.rhero-grid{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center}
+.rhero-ey{font-family:var(--fm);font-size:.6rem;letter-spacing:3px;text-transform:uppercase;opacity:.6;margin-bottom:10px}
+.rhero-tipo{font-family:var(--fn);font-weight:800;font-size:4.5rem;line-height:.9;letter-spacing:-2px;text-transform:uppercase}
+.rhero-sub{font-family:var(--fm);font-size:.78rem;margin-top:10px;opacity:.6}
+.rhero-em{font-size:7rem;opacity:.15;line-height:1}
+
+.cbar{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.cbar-l{font-family:var(--fm);font-size:.6rem;letter-spacing:1px;width:120px;flex-shrink:0;text-transform:uppercase}
+.cbar-t{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.cbar-f{height:100%;border-radius:4px;transition:width 1.3s cubic-bezier(.34,1.4,.64,1)}
+.cbar-p{font-family:var(--fm);font-size:.62rem;width:44px;text-align:right}
+
+.sstrip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.sc2{background:var(--c);padding:18px 16px}
+.sc2-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
+.sc2-v{font-family:var(--fn);font-weight:800;font-size:1.4rem;letter-spacing:-.5px;line-height:1}
+
+.pyrvis{display:flex;flex-direction:column;gap:7px}
+.pyr-row{display:flex;align-items:center;gap:10px}
+.pyr-l{font-family:var(--fm);font-size:.57rem;color:var(--mu);width:90px;flex-shrink:0;text-align:right}
+.pyr-t{flex:1;display:flex;gap:3px;height:30px}
+.pyr-seg{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;min-width:0;transition:width 1.2s cubic-bezier(.34,1.4,.64,1);overflow:hidden}
+.pyr-seg span{font-family:var(--fm);font-size:.57rem;color:rgba(0,0,0,.8);font-weight:600;white-space:nowrap}
+
+.mrow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.mrow:last-child{border-bottom:none}
+.mk{font-size:.82rem;color:var(--sb)}
+.mv{font-family:var(--fm);font-size:.78rem;color:var(--tx)}
+.mv.g{color:var(--g)}.mv.a{color:var(--am)}.mv.r{color:var(--rd)}.mv.c{color:var(--cy)}
+
+.rec-item{background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
+.rec-ico{font-size:1.3rem;flex-shrink:0;margin-top:1px}
+.rec-txt{font-size:.82rem;color:var(--sb);line-height:1.6}
+.rec-txt strong{color:var(--tx)}
+.rtag{display:inline-block;font-family:var(--fm);font-size:.5rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-bottom:4px}
+
+/* CENÁRIOS */
+.sc-card{background:var(--c2);border:1px solid var(--b);border-radius:var(--r);padding:20px;margin-bottom:10px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.sc-card:hover{border-color:var(--b2);transform:translateY(-2px)}
+.sc-card.sel{border-color:var(--g);background:rgba(74,222,128,.05)}
+.sc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.sc-opt::before{background:var(--g)}.sc-cres::before{background:var(--cy)}
+.sc-spec::before{background:var(--am)}.sc-cons::before{background:var(--rd)}
+.sc-name{font-family:var(--fn);font-weight:700;font-size:1rem;margin-bottom:4px}
+.sc-desc{font-size:.82rem;color:var(--sb);line-height:1.5}
+
+.proj-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.pjc{background:var(--c);padding:18px 16px}
+.pjc-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
+.pjc-v{font-family:var(--fn);font-weight:800;font-size:1.5rem;letter-spacing:-.5px;line-height:1}
+.pjc-d{font-family:var(--fm);font-size:.6rem;margin-top:4px}
+
+.ytbl{width:100%;border-collapse:collapse}
+.ytbl th{font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:10px 14px;text-align:left;border-bottom:1px solid var(--b)}
+.ytbl th.r{text-align:right}
+.ytbl td{padding:11px 14px;font-size:.84rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.ytbl td.r{text-align:right;font-family:var(--fm);font-size:.78rem}
+.ytbl td.g{color:var(--g);font-family:var(--fm);font-size:.78rem;text-align:right}
+.ytbl td.a{color:var(--am);font-family:var(--fm);font-size:.78rem;text-align:right}
+.ytbl td.r2{color:var(--rd);font-family:var(--fm);font-size:.78rem;text-align:right}
+.ytbl tbody tr:hover td{background:rgba(255,255,255,.02)}
+
+.tc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.tc{border-radius:var(--rs);padding:16px;border:1px solid var(--b);background:var(--c2);position:relative}
+.tc-sel{position:absolute;top:10px;right:10px;font-family:var(--fm);font-size:.48rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.tc-ico{font-size:1.7rem;margin-bottom:7px;display:block}
+.tc-name{font-family:var(--fn);font-weight:700;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.tc-desc{font-size:.73rem;color:var(--mu);line-height:1.5}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--c2);border:1px solid var(--b2);border-radius:var(--rs);padding:14px 20px;font-family:var(--fm);font-size:.75rem;z-index:999;opacity:0;transform:translateY(20px);transition:all .3s;max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{border-color:rgba(248,113,113,.4);color:var(--rd)}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:rgba(6,8,16,.85);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;backdrop-filter:blur(8px)}
+.loading-overlay.show{display:flex}
+.lspin{width:50px;height:50px;border:3px solid var(--b2);border-top-color:var(--g);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{font-family:var(--fn);font-size:1rem;letter-spacing:.5px}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+@media(max-width:900px){.g2,.g3,.g13,.fgrid,.sstrip,.tc-grid{grid-template-columns:1fr 1fr}main,header{padding-left:20px;padding-right:20px}.rhero-tipo{font-size:3rem}.rhero-em{display:none}.tstrip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.g2,.g3,.sstrip,.tc-grid{grid-template-columns:1fr}}
+
+/* ── CICLO COMPLETO ── */
+.sc-sn{font-family:var(--fn);font-weight:700;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap}
+.sc-sn:hover{border-color:var(--am);color:var(--am)}
+.sc-sn.act{background:var(--am);border-color:var(--am);color:#000}
+.sc-spanel{display:none}.sc-spanel.act{display:block;animation:rise .3s cubic-bezier(.22,1,.36,1)}
+.brow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.brow-l{font-family:var(--fm);font-size:.58rem;color:var(--mu);width:120px;flex-shrink:0;text-align:right}
+.brow-t{flex:1;height:26px;background:var(--c2);border-radius:4px;overflow:hidden;border:1px solid var(--b)}
+.brow-f{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 1s cubic-bezier(.34,1.4,.64,1)}
+.brow-f span{font-family:var(--fm);font-size:.57rem;color:rgba(0,0,0,.8);font-weight:600;white-space:nowrap}
+.flow-wrap{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.flow-step{background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:12px 16px;text-align:center;min-width:80px}
+.flow-arr{color:var(--mu);font-size:1rem;padding:0 2px;align-self:center}
+.flow-n{font-family:var(--fn);font-weight:800;font-size:1.4rem;line-height:1}
+.flow-l{font-family:var(--fm);font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-top:3px}
+.lvl-badge{font-family:var(--fm);font-size:.54rem;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:4px}
+.lvl-badge.baixo{background:rgba(248,113,113,.15);color:var(--rd);border:1px solid rgba(248,113,113,.25)}
+.lvl-badge.medio{background:rgba(251,191,36,.15);color:var(--am);border:1px solid rgba(251,191,36,.25)}
+.lvl-badge.alto{background:rgba(74,222,128,.15);color:var(--g);border:1px solid rgba(74,222,128,.25)}
+.cetbl{width:100%;border-collapse:collapse}
+.cetbl th{font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:8px 12px;text-align:left;border-bottom:1px solid var(--b)}
+.cetbl td{padding:7px 12px;font-size:.84rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.cetbl input[type=number]{background:var(--c2);border:1px solid var(--b2);border-radius:6px;padding:5px 8px;color:var(--tx);font-family:var(--fm);font-size:.78rem;width:85px;text-align:center;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.cetbl input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.cetbl input[type=number]:focus{border-color:var(--g)}
+.res-box{border-radius:var(--r);padding:20px 24px;margin-top:16px;border:1px solid;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.res-box.pos{border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06)}
+.res-box.neg{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
+</style>
 </head>
 <body>
 
@@ -18,19 +239,15 @@
 <div class="toast" id="toast"></div>
 
 <header>
-  <div class="logo"><div class=""></div>Fluxo de caixa<em>- Bovinos</em></div>
+  <div class="logo"><div class=""></div>Fluxo de caixa<em>— Gestão Jaine</em></div>
   <div class="hdr-r">
-  <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi Gordo (R$/arroba)">Boi Gordo: --</span>
-  <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca Gorda (R$/arroba)">Vaca Gorda: --</span>
-  <span id="hdr-china" class="ml-acc" style="cursor:default" title="Cotação Boi China (R$/arroba)">Boi China: --</span>
-  <span id="hdr-indicador" class="ml-acc" style="cursor:default" title="Indicador Scot RO (R$/arroba)">Indicador RO: --</span>
-  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">RETREINAR</button>
-  <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(251,191,36,.1);color:var(--am);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(251,191,36,.3)" onclick="tutAbrir()">AJUDA</button>
-  <span style="width:1px;height:18px;background:var(--b2);display:inline-block;margin:0 4px;vertical-align:middle"></span>
-  <button id="btn-alertas" class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 12px;border-radius:8px;border:1px solid rgba(248,113,113,.3);display:flex;align-items:center;gap:5px" onclick="alertasAbrir()"><span style="font-size:.7rem"></span>Alertas</button>
-  <span class="ml-acc" style="border-color:var(--b2);color:var(--tx);padding:4px 12px">USUÁRIO: {{ current_user.nome }}</span>
-  <a href="{{ url_for('logout') }}" class="ml-acc" style="text-decoration:none;background:rgba(248,113,113,.1);color:var(--rd);border-color:rgba(248,113,113,.3);padding:4px 12px">Sair</a>
-</div>
+    <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
+    <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
+    <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi (R$/arroba)">Boi: --</span>
+    <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca (R$/arroba)">Vaca: --</span>
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
+    <!-- Botão de sair (logout) adicionado -->
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
   </div>
 </header>
 
@@ -39,8 +256,6 @@
   <button class="tab-btn active" onclick="showTab('entrada',this)">Inserir Dados</button>
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
-  <button class="tab-btn" onclick="showTab('custos',this)">Custo/Cab.</button>
-  <button class="tab-btn" onclick="showTab('fazendas',this);abrirFazendas()">Fazendas</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -52,31 +267,10 @@
     <div class="ch"><div class="ct"><div class="cd"></div>Dados</div></div>
     <div class="cb">
       <div class="fgrid">
-        <div class="field">
-          <label>Selecionar Fazenda</label>
-          <select id="f_sel_faz" onchange="carregarFazenda(this.value)">
-            <option value="">— Sem vínculo —</option>
-            {% for f in fazendas %}
-              <option value="{{ f.id }}">{{ f.nome }} ({{ f.municipio }})</option>
-            {% endfor %}
-            <option value="__nova">＋ Nova Fazenda...</option>
-          </select>
-        </div>
-        <div class="field"><label>Nome da Fazenda</label><input type="text" id="f_faz" placeholder="Ex: Fazenda Santa Cruz"></div>
+        <div class="field"><label>Fazenda</label><input type="text" id="f_faz" placeholder="Ex: Fazenda Santa Cruz"></div>
         <div class="field"><label>Município / Estado</label><input type="text" id="f_mun" placeholder="Ex: Juara - MT"></div>
-        <input type="hidden" id="f_id_faz" value="">
+        <div class="field"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
       </div>
-      <div id="nova-faz-form" style="display:none;grid-column:1/-1;background:var(--c2);border:1px solid var(--b2);border-radius:var(--rs);padding:14px;margin-top:4px;gap:10px;align-items:flex-end" class="fgrid">
-        <div class="field" style="grid-column:1/3">
-          <label>Nome da Nova Fazenda</label>
-          <input type="text" id="nova-faz-nome" placeholder="Ex: Fazenda Santa Cruz" onkeydown="if(event.key==='Enter')criarFazenda()">
-        </div>
-        <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:2px">
-          <button class="btn-sm" style="border-color:var(--g);color:var(--g)" onclick="criarFazenda()">＋ Criar</button>
-          <button class="btn-sm" onclick="cancelarNovaFazenda()">✕</button>
-        </div>
-      </div>
-      <div class="field" style="margin-top:14px"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
     </div>
   </div>
 
@@ -89,7 +283,7 @@
         <button class="btn-sm" onclick="fillEx('recria')">Recria</button>
         <button class="btn-sm" onclick="fillEx('engorda')">Engorda</button>
         <button class="btn-sm" onclick="document.getElementById('insr-pdf-inp').click()">📂 Ler PDF</button>
-        <input type="file" id="insr-pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDFInserir(this.files);this.value=''">
+        <input type="file" id="insr-pdf-inp" accept=".pdf" style="display:none" onchange="lerPDFInserir(this.files[0]);this.value=''">
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
       </div>
     </div>
@@ -112,7 +306,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
               <div class="field">
                 <label>Taxa Natalidade (%)</label>
-                <input type="number" id="c-nat" placeholder="75" min="1" max="100" step="1" oninput="upd();validarCampo(this,1,100)">
+                <input type="number" id="c-nat" placeholder="75" min="1" max="100" step="1" oninput="upd()">
               </div>
               <div class="field">
                 <label>Bois Vendidos (cab.)</label>
@@ -136,15 +330,15 @@
 
 <!-- ═══ PDF ═══ -->
 <div class="panel" id="panel-pdf">
-  <div class="ptitle">Ler PDF do <em></em></div>
+  <div class="ptitle">Ler PDF do <em>INDEA</em></div>
   <p class="psub">Upload do "Saldo Atual da Exploração".</p>
 
   <div class="upzone" id="dz" onclick="document.getElementById('pdf-inp').click()">
     <span class="upzone-icon"></span>
-    <h2 class="upzone-title">Carregue os PDFs<span></span></h2>
-    <p class="upzone-sub">Saldo Atual da Exploração · Selecione um ou mais · Arraste ou clique</p>
+    <h2 class="upzone-title">Carregue o PDF<span></span></h2>
+    <p class="upzone-sub">Saldo Atual da Exploração · Arraste ou clique</p>
     <button class="btn-sm" style="margin:0 auto" onclick="event.stopPropagation();document.getElementById('pdf-inp').click()">📂 Selecionar PDF</button>
-    <input type="file" id="pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDF(this.files)">
+    <input type="file" id="pdf-inp" accept=".pdf" style="display:none" onchange="lerPDF(this.files[0])">
   </div>
   <div id="pdf-status" style="margin-top:16px;display:none"></div>
 </div>
@@ -174,15 +368,15 @@
       <button class="btn-p" onclick="confirmarClassificacao()" style="flex-shrink:0"><span>✓ Confirmar</span></button>
     </div>
     <div style="padding:0 22px 16px;font-family:var(--fm);font-size:.65rem;color:var(--mu)">
-      Cada confirmação melhora o modelo. O retreino ocorre <strong style="color:var(--tx)">automaticamente a cada 10 confirmações</strong> ou manualmente pelo botão <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.
+      Cada confirmação melhora o modelo. Após acumular dados, clique em <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.
     </div>
   </div>
 </div>
 
 <!-- ═══ CENÁRIOS ═══ -->
 <div class="panel" id="panel-cenarios">
-  <div class="ptitle" id="cenarios-titulo">Ciclo Completo — <em>Análise Detalhada</em></div>
-  <p class="psub" id="cenarios-sub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
+  <div class="ptitle">Ciclo Completo — <em>Análise Detalhada</em></div>
+  <p class="psub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
 
   <!-- Sub-nav -->
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
@@ -195,13 +389,12 @@
     <button class="sc-sn" onclick="showScSub('5anos',this)">Projeção 5 Anos</button>
   </div>
 
-  <!-- KPI sempre visível (agora com 5 cards) -->
-  <div id="s-kpi" style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
+  <!-- KPI sempre visível -->
+  <div id="s-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
     <div class="pjc"><div class="pjc-l">Total Rebanho</div><div class="pjc-v cg" id="s-kpi-reb">—</div></div>
     <div class="pjc"><div class="pjc-l">Bezerros/Ano</div><div class="pjc-v cg" id="s-kpi-bez">—</div></div>
     <div class="pjc"><div class="pjc-l">Total Vendido</div><div class="pjc-v ca" id="s-kpi-vnd">—</div></div>
     <div class="pjc"><div class="pjc-l">Resultado</div><div class="pjc-v" id="s-kpi-res">—</div></div>
-    <div class="pjc"><div class="pjc-l">Taxa de Desfrute</div><div class="pjc-v cy" id="s-kpi-desfrute">—</div><div class="pjc-d">% do rebanho vendido/ano</div></div>
   </div>
 
   <!-- ── Dashboard ── -->
@@ -226,15 +419,6 @@
         <div class="cb" id="s-flow-bois" style="overflow-x:auto"></div>
       </div>
     </div>
-    <div class="card" id="card-recomendacoes" style="margin-top:16px">
-      <div class="ch">
-        <div class="ct"><div class="cd" style="background:var(--am)"></div>Análise da Fazenda</div>
-        <span id="rec-badge" style="font-family:var(--fm);font-size:.6rem;color:var(--mu)"></span>
-      </div>
-      <div class="cb" id="rec-body">
-        <div style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Preencha os parâmetros para ver a análise.</div>
-      </div>
-    </div>
   </div>
 
   <!-- ── Parâmetros ── -->
@@ -248,10 +432,10 @@
           </div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
-              <div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
-              <div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
-              <div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo();validarCampo(this,0,99999)"></div>
+              <div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo()"></div>
             </div>
           </div>
         </div>
@@ -259,11 +443,11 @@
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="65" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
-              <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo();validarCampo(this,1,100)"></div>
-              <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
-              <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
-              <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo();validarCampo(this,0,100)"></div>
+              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div>
               <div class="field"><label>Nível Tecnológico</label>
                 <select id="s-nivel" onchange="recalcCiclo()">
                   <option value="baixo">Baixo</option>
@@ -280,50 +464,14 @@
           <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
           <div class="cb">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Peso Boi (@)</label><input type="number" id="s-peso-boi" value="20" step="0.5" min="8" max="30" oninput="recalcCiclo();validarCampo(this,8,30)"></div>
-              <div class="field"><label>Preço @ Boi (R$)</label><input type="number" id="s-preco-arr-boi" value="0" min="1" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Peso Vaca (@)</label><input type="number" id="s-peso-vaca" value="17" step="0.5" min="6" max="25" oninput="recalcCiclo();validarCampo(this,6,25)"></div>
-              <div class="field"><label>Preço @ Vaca (R$)</label><input type="number" id="s-preco-arr-vaca" value="0" min="1" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="4" max="15" oninput="recalcCiclo();validarCampo(this,4,15)"></div>
-              <div class="field"><label>Preço @ Bezerra (R$)</label><input type="number" id="s-preco-arr" value="0" min="1" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço Boi (R$/cab.)</label><input type="number" id="s-preco-boi" value="4500" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço Matriz (R$/cab.)</label><input type="number" id="s-preco-mat" value="3200" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div>
             </div>
             <div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
           </div>
         </div>
-        <!-- Campos específicos por ciclo -->
-        <div class="card" id="card-params-cria" style="margin-bottom:16px;display:none">
-          <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros — CRIA</div></div>
-          <div class="cb">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Preço Bezerro (R$/cab)</label><input type="number" id="p-preco-bezerro" value="2960" min="1" oninput="runSc();validarCampo(this,1,99999)"></div>
-              <div class="field"><label>Taxa de Desmama (%)</label><input type="number" id="p-desmama" value="75" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
-            </div>
-          </div>
-        </div>
-        <div class="card" id="card-params-recria" style="margin-bottom:16px;display:none">
-          <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Parâmetros — RECRIA</div></div>
-          <div class="cb">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Peso Entrada (@)</label><input type="number" id="p-peso-ent-arr" value="13.33" step="0.5" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Peso Saída (@)</label><input type="number" id="p-peso-sai-arr" value="20" step="0.5" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Meses de Recria</label><input type="number" id="p-meses-recria" value="12" min="1" max="36" oninput="runSc();validarCampo(this,1,36)"></div>
-              <div class="field"><label>Custo/Cabeça/Mês (R$)</label><input type="number" id="p-custo-cab-mes" value="67" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
-            </div>
-          </div>
-        </div>
-        <div class="card" id="card-params-engorda" style="margin-bottom:16px;display:none">
-          <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros — ENGORDA</div></div>
-          <div class="cb">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-              <div class="field"><label>Peso Entrada (kg)</label><input type="number" id="p-peso-ent-kg" value="450" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Peso Abate (kg)</label><input type="number" id="p-peso-sai-kg" value="540" min="1" oninput="runSc()"></div>
-              <div class="field"><label>Rendimento Carcaça (%)</label><input type="number" id="p-rend-carcaca" value="52" min="1" max="100" oninput="runSc();validarCampo(this,1,100)"></div>
-              <div class="field"><label>Custo/Cab/Dia (R$)</label><input type="number" id="p-custo-dia" value="13.76" min="1" oninput="runSc();validarCampo(this,1,9999)"></div>
-              <div class="field"><label>Dias de Engorda</label><input type="number" id="p-dias-engorda" value="90" min="30" max="365" oninput="runSc();validarCampo(this,30,365)"></div>
-            </div>
-          </div>
-        </div>
-
         <div class="card">
           <div class="ch">
             <div class="ct"><div class="cd" style="background:var(--pu)"></div>Custos por Nível (R$/cab/ano)</div>
@@ -342,7 +490,7 @@
         </div>
       </div>
     </div>
-    <button class="btn-p" style="margin-top:16px" id="btn-recalc-cen" onclick="recalcCiclo()"><span>↻ Recalcular Tudo</span></button>
+    <button class="btn-p" style="margin-top:16px" onclick="recalcCiclo()"><span>↻ Recalcular Tudo</span></button>
   </div>
 
   <!-- ── Rebanho ── -->
@@ -440,10 +588,9 @@
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div>
         <div class="cb">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div class="field"><label>Preço Arroba (R$)</label><input type="number" id="sc-preco-arr" value="0" min="0" oninput="runSc();validarCampo(this,0,2000)"></div>
-            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="4" min="0" max="15" oninput="runSc();validarCampo(this,0,15)"></div>
-            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="950" min="1" max="9999" oninput="runSc();validarCampo(this,1,9999)"></div>
-            <div class="field"><label>Peso Bezerra (@)</label><input type="number" id="sc-peso" value="8" min="4" max="20" step="0.5" oninput="runSc();validarCampo(this,4,20)"></div>
+            <div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div>
+            <div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div>
+            <div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div>
           </div>
           <div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">
             Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.
@@ -454,192 +601,71 @@
     <div id="sc-result"></div>
   </div>
 </div>
-
-<!-- ═══ CALCULADORA DE CUSTO/CABEÇA ═══ -->
-<div class="panel" id="panel-custos">
-  <div class="ptitle">Custo por <em>Cabeça</em></div>
-  <p class="psub">Calcule o custo real por animal e o ponto de equilíbrio da sua operação.</p>
-
-  <div class="kpi-custos">
-    <div class="kpi-c">
-      <div class="kpi-c-l">Custo Total/Ano</div>
-      <div class="kpi-c-v cr" id="cc-total">R$ 0</div>
-      <div class="kpi-c-d">soma de todos os custos</div>
-    </div>
-    <div class="kpi-c">
-      <div class="kpi-c-l">Custo/Cabeça/Ano</div>
-      <div class="kpi-c-v ca" id="cc-por-cab">R$ 0</div>
-      <div class="kpi-c-d" id="cc-por-cab-mes">— /mês</div>
-    </div>
-    <div class="kpi-c">
-      <div class="kpi-c-l">Custo/@ Produzida</div>
-      <div class="kpi-c-v cp" id="cc-por-arr">R$ 0</div>
-      <div class="kpi-c-d">break-even estimado</div>
-    </div>
-    <div class="kpi-c">
-      <div class="kpi-c-l">Margem/Cabeça</div>
-      <div class="kpi-c-v" id="cc-margem">—</div>
-      <div class="kpi-c-d" id="cc-margem-txt">com preço atual do mercado</div>
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Rebanho e Área</div>
-          <button class="btn-sm" onclick="ccSincronizar()">↺ Da classificação</button>
-        </div>
-        <div class="cb">
-          <div class="custo-row"><span class="custo-key">Total de animais</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-animais" value="0" min="0" oninput="calcCustos()"><span class="custo-tag">cabeças</span></div></div>
-          <div class="custo-row"><span class="custo-key">Área total da fazenda</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-area" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">hectares</span></div></div>
-          <div class="custo-row"><span class="custo-key">Arrobas produzidas/ano</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-arrobas" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">@/ano</span></div></div>
-          <div class="custo-row"><span class="custo-key">Preço @ boi gordo atual</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-preco-arr" value="0" min="0" step="5" oninput="calcCustos()"><span class="custo-tag">R$/@</span></div></div>
-        </div>
-      </div>
-    </div>
-    <div>
-      <div class="card">
-        <div class="ch"><div class="ct"><div class="cd" style="background:var(--rd)"></div>Custos Anuais</div></div>
-        <div class="cb">
-          <div class="custo-row"><span class="custo-key">Alimentação / Suplementação</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-alimentacao" value="0" min="0" step="100" oninput="calcCustos()"><span class="custo-tag">R$/cab</span></div></div>
-          <div class="custo-row"><span class="custo-key">Sal mineral</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-mineral" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/cab</span></div></div>
-          <div class="custo-row"><span class="custo-key">Veterinário / Medicamentos</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-vet" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/cab</span></div></div>
-          <div class="custo-row"><span class="custo-key">Mão de obra (total)</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-mao-obra" value="0" min="0" step="100" oninput="calcCustos()"><span class="custo-tag">R$/ano</span></div></div>
-          <div class="custo-row"><span class="custo-key">Manutenção de pastagem</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-pastagem" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/ha</span></div></div>
-          <div class="custo-row"><span class="custo-key">Arrendamento / Imposto</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-arrendamento" value="0" min="0" step="10" oninput="calcCustos()"><span class="custo-tag">R$/ha</span></div></div>
-          <div class="custo-row"><span class="custo-key">Outros (energia, combustível...)</span><div style="display:flex;align-items:center"><input class="custo-input" type="number" id="cc-outros" value="0" min="0" step="100" oninput="calcCustos()"><span class="custo-tag">R$/ano</span></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div id="cc-resultado" style="margin-top:8px"></div>
-</div>
-
 </main>
 
-<!-- ═══ TUTORIAL MODAL ═══ -->
-<div id="tut-overlay" style="display:none">
-  <div id="tut-box">
-    <div id="tut-head">
-      <h2>Por onde começar</h2>
-      <span id="tut-counter">1 / 5</span>
-    </div>
-    <div id="tut-body">
-      <div class="tut-step-icon" id="tut-icon"></div>
-      <div class="tut-step-num" id="tut-num"></div>
-      <div class="tut-step-title" id="tut-title"></div>
-      <div class="tut-step-desc" id="tut-desc"></div>
-      <div id="tut-prog"></div>
-    </div>
-    <div id="tut-foot">
-      <button class="tut-skip" onclick="tutFechar()">Não mostrar novamente</button>
-      <div class="tut-nav">
-        <button class="tut-btn sec" id="tut-back" onclick="tutNav(-1)">← Voltar</button>
-        <button class="tut-btn pri" id="tut-next" onclick="tutNav(1)">Próximo →</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ MODAL ALERTAS DE MERCADO ═══ -->
-<div id="alerta-overlay">
-  <div id="alerta-box">
-    <div id="alerta-head">
-      <h2>Alertas de Mercado</h2>
-      <button onclick="alertasFechar()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:1.2rem;line-height:1">✕</button>
-    </div>
-    <div id="alerta-body">
-      <p style="font-family:var(--fb);font-size:.82rem;color:var(--sb);margin-bottom:20px">Defina os limites de preço. Você será notificado quando a cotação ultrapassar esses valores.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-        <div class="alerta-label">Cotação</div>
-        <div class="alerta-label">Mínimo (R$/@)</div>
-        <div class="alerta-label">Máximo (R$/@)</div>
-      </div>
-      <div class="alerta-row">
-        <div style="font-family:var(--fn);font-weight:700;font-size:.9rem">Boi Gordo</div>
-        <input class="alerta-input" type="number" id="al-boi-min" placeholder="Ex: 280" min="0" step="1">
-        <input class="alerta-input" type="number" id="al-boi-max" placeholder="Ex: 360" min="0" step="1">
-      </div>
-      <div class="alerta-row">
-        <div style="font-family:var(--fn);font-weight:700;font-size:.9rem">Vaca Gorda</div>
-        <input class="alerta-input" type="number" id="al-vaca-min" placeholder="Ex: 220" min="0" step="1">
-        <input class="alerta-input" type="number" id="al-vaca-max" placeholder="Ex: 300" min="0" step="1">
-      </div>
-      <div class="alerta-row">
-        <div style="font-family:var(--fn);font-weight:700;font-size:.9rem">Boi China</div>
-        <input class="alerta-input" type="number" id="al-china-min" placeholder="Ex: 300" min="0" step="1">
-        <input class="alerta-input" type="number" id="al-china-max" placeholder="Ex: 400" min="0" step="1">
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:22px">
-        <span id="alerta-status" class="alerta-badge inativo"><span class="alerta-ativo-indicator" style="background:var(--mu)"></span>Sem alertas</span>
-        <div style="display:flex;gap:8px">
-          <button onclick="alertasLimpar()" style="font-family:var(--fn);font-weight:700;font-size:.7rem;padding:10px 18px;border-radius:10px;border:1px solid var(--b2);background:none;color:var(--mu);cursor:pointer">Limpar</button>
-          <button onclick="alertasSalvar()" style="font-family:var(--fn);font-weight:700;font-size:.7rem;padding:10px 22px;border-radius:10px;border:none;background:var(--am);color:#000;cursor:pointer">Salvar Alertas</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ MINHAS FAZENDAS ═══ -->
-<div class="panel" id="panel-fazendas">
-  <div style="max-width:1280px; margin:0 auto; padding:0 20px">
-    <div class="ptitle">Minhas <em>Fazendas</em></div>
-    <p class="psub">Histórico de análises por propriedade.</p>
-    <div id="faz-lista-wrap"></div>
-    <div id="faz-hist-wrap" style="display:none"></div>
-  </div>
-</div>
-
 <script>
- // ==================== PREÇOS (CORRIGIDO) ====================
-const _COTACOES_FALLBACK = {
-  boi: {{ cotacoes['boi']|default(0) }},
-  vaca: {{ cotacoes['vaca']|default(0) }},
-  boi_china: {{ cotacoes['boi_china']|default(0) }},
-  indicador: {{ cotacoes['indicador']|default(0) }}
-};
+  // Fallback values provided by server-side (populated by rota index())
+  const _COTACOES_FALLBACK = {
+    boi: {{ cotacoes['boi']|default(0) }},
+    vaca: {{ cotacoes['vaca']|default(0) }}
+  };
 
-function _fmtValor(v){
-  const n = Number(v) || 0;
-  return n.toFixed(2) + ' R$';
-}
+  function _fmtValor(v){
+    const n = Number(v) || 0;
+    return n.toFixed(2) + ' R$';
+  }
+  function showToast(msg, isError=false){
+    const t = document.getElementById('toast');
+    if(!t) return;
+    t.textContent = msg;
+    t.classList.toggle('err', !!isError);
+    t.classList.add('show');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(()=> t.classList.remove('show'), 6000);
+  }
 
-async function atualizarPrecos(){
-  console.log("🔄 Atualizando preços...");
-  try{
-    const response = await fetch('/api/precos/live');
-    if(!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if(data && data.ok && data.precos){
-      const p = data.precos;
-      document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(p.boi);
-      document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(p.vaca);
-      document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(p.boi_china);
-      document.getElementById('hdr-indicador').textContent = 'Indicador RO: ' + _fmtValor(p.indicador);
-      return;
+  async function atualizarPrecos(){
+    try{
+      const res = await fetch('/api/precos/live');
+      // Se a resposta não for OK, tenta extrair a mensagem JSON e mostra como aviso
+      if(!res.ok){
+        try{
+          const err = await res.json();
+          const m = err.msg || err.erro || JSON.stringify(err);
+          showToast(m, true);
+        }catch(e){
+          showToast('Erro ao obter preços (network). Usando última cotação conhecida.', true);
+        }
+        // usa fallback abaixo
+      } else {
+        const j = await res.json();
+        if(j && j.ok && j.precos){
+          const p = j.precos;
+          document.getElementById('hdr-boi').textContent = 'Boi: ' + _fmtValor(p.boi);
+          document.getElementById('hdr-vaca').textContent = 'Vaca: ' + _fmtValor(p.vaca);
+          return;
+        }
+        // caso j.ok não exista
+        if(j && (j.erro || j.msg)){
+          const m = j.msg || j.erro;
+          showToast(m, true);
+        }
+      }
+    }catch(e){
+      // fetch threw (CORS, network, etc.)
+      showToast('Não foi possível conectar ao serviço de preços. Usando última cotação conhecida.', true);
     }
-    throw new Error("Resposta inválida");
-  } catch(e){
-    console.warn("Erro na API, usando fallback do banco:", e);
-    document.getElementById('hdr-boi').textContent = 'Boi Gordo: ' + _fmtValor(_COTACOES_FALLBACK.boi);
-    document.getElementById('hdr-vaca').textContent = 'Vaca Gorda: ' + _fmtValor(_COTACOES_FALLBACK.vaca);
-    document.getElementById('hdr-china').textContent = 'Boi China: ' + _fmtValor(_COTACOES_FALLBACK.boi_china);
-    document.getElementById('hdr-indicador').textContent = 'Indicador RO: ' + _fmtValor(_COTACOES_FALLBACK.indicador);
-  }
-}
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  atualizarPrecos();
-  setInterval(atualizarPrecos, 1000 * 60 * 30);
-  if(_COTACOES_FALLBACK.boi>0){
-    _setBadgeCotacao('s-preco-arr-boi',_COTACOES_FALLBACK.boi);
-    _setBadgeCotacao('s-preco-arr',_COTACOES_FALLBACK.boi);
-    _setBadgeCotacao('sc-preco-arr',_COTACOES_FALLBACK.boi);
-    recalcCiclo();runSc();
+    // Fallback: valores servidos pelo backend (rotina diária)
+    document.getElementById('hdr-boi').textContent = 'Boi: ' + _fmtValor(_COTACOES_FALLBACK.boi);
+    document.getElementById('hdr-vaca').textContent = 'Vaca: ' + _fmtValor(_COTACOES_FALLBACK.vaca);
   }
-  if(_COTACOES_FALLBACK.vaca>0)_setBadgeCotacao('s-preco-arr-vaca',_COTACOES_FALLBACK.vaca);
-});
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    atualizarPrecos();
+    // Atualiza a cada 30 minutos
+    setInterval(atualizarPrecos, 1000 * 60 * 30);
+  });
 </script>
 
 <script>
@@ -663,9 +689,7 @@ const fN=n=>Math.round(n).toLocaleString('pt-BR');
 const fR=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');
 const fP=n=>(n*100).toFixed(1)+'%';
 
-let lastVals=null, curSc='otimista', curCiclo='CICLO_COMPLETO', sliderData=null;
-let _tutStep = 0;
-let _lastScResult = null;
+let lastVals=null, curSc='otimista';
 
 // ── BUILD TABLE
 function buildTable(){
@@ -678,7 +702,7 @@ function buildTable(){
       <td class="tdc"><input type="number" class="ni nm" id="${f.key}_M" value="0" min="0" oninput="upd()"></td>
       <td class="tdc tdtot" id="${f.key}_T">0</td>
       <td class="tdc tdtot" id="${f.key}_P" style="color:var(--mu)">0%</td>
-    </table>`;
+    </tr>`;
   });
   upd();
 }
@@ -709,83 +733,12 @@ function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value
 // ── CLASSIFY
 let lastRegistroId=null;
 
-// ── FAZENDAS
-async function carregarFazenda(fid){
-  const nff=document.getElementById('nova-faz-form');
-  if(fid==='__nova'){nff.style.display='flex';document.getElementById('nova-faz-nome').focus();return}
-  nff.style.display='none';document.getElementById('nova-faz-nome').value='';
-  if(!fid){
-    document.getElementById('f_faz').value='';
-    document.getElementById('f_mun').value='';
-    document.getElementById('f_prop').value='';
-    document.getElementById('f_id_faz').value='';
-    return;
-  }
-  showLoading('Carregando dados da fazenda...');
-  try{
-    const res=await fetch(`/api/fazendas/${fid}/historico`);
-    const data=await res.json();
-    if(data.erro){toast(data.erro,true);return}
-    const f=data.fazenda;
-    document.getElementById('f_faz').value=f.nome||'';
-    document.getElementById('f_mun').value=f.municipio||'';
-    document.getElementById('f_prop').value=f.proprietario||'';
-    document.getElementById('f_id_faz').value=f.id||'';
-    
-    if(data.historico && data.historico.length > 0){
-      const last = data.historico[0];
-      FAIXAS.forEach((faixa,i)=>{
-        document.getElementById(faixa.key+'_F').value=last.valores[i*2];
-        document.getElementById(faixa.key+'_M').value=last.valores[i*2+1]
-      });
-      document.getElementById('c-nat').value=last.nat_pct||'';
-      upd();
-      toast(`Dados carregados da fazenda ${f.nome}`);
-    }
-  }finally{hideLoading()}
-}
-async function criarFazenda(){
-  const nome=document.getElementById('nova-faz-nome').value.trim();
-  if(!nome){toast('Digite o nome da fazenda',true);return}
-  showLoading('Criando fazenda...');
-  try{
-    const res=await fetch('/api/fazendas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value})});
-    const data=await res.json();
-    if(data.erro){toast(data.erro,true);return}
-    const sel=document.getElementById('f_sel_faz');
-    const opt=document.createElement('option');
-    opt.value=data.id;
-    const mun=document.getElementById('f_mun').value;
-    opt.textContent=nome+(mun?' ('+mun+')':'');
-    sel.insertBefore(opt,sel.lastElementChild);
-    sel.value=data.id;
-    document.getElementById('f_id_faz').value=data.id;
-    document.getElementById('f_faz').value=nome;
-    document.getElementById('nova-faz-form').style.display='none';
-    document.getElementById('nova-faz-nome').value='';
-    toast('Fazenda "'+nome+'" criada');
-  }catch(e){toast('Erro ao criar fazenda. Tente novamente.',true)
-  }finally{hideLoading()}
-}
-function cancelarNovaFazenda(){
-  document.getElementById('f_sel_faz').value='';
-  document.getElementById('f_id_faz').value='';
-  document.getElementById('nova-faz-form').style.display='none';
-  document.getElementById('nova-faz-nome').value='';
-}
-
 async function classificar(){
   const v=getVals();
   if(v.reduce((a,b)=>a+b,0)<10){toast('Insira pelo menos 10 animais.',true);return}
   showLoading('Classificando com ML...');
   try{
-    const body={
-      valores:v,
-      fazenda:document.getElementById('f_faz').value,
-      municipio:document.getElementById('f_mun').value,
-      proprietario:document.getElementById('f_prop').value,
-      fazenda_id:document.getElementById('f_id_faz').value || null
-    };
+    const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
     const natV=document.getElementById('c-nat').value;
     const boisvV=document.getElementById('c-boisv').value;
     const bezvV=document.getElementById('c-bezv').value;
@@ -797,8 +750,6 @@ async function classificar(){
     if(data.erro){toast(data.erro,true);return}
     lastVals=v;
     lastRegistroId=data.registro_id||null;
-    curCiclo=data.classificacao||'CICLO_COMPLETO';
-    atualizarParamsCiclo(curCiclo);
     renderResult(data);
     showTab('resultado',null);
     document.getElementById('tab-res').style.display='flex';
@@ -825,14 +776,12 @@ async function classificar(){
 }
 
 // ── PDF NO INSERIR DADOS
-async function lerPDFInserir(files){
-  if(!files||!files.length)return;
-  const n=files.length;
-  showLoading(n>1?`Lendo ${n} PDFs...`:'Lendo PDF...');
-  const fd=new FormData();
-  for(const f of files)fd.append('pdf',f);
+async function lerPDFInserir(file){
+  if(!file)return;
+  showLoading('Lendo PDF...');
+  const fd=new FormData();fd.append('pdf',file);
   try{
-    const res=await fetch('/api/ler-pdfs',{method:'POST',body:fd});
+    const res=await fetch('/api/ler-pdf',{method:'POST',body:fd});
     const data=await res.json();
     if(data.erro){toast(data.erro,true);return}
     FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=data.valores[i*2];document.getElementById(f.key+'_M').value=data.valores[i*2+1]});
@@ -840,17 +789,7 @@ async function lerPDFInserir(files){
     document.getElementById('f_mun').value=data.municipio||'';
     document.getElementById('f_prop').value=data.proprietario||'';
     upd();
-    const _sel=document.getElementById('f_sel_faz');
-    const _nomePDF=(data.fazenda||'').trim().toLowerCase();
-    if(_nomePDF&&_sel){
-      let _found='';
-      for(const _o of _sel.options){
-        if(_o.value&&_o.value!=='__nova'&&_o.textContent.toLowerCase().includes(_nomePDF)){_found=_o.value;break}
-      }
-      if(_found){_sel.value=_found;document.getElementById('f_id_faz').value=_found}
-    }
-    const _np=data.pdfs_processados||1;
-    toast((_np>1?_np+' PDFs carregados':'PDF carregado')+': '+(data.fazenda||'Exploração')+' ('+fN(data.total)+' animais)');
+    toast('PDF carregado: '+(data.fazenda||'Exploração')+' ('+fN(data.total)+' animais)');
   }finally{hideLoading()}
 }
 
@@ -864,14 +803,12 @@ function toggleConds(){
 }
 
 // ── PDF
-async function lerPDF(files){
-  if(!files||!files.length)return;
-  const n=files.length;
-  showLoading(n>1?`Lendo ${n} PDFs no servidor Python...`:'Lendo PDF no servidor Python...');
-  const fd=new FormData();
-  for(const f of files)fd.append('pdf',f);
+async function lerPDF(file){
+  if(!file)return;
+  showLoading('Lendo PDF no servidor Python...');
+  const fd=new FormData();fd.append('pdf',file);
   try{
-    const res=await fetch('/api/ler-pdfs',{method:'POST',body:fd});
+    const res=await fetch('/api/ler-pdf',{method:'POST',body:fd});
     const data=await res.json();
     if(data.erro){toast(data.erro,true);return}
     mostrarPDFPreview(data);
@@ -886,6 +823,19 @@ function mostrarPDFPreview(data){
     <div class="card">
       <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Dados Extraídos do PDF</div></div>
       <div class="cb">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Origem detectada:</div>
+          <div id="pdf-origem" style="font-family:var(--fb);font-weight:700">${data.origem||'—'}</div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <label style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">Reprocessar como</label>
+            <select id="pdf-parser-select" style="background:var(--c2);border:1px solid var(--b2);padding:6px;border-radius:6px">
+              <option value="IDARON">IDARON</option>
+              <option value="INDEA">INDEA</option>
+              <option value="GENERICO">GENÉRICO</option>
+            </select>
+            <button class="btn-sm" onclick="reparsarPDF()">↻ Reprocessar</button>
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px">
           <div><div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Fazenda</div><div>${data.fazenda||'—'}</div></div>
           <div><div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Município</div><div>${data.municipio||'—'}</div></div>
@@ -900,7 +850,27 @@ function mostrarPDFPreview(data){
       </div>
     </div>
     <button class="btn-p" style="margin-top:16px" onclick="classificarPDF(${JSON.stringify(v)},${JSON.stringify(data)})"><span>🧠 Classificar com Machine Learning</span></button>`;
-  const _np=data.pdfs_processados||1;document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">${_np>1?_np+' PDFs carregados':'PDF carregado'}: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outros</p><button class="btn-sm" style="margin:0 auto" onclick="event.stopPropagation();document.getElementById('pdf-inp').click()">📂 Selecionar PDFs</button><input type="file" id="pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDF(this.files)">`;
+  document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">PDF carregado: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outro</p><input type="file" id="pdf-inp" accept=".pdf" style="display:none" onchange="lerPDF(this.files[0])">`;
+}
+
+async function reparsarPDF(){
+  const sel = document.getElementById('pdf-parser-select').value;
+  // raw_text is embedded in the last fetched `data` variable on server; we kept it only in the response
+  // To reparse, fetch the hidden raw text from the server by re-posting the same data (we stored it in a global on preview)
+  if(!window._last_pdf_raw){
+    toast('Texto do PDF não disponível para reparsing.', true);
+    return;
+  }
+  showLoading('Reprocessando...');
+  try{
+    const res = await fetch('/api/parse-text', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text: window._last_pdf_raw, origem: sel})});
+    const d = await res.json();
+    if(d.erro){ toast(d.erro,true); return }
+    mostrarPDFPreview(d);
+    toast('Reprocessado usando ' + sel);
+  }catch(e){
+    toast('Erro ao reprocessar: '+e.message, true);
+  }finally{hideLoading()}
 }
 
 async function classificarPDF(v,meta){
@@ -953,14 +923,6 @@ function renderResult(data){
     </div>`;
   }).join('');
 
-  // Estimativa de taxa de desfrute com base no tipo de ciclo
-  const desfruteEstimado = {
-    'CRIA': 0.30,
-    'RECRIA': 0.50,
-    'ENGORDA': 0.70,
-    'CICLO_COMPLETO': 0.40
-  }[tipo] * 100;
-
   document.getElementById('result-wrap').innerHTML=`
     <div class="rhero" style="border-color:${col}40;background:${col}08">
       <div class="rhero-grid">
@@ -998,7 +960,6 @@ function renderResult(data){
           ${mr('Razão ♀/♂',ind.ratio_fm,ind.ratio_fm>1?'g':'r')}
           ${mr('Bezerros estimados/ano',fN(ind.bezerros_est)+' cab.','g')}
           ${mr('% Matrizes',fP(ind.pct_matrizes/100),'c')}
-          ${mr('Taxa de Desfrute (estimada)', desfruteEstimado.toFixed(1) + '%', 'c')}
         </div>
       </div>
     </div>
@@ -1049,69 +1010,6 @@ function renderResult(data){
   setTimeout(()=>{
     document.querySelectorAll('#dist-bars [data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
   },200);
-  if(data.benchmarks && data.benchmarks.length){
-    document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBenchmarksHTML(data.benchmarks));
-  }
-  if(data.breakeven_estimado && data.breakeven_estimado.preco_breakeven){
-    document.getElementById('result-wrap').insertAdjacentHTML('beforeend', renderBreakevenCompactoHTML(data.breakeven_estimado));
-  }
-  gerarRecomendacoes(calcCiclo());
-}
-
-const _FAIXA_COR   = {abaixo:'var(--rd)', medio:'var(--am)', bom:'var(--g)', excelente:'#22D3EE'};
-const _FAIXA_LABEL = {abaixo:'Abaixo da média RO', medio:'Média RO', bom:'Bom ✓', excelente:'Excelente ★'};
-const _FAIXA_PCT   = {abaixo:15, medio:42, bom:72, excelente:100};
-
-function renderBenchmarksHTML(benchmarks) {
-  if (!benchmarks || !benchmarks.length) return '';
-  const itens = benchmarks.map(b => {
-    const cor  = _FAIXA_COR[b.faixa];
-    const pct  = _FAIXA_PCT[b.faixa];
-    const prox = b.proximo_nivel
-      ? `Faltam ${b.falta} ${b.unidade} para <strong>${b.proximo_nivel}</strong>`
-      : 'Nível máximo atingido ✓';
-    return `
-      <div style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-          <span style="font-family:var(--fb);font-size:.83rem">${b.label}</span>
-          <span style="font-family:var(--fm);font-size:.65rem;color:${cor};background:${cor}1A;padding:2px 9px;border-radius:4px;border:1px solid ${cor}40">${_FAIXA_LABEL[b.faixa]}</span>
-        </div>
-        <div style="height:7px;background:var(--c2);border-radius:4px;overflow:hidden;border:1px solid var(--b)">
-          <div style="width:${pct}%;height:100%;background:${cor};border-radius:3px;transition:width .9s cubic-bezier(.34,1.2,.64,1)"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:4px">
-          <span style="font-family:var(--fm);font-size:.58rem;color:var(--tx)">${b.valor} ${b.unidade}</span>
-          <span style="font-family:var(--fm);font-size:.58rem;color:var(--sb)">${prox}</span>
-        </div>
-      </div>`;
-  }).join('');
-  return `
-    <div class="card" style="margin-top:16px">
-      <div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Benchmarks — Rondônia</div>
-        <span style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">Médias regionais RO · Embrapa/SEAGRI</span>
-      </div>
-      <div class="cb">${itens}</div>
-    </div>`;
-}
-
-function renderBreakevenCompactoHTML(be) {
-  if (!be || !be.preco_breakeven) return '';
-  return `
-    <div class="card" style="margin-top:16px">
-      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Ponto de Equilíbrio — Estimativa</div>
-        <span style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">baseado em custos padrão RO</span>
-      </div>
-      <div class="cb" style="display:flex;align-items:center;gap:24px">
-        <div style="text-align:center">
-          <div style="font-family:var(--fm);font-size:.55rem;color:var(--mu);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Preço Mínimo</div>
-          <div style="font-family:var(--fn);font-weight:800;font-size:2rem;color:var(--rd)">R$&nbsp;${Math.round(be.preco_breakeven).toLocaleString('pt-BR')}</div>
-          <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${be.unidade}</div>
-        </div>
-        <div style="font-family:var(--fb);font-size:.8rem;color:var(--sb);flex:1">
-          Se vender acima desse valor, a operação é lucrativa. Execute a simulação na aba <strong>Simular Cenários</strong> para ver o slider com o preço real do mercado.
-        </div>
-      </div>
-    </div>`;
 }
 
 function mr(k,v,c){return`<div class="mrow"><span class="mk">${k}</span><span class="mv ${c}">${v}</span></div>`}
@@ -1156,252 +1054,10 @@ function getRecs(tipo,ind){
 
 // ── CICLO COMPLETO ENGINE ────────────────────────────────────────────────
 let CUSTO_S={
-  baixo: {matrizes:800, bois:600, femeas:400, machos:380, bezerros:180},
-  medio: {matrizes:950, bois:700, femeas:500, machos:450, bezerros:250},
-  alto:  {matrizes:1100, bois:850, femeas:600, machos:550, bezerros:320}
+  baixo: {matrizes:800,bois:600,femeas:400,machos:380,bezerros:180},
+  medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220},
+  alto:  {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280}
 };
-const _REGRAS_VALIDACAO = [
-  ['c-nat',           1,   100],
-  ['p-desmama',       1,   100],
-  ['p-rend-carcaca',  1,   100],
-  ['sc-mort',         0,    15],
-  ['s-desc',          0,   100],
-  ['s-vendbez',       0,   100],
-  ['s-renovboi',      0,   100],
-  ['s-propboi',       1,   100],
-  ['p-preco-bezerro', 1, 99999],
-  ['p-custo-dia',     1,  9999],
-  ['p-custo-cab-mes', 1,  9999],
-  ['sc-custo',        1,  9999],
-  ['p-dias-engorda',  30,  365],
-  ['p-meses-recria',  1,    36],
-  ['s-peso-boi',      8,    30],
-  ['s-peso-vaca',     6,    25],
-  ['s-bez-arr',      4,    15],
-  ['s-nat',          1,   100],
-  ['s-mat',          0, 99999],
-  ['s-fem',          0, 99999],
-  ['s-mac',          0, 99999],
-  ['s-boi',          0, 99999],
-  ['sc-preco-arr',   0,  2000],
-  ['sc-peso',        4,    20],
-];
-
-function validarCampo(el, min, max) {
-  const v = parseFloat(el.value);
-  const ok = !isNaN(v) && v >= min && v <= max;
-  el.style.borderColor = ok ? '' : 'var(--rd)';
-  let msg = el.parentNode.querySelector('.v-err');
-  if (!msg) {
-    msg = document.createElement('div');
-    msg.className = 'v-err';
-    msg.style.cssText = 'font-family:var(--fm);font-size:.55rem;color:var(--rd);margin-top:3px';
-    el.parentNode.appendChild(msg);
-  }
-  msg.textContent = ok ? '' : `Deve ser entre ${min} e ${max}`;
-  validarTudo();
-  return ok;
-}
-
-function validarTudo() {
-  let invalido = false;
-  _REGRAS_VALIDACAO.forEach(([id, min, max]) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const card = el.closest('[id^="card-params-"]');
-    if (card && card.style.display === 'none') return;
-    const v = parseFloat(el.value);
-    if (!isNaN(v) && (v < min || v > max)) invalido = true;
-  });
-  const btn = document.getElementById('btn-class');
-  if (btn) btn.disabled = invalido;
-  const btnCen = document.getElementById('btn-recalc-cen');
-  if (btnCen) btnCen.disabled = invalido;
-}
-
-function gerarRecomendacoes(d) {
-  const body   = document.getElementById('rec-body');
-  const badge  = document.getElementById('rec-badge');
-  if (!body) return;
-
-  // Sem rebanho informado — estado inicial
-  if (!d || !d.totReb || d.totReb === 0) {
-    body.innerHTML = '<div style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Preencha os parâmetros para ver a análise.</div>';
-    if (badge) badge.textContent = '';
-    return;
-  }
-
-  const fR2 = v => 'R$ ' + Math.abs(Math.round(v)).toLocaleString('pt-BR');
-  const recs = [];
-
-  // R1 — Resultado financeiro
-  if (d.rTot > 0) {
-    const margem = d.res / d.rTot;
-    if (d.res < 0) {
-      recs.push({
-        nivel: 'critico',
-        icon: '🔴',
-        titulo: 'Fazenda no prejuízo',
-        desc: `Resultado negativo de ${fR2(d.res)} no período. Custos superam a receita.`,
-        impacto: `Prejuízo: ${fR2(d.res)}`
-      });
-    } else if (margem < 0.10) {
-      recs.push({
-        nivel: 'atencao',
-        icon: '🟡',
-        titulo: 'Margem muito apertada',
-        desc: `Margem de ${(margem*100).toFixed(1)}%. Uma queda de preço ou aumento de custo pode gerar prejuízo.`,
-        impacto: `Margem atual: ${(margem*100).toFixed(1)}%`
-      });
-    } else {
-      recs.push({
-        nivel: 'bom',
-        icon: '🟢',
-        titulo: 'Resultado positivo',
-        desc: `Margem de ${(margem*100).toFixed(1)}%. Fazenda operando com lucro.`,
-        impacto: `Resultado: ${fR2(d.res)}`
-      });
-    }
-  }
-
-  // R2 — Custo por cabeça vs receita por animal vendido
-  if (d.totReb > 0 && d.totVend > 0) {
-    const custoCab    = d.cTot / d.totReb;
-    const receitaVend = d.rTot / d.totVend;
-    const ratio       = custoCab / receitaVend;
-    if (ratio > 1) {
-      recs.push({
-        nivel: 'critico',
-        icon: '🔴',
-        titulo: 'Custo por cabeça acima da receita',
-        desc: `Custo médio por cabeça (${fR2(custoCab)}) supera a receita por animal vendido (${fR2(receitaVend)}).`,
-        impacto: `Custo = ${(ratio*100).toFixed(0)}% da receita por animal`
-      });
-    } else if (ratio > 0.80) {
-      recs.push({
-        nivel: 'atencao',
-        icon: '🟡',
-        titulo: 'Custo por cabeça elevado',
-        desc: `Custo médio de ${fR2(custoCab)}/cab representa ${(ratio*100).toFixed(0)}% da receita por animal vendido (${fR2(receitaVend)}).`,
-        impacto: `Margem de cobertura: ${((1-ratio)*100).toFixed(0)}%`
-      });
-    }
-  }
-
-  // R3 — Taxa de natalidade vs benchmark RO (75%)
-  const natPct = d.nat;
-  if (d.mat > 0 && natPct < 0.75) {
-    const deficit      = 0.75 - natPct;
-    const intervalos5  = deficit / 0.05;
-    const impactoAno   = intervalos5 * Math.floor(d.mat * 0.05) * d.pBezCab;
-    if (natPct < 0.60) {
-      recs.push({
-        nivel: 'critico',
-        icon: '🔴',
-        titulo: 'Natalidade crítica',
-        desc: `Taxa de ${(natPct*100).toFixed(0)}% está abaixo do mínimo esperado. Média RO é 75%. Cada 5% de melhora gera aproximadamente ${fR2(Math.floor(d.mat * 0.05) * d.pBezCab)} a mais/ano.`,
-        impacto: `Potencial de melhora: ${fR2(impactoAno)}/ano`
-      });
-    } else {
-      recs.push({
-        nivel: 'atencao',
-        icon: '🟡',
-        titulo: 'Natalidade abaixo da média RO',
-        desc: `Taxa de ${(natPct*100).toFixed(0)}% vs média de 75% em Rondônia. Cada 5% de melhora equivale a ${fR2(Math.floor(d.mat * 0.05) * d.pBezCab)}/ano.`,
-        impacto: `Potencial: ${fR2(impactoAno)}/ano`
-      });
-    }
-  }
-
-  // R4 — Excesso de bois
-  if (d.boi > 0 && d.bNec > 0 && d.boi > d.bNec * 1.2) {
-    const excesso      = d.boi - d.bNec;
-    const receitaExtra = excesso * d.pBoi;
-    recs.push({
-      nivel: 'atencao',
-      icon: '🟡',
-      titulo: 'Excesso de bois reprodutores',
-      desc: `${d.boi} bois para ${d.mat} matrizes (proporção 1:${Math.round(d.mat / d.boi)}). O ideal é 1:${d.prop}. Vender ${excesso} bois excedentes geraria ${fR2(receitaExtra)}.`,
-      impacto: `Receita potencial: ${fR2(receitaExtra)}`
-    });
-  }
-
-  // R5 — Breakeven vs preço atual
-  if (_lastScResult && _lastScResult.preco_breakeven && _lastScResult.preco_usado) {
-    const be    = _lastScResult.preco_breakeven;
-    const atual = _lastScResult.preco_usado;
-    const unid  = _lastScResult.preco_breakeven_unidade || 'R$/@';
-    const ratio = be / atual;
-    if (ratio > 1.10) {
-      recs.push({
-        nivel: 'critico',
-        icon: '🔴',
-        titulo: 'Preço mínimo acima do mercado',
-        desc: `Preço mínimo (${fR2(be)} ${unid}) está ${((ratio-1)*100).toFixed(0)}% acima do preço atual (${fR2(atual)} ${unid}).`,
-        impacto: `Gap: ${fR2(be - atual)} ${unid}`
-      });
-    } else if (ratio > 1.0) {
-      recs.push({
-        nivel: 'atencao',
-        icon: '🟡',
-        titulo: 'Preço no limite do breakeven',
-        desc: `Preço mínimo (${fR2(be)}) próximo ao mercado (${fR2(atual)} ${unid}). Margem de segurança pequena.`,
-        impacto: `Gap: ${fR2(be - atual)} ${unid}`
-      });
-    } else {
-      recs.push({
-        nivel: 'bom',
-        icon: '🟢',
-        titulo: 'Preço acima do breakeven',
-        desc: `Preço atual (${fR2(atual)}) acima do mínimo necessário (${fR2(be)} ${unid}).`,
-        impacto: `Folga: ${fR2(atual - be)} ${unid}`
-      });
-    }
-  }
-
-  // Ordenar: crítico → atenção → bom
-  const ordem = { critico: 0, atencao: 1, bom: 2 };
-  recs.sort((a, b) => ordem[a.nivel] - ordem[b.nivel]);
-
-  // Máximo 5 itens
-  const top = recs.slice(0, 5);
-
-  // Badge de resumo
-  const nCrit = top.filter(r => r.nivel === 'critico').length;
-  const nAten = top.filter(r => r.nivel === 'atencao').length;
-  if (badge) {
-    if (nCrit > 0) {
-      badge.textContent = `${nCrit} crítico${nCrit>1?'s':''}`;
-      badge.style.color = 'var(--rd)';
-    } else if (nAten > 0) {
-      badge.textContent = `${nAten} atenção`;
-      badge.style.color = 'var(--am)';
-    } else {
-      badge.textContent = 'tudo certo';
-      badge.style.color = 'var(--g)';
-    }
-  }
-
-  // Renderizar
-  if (top.length === 0 || top.every(r => r.nivel === 'bom')) {
-    body.innerHTML = `<div style="color:var(--g);font-family:var(--fb);font-size:.85rem;display:flex;align-items:center;gap:8px">
-      <span style="font-size:1.2rem">✅</span> Fazenda dentro dos parâmetros esperados.
-    </div>`;
-    return;
-  }
-
-  body.innerHTML = top.map(r => `
-    <div class="rec-item rec-nivel-${r.nivel}">
-      <div class="rec-icon">${r.icon}</div>
-      <div class="rec-content">
-        <div class="rec-titulo">${r.titulo}</div>
-        <div class="rec-desc">${r.desc}</div>
-        ${r.impacto ? `<div class="rec-impacto">${r.impacto}</div>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
 function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
 
 function renderCostTableS(){
@@ -1443,20 +1099,16 @@ function hlCostLevel(){
 
 function calcCiclo(){
   const mat=gS('s-mat'),fem=gS('s-fem'),mac=gS('s-mac'),boi=gS('s-boi');
-  const nat=gS('s-nat')/100||0.65;
+  const nat=gS('s-nat')/100||0.75;
   const prop=gS('s-propboi')||30;
   const rb=gS('s-renovboi')/100||0.2;
   const des=gS('s-desc')/100||0.3;
   const vbp=gS('s-vendbez')/100||0.3;
   const niv=document.getElementById('s-nivel')?.value||'medio';
-  const pArr=gS('s-preco-arr')||340;
-  const pArrBoi=gS('s-preco-arr-boi')||pArr;
-  const pArrVaca=gS('s-preco-arr-vaca')||pArr;
-  const pesoBoi=gS('s-peso-boi')||20;
-  const pesoVaca=gS('s-peso-vaca')||17;
+  const pBoi=gS('s-preco-boi')||4500;
+  const pMat=gS('s-preco-mat')||3200;
   const pBezArr=gS('s-bez-arr')||8;
-  const pBoi=pesoBoi*pArrBoi;
-  const pMat=pesoVaca*pArrVaca;
+  const pArr=gS('s-preco-arr')||350;
 
   const totBez=Math.floor(mat*nat);
   const bezF=Math.floor(totBez/2),bezM=totBez-bezF;
@@ -1472,13 +1124,12 @@ function calcCiclo(){
   const cresc=femR-desQ;
   const totReb=mat+fem+mac+boi+totBez;
   const totVend=bVend+desQ+bezV+bezMV;
-  const taxaDesfrute = totReb > 0 ? (totVend / totReb) * 100 : 0;
   const pBezCab=pBezArr*pArr;
   const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rBezM=bezMV*pBezCab,rTot=rBoi+rMat+rBez+rBezM;
   const cn=CUSTO_S[niv];
   const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez;
   const res=rTot-cTot;
-  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pesoBoi,pesoVaca,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res, taxaDesfrute};
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
 }
 
 function makeBarsS(items,maxV,colors){
@@ -1505,7 +1156,7 @@ function recalcCiclo(){
 
   // Preço bezerra info
   const pbi=document.getElementById('s-preco-bez-info');
-  if(pbi) pbi.innerHTML=`Boi: ${gS('s-peso-boi')}@ × R$${gS('s-preco-arr-boi')||gS('s-preco-arr')} = <b>${fR(d.pBoi)}/cab</b> &nbsp;|&nbsp; Vaca: ${gS('s-peso-vaca')}@ × R$${gS('s-preco-arr-vaca')||gS('s-preco-arr')} = <b>${fR(d.pMat)}/cab</b> &nbsp;|&nbsp; Bezerra: ${gS('s-bez-arr')}@ × R$${gS('s-preco-arr')} = <b>${fR(d.pBezCab)}/cab</b>`;
+  if(pbi) pbi.textContent=`Preço bezerra = ${gS('s-bez-arr')}@ × R$${gS('s-preco-arr')} = ${fR(d.pBezCab)}/cab`;
 
   // KPI strip
   const ki=id=>document.getElementById(id);
@@ -1514,8 +1165,6 @@ function recalcCiclo(){
   if(ki('s-kpi-vnd')) ki('s-kpi-vnd').textContent=fN(d.totVend)+' cab.';
   const resEl=ki('s-kpi-res');
   if(resEl){resEl.textContent=fR(d.res);resEl.className='pjc-v '+(d.res>=0?'cg':'cr');}
-  const desfruteEl=document.getElementById('s-kpi-desfrute');
-  if(desfruteEl) desfruteEl.textContent = d.taxaDesfrute.toFixed(1) + '%';
 
   // Dashboard bars
   const maxReb=Math.max(d.mat,d.fem,d.macRest,d.bNec,d.totBez,1);
@@ -1544,17 +1193,16 @@ function recalcCiclo(){
 
   // Vendas tab
   const tVnd=document.querySelector('#s-tbl-vendas tbody');
-  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`],['Bezerros M.',d.bezMV,`${fN(d.bezM)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<td><td style="font-family:var(--fn);font-weight:700">${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
+  if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`],['Bezerros M.',d.bezMV,`${fN(d.bezM)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);}
 
   // Financeiro tab
   const tRec=document.querySelector('#s-tbl-rec tbody');
-  if(tRec){tRec.innerHTML=[['Bois',d.bVend,`${d.pesoBoi}@ · ${fR(d.pBoi)}`,d.rBoi],['Matrizes',d.desQ,`${d.pesoVaca}@ · ${fR(d.pMat)}`,d.rMat],['Bezerras',d.bezV,`${gS('s-bez-arr')}@ · ${fR(d.pBezCab)}`,d.rBez],['Bezerros M.',d.bezMV,`${gS('s-bez-arr')}@ · ${fR(d.pBezCab)}`,d.rBezM]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
+  if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez],['Bezerros M.',d.bezMV,fR(d.pBezCab),d.rBezM]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
   const tCus=document.querySelector('#s-tbl-cus tbody');
   const cn=CUSTO_S[d.niv];
   if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
   const resBox=ki('s-res-box');
   if(resBox){const pos=d.res>=0;resBox.innerHTML=`<div class="res-box ${pos?'pos':'neg'}"><div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Líquido Anual</div><div style="font-family:var(--fn);font-weight:800;font-size:2.2rem;line-height:1;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res)}</div></div>${d.totVend>0?`<div style="text-align:right"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-bottom:4px">Por animal vendido</div><div style="font-family:var(--fn);font-weight:700;font-size:1.2rem;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res/d.totVend)}</div></div>`:''}</div>`;}
-  gerarRecomendacoes(d);
 }
 
 function showScSub(id,btn){
@@ -1563,94 +1211,6 @@ function showScSub(id,btn){
   const p=document.getElementById('scp-'+id);if(p)p.classList.add('act');
   if(btn)btn.classList.add('act');
   if(id==='5anos') runSc();
-}
-
-const _CICLO_INFO = {
-  CRIA:          {titulo:'Cria — <em>Análise de Matrizes e Bezerros</em>',    sub:'Foco na produção de bezerros desmamados. Receita por cabeça vendida.'},
-  RECRIA:        {titulo:'Recria — <em>Análise de Ganho de Peso</em>',         sub:'Foco em transformar garrotes leves em novilhos prontos para venda. Receita por arroba.'},
-  ENGORDA:       {titulo:'Engorda — <em>Análise de Rendimento de Carcaça</em>',sub:'Foco em boi gordo para abate. Receita por arroba de carcaça.'},
-  CICLO_COMPLETO:{titulo:'Ciclo Completo — <em>Análise Detalhada</em>',        sub:'Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.'},
-};
-function renderBreakevenHTML(d) {
-  if (!d.preco_breakeven) return '';
-  const be    = d.preco_breakeven;
-  const unid  = d.preco_breakeven_unidade || 'R$/arroba';
-  const usado = d.preco_usado || be;
-  const marg  = d.margem_atual_pct || 0;
-  const corM  = marg >= 0 ? 'var(--g)' : 'var(--rd)';
-  const slMin = Math.round(be * 0.80);
-  const slMax = Math.round(be * 1.50);
-  return `
-    <div class="card" style="margin-top:16px">
-      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Ponto de Equilíbrio — Simulação de Preço</div></div>
-      <div class="cb">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
-          <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px;text-align:center">
-            <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Preço Mínimo</div>
-            <div style="font-family:var(--fn);font-weight:800;font-size:1.5rem;color:var(--rd)">${fR(be)}</div>
-            <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${unid}</div>
-          </div>
-          <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px;text-align:center">
-            <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Preço Simulado</div>
-            <div style="font-family:var(--fn);font-weight:800;font-size:1.5rem;color:var(--cy)">${fR(usado)}</div>
-            <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${unid}</div>
-          </div>
-          <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px;text-align:center">
-            <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Margem Ano 1</div>
-            <div style="font-family:var(--fn);font-weight:800;font-size:1.5rem;color:${corM}">${marg>0?'+':''}${marg}%</div>
-            <div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-top:2px">${fR(d.margem_atual_rs||0)}</div>
-          </div>
-        </div>
-        <div style="background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:16px">
-          <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:12px">Mover o slider para simular variação de preço</div>
-          <input type="range" id="slider-preco" min="${slMin}" max="${slMax}" value="${Math.round(usado)}" step="1"
-            style="width:100%;accent-color:var(--g);cursor:pointer;height:6px"
-            oninput="atualizarSlider(this.value)">
-          <div style="display:flex;justify-content:space-between;margin-top:6px;font-family:var(--fm);font-size:.58rem;color:var(--mu)">
-            <span>${fR(slMin)}</span>
-            <span id="slider-label" style="color:var(--tx);font-weight:700;font-size:.65rem">${fR(Math.round(usado))}</span>
-            <span>${fR(slMax)}</span>
-          </div>
-          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div style="background:var(--c);border:1px solid var(--b);border-radius:10px;padding:14px;text-align:center">
-              <div style="font-family:var(--fm);font-size:.52rem;color:var(--mu);margin-bottom:6px">RESULTADO ANO 1</div>
-              <div id="slider-res-ano1" style="font-family:var(--fn);font-weight:800;font-size:1.4rem">—</div>
-            </div>
-            <div style="background:var(--c);border:1px solid var(--b);border-radius:10px;padding:14px;text-align:center">
-              <div style="font-family:var(--fm);font-size:.52rem;color:var(--mu);margin-bottom:6px">RESULTADO 5 ANOS</div>
-              <div id="slider-res-acum" style="font-family:var(--fn);font-weight:800;font-size:1.4rem">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-}
-
-function atualizarSlider(precoStr) {
-  if (!sliderData) return;
-  const p = parseFloat(precoStr);
-  const lbl = document.getElementById('slider-label');
-  if (lbl) lbl.textContent = fR(p);
-
-  const receita1 = p * sliderData.units;
-  const result1  = receita1 - sliderData.custo_ano1;
-  const el1 = document.getElementById('slider-res-ano1');
-  if (el1) { el1.textContent = fR(result1); el1.style.color = result1 >= 0 ? 'var(--g)' : 'var(--rd)'; }
-
-  const ratio   = sliderData.preco_usado > 0 ? p / sliderData.preco_usado : 1;
-  const recAcum = sliderData.acumulado_receita * ratio;
-  const resAcum = recAcum - sliderData.acumulado_custo;
-  const el2 = document.getElementById('slider-res-acum');
-  if (el2) { el2.textContent = fR(resAcum); el2.style.color = resAcum >= 0 ? 'var(--g)' : 'var(--rd)'; }
-}
-
-function atualizarParamsCiclo(ciclo){
-  const info=_CICLO_INFO[ciclo]||_CICLO_INFO['CICLO_COMPLETO'];
-  document.getElementById('cenarios-titulo').innerHTML=info.titulo;
-  document.getElementById('cenarios-sub').textContent=info.sub;
-  document.getElementById('card-params-cria').style.display    = ciclo==='CRIA'    ? 'block':'none';
-  document.getElementById('card-params-recria').style.display  = ciclo==='RECRIA'  ? 'block':'none';
-  document.getElementById('card-params-engorda').style.display = ciclo==='ENGORDA' ? 'block':'none';
 }
 
 function syncFromClass(){
@@ -1676,36 +1236,18 @@ function runSc(){
   if(!lastVals){document.getElementById('sc-result').innerHTML='<div style="text-align:center;color:var(--mu);padding:40px;font-family:var(--fm);font-size:.75rem">Classifique um rebanho primeiro para ver a projeção.</div>';return}
   clearTimeout(scDebounce);
   scDebounce=setTimeout(async()=>{
-    const gv=id=>{const el=document.getElementById(id);return el?el.value:null};
     const body={
       valores:lastVals,
       cenario:curSc,
-      ciclo:curCiclo,
-      nat:gv('s-nat'),
-      mort:gv('sc-mort'),
-      desc:gv('s-desc'),
-      preco:gv('sc-preco-arr'),
-      custo:gv('sc-custo'),
-      peso:gv('sc-peso'),
-      propboi:gv('s-propboi'),
-      renovboi:gv('s-renovboi'),
-      vendbez:gv('s-vendbez'),
-      // CRIA
-      preco_bezerro:gv('p-preco-bezerro'),
-      desmama_pct:gv('p-desmama'),
-      // RECRIA
-      peso_entrada_arr:gv('p-peso-ent-arr'),
-      peso_saida_arr:gv('p-peso-sai-arr'),
-      meses_recria:gv('p-meses-recria'),
-      custo_cab_mes:gv('p-custo-cab-mes'),
-      // ENGORDA
-      peso_entrada_kg:gv('p-peso-ent-kg'),
-      peso_saida_kg:gv('p-peso-sai-kg'),
-      rendimento_carcaca:gv('p-rend-carcaca'),
-      peso_boi:gv('s-peso-boi'),
-      peso_vaca:gv('s-peso-vaca'),
-      custo_cab_dia:gv('p-custo-dia'),
-      dias_engorda:gv('p-dias-engorda'),
+      nat:document.getElementById('s-nat').value,
+      mort:document.getElementById('sc-mort').value,
+      desc:document.getElementById('s-desc').value,
+      preco:document.getElementById('s-preco-arr').value,
+      custo:document.getElementById('sc-custo').value,
+      peso:document.getElementById('sc-peso').value,
+      propboi:document.getElementById('s-propboi').value,
+      renovboi:document.getElementById('s-renovboi').value,
+      vendbez:document.getElementById('s-vendbez').value,
     };
     const res=await fetch('/api/cenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
@@ -1714,7 +1256,6 @@ function runSc(){
 }
 
 function renderSc(d){
-  _lastScResult = d;
   const anos=d.anos, acc=d.acumulado;
   const delta=d.delta_rebanho;
   const maxRec=Math.max(...anos.map(a=>a.receita),1);
@@ -1766,214 +1307,6 @@ function renderSc(d){
         </table>
       </div>
     </div>`;
-
-  if (d.preco_breakeven) {
-    sliderData = {
-      units:             d.slider_units,
-      custo_ano1:        d.slider_custo_ano1,
-      preco_usado:       d.preco_usado || d.preco_breakeven,
-      acumulado_receita: d.acumulado.receita,
-      acumulado_custo:   d.acumulado.custo,
-    };
-    document.getElementById('sc-result').insertAdjacentHTML('beforeend', renderBreakevenHTML(d));
-    atualizarSlider(d.preco_usado || d.preco_breakeven);
-  }
-  gerarRecomendacoes(calcCiclo());
-}
-
-// ── MINHAS FAZENDAS (REDESIGN PREMIUM)
-async function abrirFazendas(){
-  const lw=document.getElementById('faz-lista-wrap');
-  const hw=document.getElementById('faz-hist-wrap');
-  hw.style.display='none';hw.innerHTML='';
-  lw.style.display='block';
-  lw.innerHTML='<div style="display:flex;justify-content:center;padding:40px"><div class="lspin"></div></div>';
-  
-  try{
-    const res=await fetch('/api/fazendas');
-    if(!res.ok){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas ('+res.status+').</p>';return}
-    const data=await res.json();
-    if(data.erro){lw.innerHTML='<p style="color:var(--rd)">Erro ao carregar fazendas.</p>';return}
-    const fzs = data.fazendas;
-    
-    if(!fzs.length){
-      lw.innerHTML=`
-        <div style="text-align:center;padding:60px 20px;background:var(--c2);border:1px dashed var(--b2);border-radius:var(--r);max-width:600px;margin:40px auto">
-          <div style="font-size:3rem;margin-bottom:16px;opacity:.5">FAZENDA</div>
-          <h3 style="font-family:var(--fn);font-size:1.4rem;margin-bottom:8px">Nenhuma fazenda cadastrada</h3>
-          <p style="color:var(--mu);margin-bottom:24px;font-size:.9rem">Vincule suas análises a uma fazenda para começar a construir seu histórico.</p>
-          <button class="btn-sm" onclick="showTab('entrada',document.querySelectorAll('.tab-btn')[0])">Ir para Inserir Dados</button>
-        </div>`;
-      return;
-    }
-
-    lw.innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="font-family:var(--fm);font-size:.6rem;color:var(--sb);letter-spacing:1px;text-transform:uppercase">${fzs.length} Propriedade${fzs.length!==1?'s':''}</div>
-        <button class="btn-sm" onclick="showTab('entrada',document.querySelectorAll('.tab-btn')[0])" style="border-color:var(--g);color:var(--g)">＋ Nova Fazenda</button>
-      </div>
-      <div class="faz-grid">${fzs.map(f=>`
-        <div class="faz-card" onclick="verHistoricoFazenda(${f.id},'${f.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">
-          <div class="faz-card-head">
-            <div style="flex:1; min-width:0">
-              <div class="faz-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.nome}</div>
-              <div class="faz-loc">${f.municipio || 'Localização não informada'}</div>
-            </div>
-            <div style="font-family:var(--fm);font-size:.8rem;color:var(--g);font-weight:700">${f.total_analises}</div>
-          </div>
-          <div class="faz-body">
-            <div class="faz-stat-row">
-              <span class="faz-stat-l">Análises Realizadas</span>
-              <span class="faz-stat-v">${f.total_analises}</span>
-            </div>
-            <div class="faz-stat-row">
-              <span class="faz-stat-l">Última Análise</span>
-              <span class="faz-stat-v">${f.ultima_analise ? f.ultima_analise.slice(0,10).split('-').reverse().join('/') : '—'}</span>
-            </div>
-            <div class="faz-stat-row" style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.03)">
-              <span class="faz-stat-l">Proprietário</span>
-              <span class="faz-stat-v" style="font-size:.78rem;color:var(--sb)">${f.proprietario || '—'}</span>
-            </div>
-          </div>
-          <div class="faz-foot">
-             <button class="btn-del-link" onclick="event.stopPropagation(); excluirFazenda(${f.id}, '${f.nome.replace(/'/g,"\\'")}')">Excluir</button>
-             <button class="btn-view-link">Ver Histórico</button>
-          </div>
-        </div>`).join('')}</div>`;
-  }catch(e){
-    lw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>';
-  }
-}
-
-async function verHistoricoFazenda(id,nome){
-  const lw=document.getElementById('faz-lista-wrap');
-  const hw=document.getElementById('faz-hist-wrap');
-  lw.style.display='none';
-  hw.style.display='block';
-  hw.innerHTML='<div style="display:flex;justify-content:center;padding:40px"><div class="lspin"></div></div>';
-  
-  try{
-    const res=await fetch(`/api/fazendas/${id}/historico`);
-    const data=await res.json();
-    if(data.erro){hw.innerHTML='<p style="color:var(--rd)">Erro: '+data.erro+'</p>';return}
-    const hist=data.historico;
-    const faz=data.fazenda;
-    
-    hw.innerHTML=`
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
-        <button class="btn-icon-sm" onclick="abrirFazendas()" title="Voltar">VOLTAR</button>
-        <div>
-          <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;color:var(--mu);text-transform:uppercase">Histórico de Propriedade</div>
-          <h1 class="ptitle" style="font-size:2.2rem;margin-bottom:0">${nome}</h1>
-        </div>
-      </div>
-
-      <div class="g2">
-        <div class="card">
-          <div class="ch"><div class="ct"><div class="cd"></div>Informações Gerais</div></div>
-          <div class="cb">
-            <div class="mrow"><span class="mk">Localização</span><span class="mv">${faz.municipio || '—'}</span></div>
-            <div class="mrow"><span class="mk">Proprietário</span><span class="mv">${faz.proprietario || '—'}</span></div>
-            <div class="mrow"><span class="mk">Total de Análises</span><span class="mv">${hist.length}</span></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Resumo de Performance</div></div>
-          <div class="cb">
-             <div style="color:var(--mu);font-size:.85rem">Abaixo estão as análises arquivadas para esta fazenda. Você pode recarregar qualquer uma delas para os simuladores.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:16px">
-        <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Análises Arquivadas</div></div>
-        <div style="overflow-x:auto">
-          <table class="ytbl">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Tipo Identificado</th>
-                <th class="r">Total Animais</th>
-                <th class="r">Confiança</th>
-                <th style="padding-right:24px; text-align:right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${!hist.length ? '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu)">Nenhuma análise salva.</td></tr>' : 
-                hist.map(r=>`
-                <tr id="row-analise-${r.id}">
-                  <td style="color:var(--sb);font-family:var(--fm);font-size:.78rem">${r.created_at.slice(0,10).split('-').reverse().join('/')}</td>
-                  <td>
-                    <div class="hist-type-badge" style="background:${TC[r.class_ml]}15;color:${TC[r.class_ml]}">
-                      ${TE[r.class_ml] || ''} ${TL[r.class_ml] || r.class_ml}
-                    </div>
-                  </td>
-                  <td class="r">${fN(r.valores.reduce((a,b)=>a+b,0))}</td>
-                  <td class="r" style="color:var(--mu)">${r.confianca}%</td>
-                  <td style="text-align:right; padding-right:12px; display:flex; gap:6px; justify-content:flex-end; padding-top:12px">
-                    <button class="btn-icon-sm reload" onclick="recarregarAnalise(${JSON.stringify(r.valores)},${r.nat_pct||75})" title="Recarregar" style="font-size:.65rem;width:auto;padding:0 8px">RECARREGAR</button>
-                    <button class="btn-icon-sm del" onclick="excluirRegistro(${r.id})" title="Excluir">X</button>
-                  </td>
-                </tr>`).join('')
-              }
-            </tbody>
-          </table>
-        </div>
-      </div>`;
-  }catch(e){
-    hw.innerHTML='<p style="color:var(--rd)">Erro: '+e.message+'</p>';
-  }
-}
-
-async function excluirRegistro(id) {
-  if(!confirm('Deseja excluir esta análise?')) return;
-  try {
-    const res = await fetch(`/api/registros/${id}/delete`, { method: 'POST' });
-    if(res.ok) {
-      const row = document.getElementById(`row-analise-${id}`);
-      if(row) {
-        row.style.opacity = '0';
-        setTimeout(() => row.remove(), 300);
-      }
-      toast('Análise excluída');
-    } else {
-      const err = await res.json();
-      console.error('Erro ao excluir registro:', err);
-      toast('Erro ao excluir: ' + (err.erro || 'Erro desconhecido'), true);
-    }
-  } catch(e) {
-    console.error('Erro na requisição excluirRegistro:', e);
-    toast('Erro de rede ao excluir', true);
-  }
-}
-
-async function excluirFazenda(id, nome) {
-  if(!confirm(`Deseja EXCLUIR "${nome}" e todo o histórico?`)) return;
-  try {
-    const res = await fetch(`/api/fazendas/${id}/delete`, { method: 'POST' });
-    if(res.ok) {
-      toast(`Fazenda excluída`);
-      abrirFazendas();
-    } else {
-      const err = await res.json();
-      console.error('Erro ao excluir fazenda:', err);
-      toast('Erro ao excluir fazenda', true);
-    }
-  } catch(e) {
-    console.error('Erro na requisição excluirFazenda:', e);
-    toast('Erro de rede', true);
-  }
-}
-
-function recarregarAnalise(valores,natPct){
-  FAIXAS.forEach((f,i)=>{
-    document.getElementById(f.key+'_F').value=valores[i*2];
-    document.getElementById(f.key+'_M').value=valores[i*2+1];
-  });
-  document.getElementById('c-nat').value=natPct??75;
-  upd();
-  showTab('entrada',document.querySelectorAll('.tab-btn')[0]);
-  toast('Análise recarregada no formulário');
 }
 
 // ── NAVIGATION
@@ -1990,7 +1323,7 @@ function resetApp(){clearAll();document.getElementById('tab-res').style.display=
 const dz2=document.getElementById('dz');
 dz2.addEventListener('dragover',e=>{e.preventDefault();dz2.classList.add('drag')});
 dz2.addEventListener('dragleave',()=>dz2.classList.remove('drag'));
-dz2.addEventListener('drop',e=>{e.preventDefault();dz2.classList.remove('drag');const fs=Array.from(e.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.pdf'));if(fs.length)lerPDF(fs)});
+dz2.addEventListener('drop',e=>{e.preventDefault();dz2.classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.name.toLowerCase().endsWith('.pdf'))lerPDF(f)});
 
 // ── UTILS
 function showLoading(t){document.getElementById('loading-ov').classList.add('show');document.getElementById('loading-txt').textContent=t}
@@ -2008,15 +1341,10 @@ async function confirmarClassificacao(){
     if(data.erro){toast(data.erro,true);return}
     const sv=document.getElementById('conf-saved');
     if(sv){sv.style.display='inline';setTimeout(()=>sv.style.display='none',3000)}
-    if(data.retraining){
-      toast('✓ Confirmado! Retreinando modelo automaticamente…');
-      setTimeout(()=>atualizarDbStats(),35000);
-    }else{
-      const faltam=data.confirmacoes_ate_retrain??'?';
-      const limite=data.limite_retrain??10;
-      toast('✓ Confirmado! Faltam '+faltam+'/'+limite+' para retreino automático');
-    }
+    toast('✓ Confirmado! Modelo atualizando em segundo plano...');
     atualizarDbStats(data.stats);
+    // Verifica acurácia atualizada após ~35s (tempo estimado do retreino)
+    setTimeout(()=>atualizarDbStats(),35000);
   }catch(e){toast('Erro ao confirmar: '+e.message,true)}
 }
 
@@ -2061,254 +1389,6 @@ renderCostTableS();
 recalcCiclo();
 runSc();
 atualizarDbStats();
-
-// ── TUTORIAL ──────────────────────────────────────────────────────────────
-const _TUT_STEPS = [
-  {
-    icon: '👋',
-    num: 'PASSO 1 DE 4',
-    title: 'Bem-vindo ao Fluxo de Gestão',
-    desc: 'Este guia rápido mostra como usar o sistema em menos de 2 minutos. Você pode abrir este tutorial a qualquer momento clicando em <b>Ajuda</b> no cabeçalho.',
-  },
-  {
-    icon: '🐄',
-    num: 'PASSO 2 DE 4',
-    title: 'Informe o seu rebanho',
-    desc: 'Vá para a aba <b>PARÂMETROS</b> e preencha quantos animais você tem em cada categoria: Matrizes, Fêmeas 0–24m, Machos 0–24m e Bois Adultos.',
-  },
-  {
-    icon: '⚙️',
-    num: 'PASSO 3 DE 4',
-    title: 'Configure os parâmetros',
-    desc: 'Ainda em <b>PARÂMETROS</b>, ajuste a Taxa de Natalidade, Descarte de Matrizes e Venda de Bezerras. No card <b>Preços de Venda</b>, informe o peso e o preço da arroba para cada categoria.',
-  },
-  {
-    icon: '📊',
-    num: 'PASSO 4 DE 4',
-    title: 'Veja os resultados no Dashboard',
-    desc: 'O <b>DASHBOARD</b> atualiza em tempo real conforme você digita. Veja composição do rebanho, animais vendidos, receita por categoria e o resultado financeiro do ano.',
-  },
-];
-
-
-function tutRender() {
-  const s = _TUT_STEPS[_tutStep];
-  document.getElementById('tut-icon').textContent   = s.icon;
-  document.getElementById('tut-num').textContent    = s.num;
-  document.getElementById('tut-title').textContent  = s.title;
-  document.getElementById('tut-desc').innerHTML     = s.desc;
-  document.getElementById('tut-counter').textContent = `${_tutStep+1} / 4`;
-  document.getElementById('tut-back').style.visibility = _tutStep === 0 ? 'hidden' : 'visible';
-  const btn = document.getElementById('tut-next');
-  btn.textContent = _tutStep === _TUT_STEPS.length - 1 ? 'Começar ✓' : 'Próximo →';
-  const prog = document.getElementById('tut-prog');
-  prog.innerHTML = _TUT_STEPS.map((_,i) =>
-    `<div class="tut-dot${i===_tutStep?' act':''}"></div>`
-  ).join('');
-}
-
-function tutNav(dir) {
-  _tutStep += dir;
-  if (_tutStep >= _TUT_STEPS.length) { tutFechar(); return; }
-  if (_tutStep < 0) _tutStep = 0;
-  tutRender();
-}
-
-function tutAbrir() {
-  _tutStep = 0;
-  tutRender();
-  document.getElementById('tut-overlay').style.display = 'flex';
-}
-
-function tutFechar() {
-  document.getElementById('tut-overlay').style.display = 'none';
-  localStorage.setItem('tut_visto', '1');
-}
-
-document.getElementById('tut-overlay').addEventListener('click', function(e) {
-  if (e.target === this) tutFechar();
-});
-
-if (!localStorage.getItem('tut_visto')) tutAbrir();
-// ═══════════════════════════════════════════════════════
-// ALERTAS DE MERCADO
-// ═══════════════════════════════════════════════════════
-const _AL_KEY = 'boviml_alertas_v1';
-let _alertasConfig = {boi_min:null,boi_max:null,vaca_min:null,vaca_max:null,china_min:null,china_max:null};
-let _precoAtual = {boi:0,vaca:0,boi_china:0};
-
-function alertasAbrir(){
-  const cfg=JSON.parse(localStorage.getItem(_AL_KEY)||'{}');
-  _alertasConfig={..._alertasConfig,...cfg};
-  ['boi-min','boi-max','vaca-min','vaca-max','china-min','china-max'].forEach(id=>{
-    const el=document.getElementById('al-'+id);
-    const key=id.replace(/-/g,'_');
-    if(el) el.value=_alertasConfig[key]||'';
-  });
-  _alertasAtualizarStatus();
-  document.getElementById('alerta-overlay').classList.add('show');
-}
-function alertasFechar(){document.getElementById('alerta-overlay').classList.remove('show');}
-function alertasSalvar(){
-  _alertasConfig.boi_min  =parseFloat(document.getElementById('al-boi-min').value)||null;
-  _alertasConfig.boi_max  =parseFloat(document.getElementById('al-boi-max').value)||null;
-  _alertasConfig.vaca_min =parseFloat(document.getElementById('al-vaca-min').value)||null;
-  _alertasConfig.vaca_max =parseFloat(document.getElementById('al-vaca-max').value)||null;
-  _alertasConfig.china_min=parseFloat(document.getElementById('al-china-min').value)||null;
-  _alertasConfig.china_max=parseFloat(document.getElementById('al-china-max').value)||null;
-  localStorage.setItem(_AL_KEY,JSON.stringify(_alertasConfig));
-  _alertasAtualizarStatus();_alertasVerificar(_precoAtual);
-  toast('Alertas salvos!');alertasFechar();
-}
-function alertasLimpar(){
-  _alertasConfig={boi_min:null,boi_max:null,vaca_min:null,vaca_max:null,china_min:null,china_max:null};
-  localStorage.removeItem(_AL_KEY);
-  ['al-boi-min','al-boi-max','al-vaca-min','al-vaca-max','al-china-min','al-china-max'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  _alertasAtualizarStatus();
-  const btn=document.getElementById('btn-alertas');
-  if(btn){btn.style.background='rgba(248,113,113,.1)';btn.style.color='var(--rd)';btn.style.border='1px solid rgba(248,113,113,.3)';btn.textContent='Alertas';}
-}
-function _alertasAtualizarStatus(){
-  const temAlgum=Object.values(_alertasConfig).some(v=>v!==null);
-  const b=document.getElementById('alerta-status');
-  if(!b)return;
-  b.className=temAlgum?'alerta-badge ativo':'alerta-badge inativo';
-  b.innerHTML=temAlgum
-    ?'<span class="alerta-ativo-indicator" style="background:var(--g)"></span>Alertas ativos'
-    :'<span class="alerta-ativo-indicator" style="background:var(--mu)"></span>Sem alertas';
-}
-function _alertasVerificar(precos){
-  if(!precos)return;
-  const cfg=JSON.parse(localStorage.getItem(_AL_KEY)||'{}');
-  const checks=[
-    {key:'boi',      min:cfg.boi_min,   max:cfg.boi_max,   label:'Boi Gordo'},
-    {key:'vaca',     min:cfg.vaca_min,  max:cfg.vaca_max,  label:'Vaca Gorda'},
-    {key:'boi_china',min:cfg.china_min, max:cfg.china_max, label:'Boi China'},
-  ];
-  let disparou=false;
-  checks.forEach(c=>{
-    const v=parseFloat(precos[c.key])||0;if(!v)return;
-    if(c.min!==null&&c.min!==undefined&&v<c.min){disparou=true;toast(`ALERTA: ${c.label} em R$${v.toFixed(2)}/@ abaixo do minimo (R$${c.min})`,true);}
-    if(c.max!==null&&c.max!==undefined&&v>c.max){disparou=true;toast(`ALERTA: ${c.label} em R$${v.toFixed(2)}/@ acima do maximo (R$${c.max})`);}
-  });
-  const btn=document.getElementById('btn-alertas');
-  if(!btn)return;
-  if(disparou){btn.style.background='rgba(251,191,36,.25)';btn.style.color='var(--am)';btn.style.border='1px solid rgba(251,191,36,.6)';btn.textContent='ALERTA!';}
-  else if(Object.values(cfg).some(v=>v!==null)){btn.style.background='rgba(74,222,128,.1)';btn.style.color='var(--g)';btn.style.border='1px solid rgba(74,222,128,.3)';btn.textContent='Alertas';}
-}
-document.getElementById('alerta-overlay').addEventListener('click',function(e){if(e.target===this)alertasFechar();});
-// Inicializa status ao carregar
-(function(){
-  const cfg=JSON.parse(localStorage.getItem(_AL_KEY)||'{}');
-  _alertasConfig={..._alertasConfig,...cfg};
-  _alertasAtualizarStatus();
-  const btn=document.getElementById('btn-alertas');
-  if(btn&&Object.values(cfg).some(v=>v!==null)){btn.style.background='rgba(74,222,128,.1)';btn.style.color='var(--g)';btn.style.border='1px solid rgba(74,222,128,.3)';}
-})();
-
-// ═══════════════════════════════════════════════════════
-// CALCULADORA DE CUSTO POR CABEÇA
-// ═══════════════════════════════════════════════════════
-function ccSincronizar(){
-  if(!lastVals){toast('Faca uma classificacao primeiro.',true);return;}
-  const total=lastVals.reduce((a,b)=>a+b,0);
-  document.getElementById('cc-animais').value=total;
-  const boiTxt=document.getElementById('hdr-boi')?.textContent||'';
-  const boi=parseFloat(boiTxt.replace(/[^\d.,]/g,'').replace(',','.'))||0;
-  if(boi>0)document.getElementById('cc-preco-arr').value=boi.toFixed(2);
-  calcCustos();toast('Dados sincronizados!');
-}
-function calcCustos(){
-  const n   =parseFloat(document.getElementById('cc-animais').value)||0;
-  const area=parseFloat(document.getElementById('cc-area').value)||0;
-  const arrs=parseFloat(document.getElementById('cc-arrobas').value)||0;
-  const pArr=parseFloat(document.getElementById('cc-preco-arr').value)||0;
-  const alim=parseFloat(document.getElementById('cc-alimentacao').value)||0;
-  const min =parseFloat(document.getElementById('cc-mineral').value)||0;
-  const vet =parseFloat(document.getElementById('cc-vet').value)||0;
-  const mao =parseFloat(document.getElementById('cc-mao-obra').value)||0;
-  const past=parseFloat(document.getElementById('cc-pastagem').value)||0;
-  const arrend=parseFloat(document.getElementById('cc-arrendamento').value)||0;
-  const out =parseFloat(document.getElementById('cc-outros').value)||0;
-
-  const custoPorCabAno=(alim+min+vet);
-  const custoTotal=custoPorCabAno*n + mao + (past+arrend)*area + out;
-  const custoCab=n>0?custoTotal/n:0;
-  const custoArr=arrs>0?custoTotal/arrs:0;
-  const recCab=arrs>0&&n>0?(arrs*pArr)/n:0;
-  const margem=recCab-custoCab;
-  const fmt=v=>'R$ '+Math.round(v).toLocaleString('pt-BR');
-
-  document.getElementById('cc-total').textContent=fmt(custoTotal);
-  document.getElementById('cc-por-cab').textContent=fmt(custoCab);
-  document.getElementById('cc-por-cab-mes').textContent=fmt(custoCab/12)+' /mes';
-  document.getElementById('cc-por-arr').textContent=custoArr>0?fmt(custoArr):'—';
-  const elM=document.getElementById('cc-margem');
-  const elMt=document.getElementById('cc-margem-txt');
-  if(pArr>0&&n>0&&arrs>0){
-    elM.textContent=(margem>=0?'+':'')+fmt(margem);
-    elM.style.color=margem>=0?'var(--g)':'var(--rd)';
-    elMt.textContent=margem>=0?'lucro por cabeca/ano':'prejuizo por cabeca/ano';
-  }else{elM.textContent='—';elM.style.color='';elMt.textContent='informe arrobas e preco para calcular';}
-
-  const res=document.getElementById('cc-resultado');
-  if(!res)return;
-  if(custoTotal===0){res.innerHTML='';return;}
-  const lucro=arrs*pArr-custoTotal;
-  const pos=lucro>=0;
-  res.innerHTML=`<div class="res-box ${pos?'pos':'neg'}">
-    <div>
-      <div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Anual Estimado</div>
-      <div style="font-family:var(--fn);font-weight:800;font-size:2rem;color:${pos?'var(--g)':'var(--rd)'}">${pos?'+':''}${fmt(lucro)}</div>
-      <div style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-top:4px">${arrs>0?Math.round(arrs)+'@ x R$'+pArr.toFixed(2)+' = '+fmt(arrs*pArr)+' de receita':'Informe arrobas produzidas para ver receita'}</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Break-even (@)</div>
-      <div style="font-family:var(--fn);font-weight:800;font-size:1.8rem;color:var(--am)">${custoArr>0?'R$ '+custoArr.toFixed(2):'—'}</div>
-      <div style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-top:4px">${pArr>0&&custoArr>0?(pArr>custoArr?'Lucrando R$'+(pArr-custoArr).toFixed(2)+'/@ acima do ponto':'Prejuizo R$'+(custoArr-pArr).toFixed(2)+'/@ abaixo do ponto'):'informe o preco atual'}</div>
-    </div>
-  </div>`;
-}
-
-function _setBadgeCotacao(inputId,valor){
-  const el=document.getElementById(inputId);
-  if(!el||(parseFloat(el.value)||0)!==0)return;
-  el.value=valor.toFixed(2);
-  const field=el.closest('.field');
-  if(!field)return;
-  const bid='badge-cot-'+inputId;
-  if(document.getElementById(bid))return;
-  const span=document.createElement('span');
-  span.id=bid;span.textContent='↑ cotação hoje';
-  span.style.cssText='font-family:var(--fm);font-size:.52rem;color:var(--g);letter-spacing:1px';
-  field.appendChild(span);
-  el.addEventListener('input',()=>span.remove(),{once:true});
-}
-
-// Intercepta atualizarPrecos para verificar alertas e preencher calculadora
-const _origAP=window.atualizarPrecos;
-window.atualizarPrecos=async function(){
-  if(_origAP)await _origAP();
-  try{
-    const r=await fetch('/api/precos/live');const d=await r.json();
-    if(d&&d.precos){
-      _precoAtual=d.precos;
-      const cc=document.getElementById('cc-preco-arr');
-      if(cc&&(parseFloat(cc.value)||0)===0&&d.precos.boi>0){cc.value=d.precos.boi.toFixed(2);calcCustos();}
-      if(d.precos.boi>0){
-        _setBadgeCotacao('s-preco-arr-boi',d.precos.boi);
-        _setBadgeCotacao('s-preco-arr',d.precos.boi);
-        _setBadgeCotacao('sc-preco-arr',d.precos.boi);
-        recalcCiclo();runSc();
-      }
-      if(d.precos.vaca>0)_setBadgeCotacao('s-preco-arr-vaca',d.precos.vaca);
-      _alertasVerificar(d.precos);
-    }
-  }catch(e){}
-};
-
-calcCustos();
-
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
   <p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p>

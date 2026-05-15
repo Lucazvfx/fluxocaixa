@@ -1,15 +1,16 @@
 services:
   - type: web
-    name: fluxo-gestao
-    runtime: python
+    name: fluxo-caixa
+    env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 1 --timeout 120
+    startCommand: gunicorn app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: bovi-ml-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      - key: ADMIN_EMAIL
-        value: viniciuslukas353@gmail.com
+
+databases:
+  - name: fluxo-caixa-db

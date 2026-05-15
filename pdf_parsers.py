@@ -1,404 +1,16 @@
 """
-BoviML — Servidor Flask
+Parsers de PDF de saldo de rebanho — IDARON-RO, INDEA-MT, DECLARAÇÃO IDARON e GENÉRICO.
+
+Expõe:
+  extrair_texto_pdf(path) -> str
+  detectar_origem(text)   -> 'IDARON' | 'INDEA' | 'DECLARACAO_IDARON' | 'GENERICO'
+  parsear_idaron(text, pdf_path=None) -> dict
+  parsear_indea(text)                 -> dict
+  parsear_declaracao_idaron(text)     -> dict
+  parsear_generico(text)              -> dict
 """
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from apscheduler.schedulers.background import BackgroundScheduler # IMPORT NOVO: Agendador
-
-import os, re, tempfile, subprocess, threading
-
-
-from ml_engine import (
-    treinar_modelo, classificar, calcular_indicadores,
-    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS
-)
-import database as db
-
-from pdf_parsers import (
-    extrair_texto_pdf, detectar_origem,
-    parsear_idaron, parsear_indea, parsear_declaracao_idaron
-)
-
-# IMPORT NOVO: O seu ficheiro scraper.py
-from scraper import obter_precos_arroba, obter_precos_agrobr_strict
-
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')
-
-# ── Flask-Login ──────────────────────────────────────────────────────────────
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-login_manager.login_message = 'Faça login para acessar o sistema.'
-
-class User(UserMixin):
-    def __init__(self, data: dict):
-        self.id    = data['id']
-        self.email = data['email']
-        self.nome  = data['nome']
-        self.plano = data.get('plano', 'free')
-
-@login_manager.user_loader
-def load_user(user_id):
-    u = db.buscar_usuario_id(int(user_id))
-    return User(u) if u else None
-
-# ── Startup: carrega modelo do disco ou treina do zero ──────────────────────
-_saved = carregar_modelo()
-if _saved:
-    stats = _saved
-    print(f"✅ Modelo carregado do disco | Acurácia: {stats['accuracy_mean']*100:.1f}% | Amostras: {stats['n_samples']}")
-else:
-    print("🧠 Treinando modelo ML (primeira execução)...")
-    stats = treinar_modelo()
-    print(f"✅ Modelo treinado | Acurácia CV: {stats['accuracy_mean']*100:.1f}% ± {stats['accuracy_std']*100:.1f}% | Amostras: {stats['n_samples']}")
-
-db.init_db()
-print("🗃️  Banco SQLite inicializado.")
-
-# ── Automação: Cotações Diárias (Scraper) ────────────────────────────────────
-def rotina_diaria_cotacoes():
-    """Função executada em background para atualizar preços da arroba."""
-    print("📈 [Scraper] A iniciar a busca automática de cotações...")
-    try:
-        precos = obter_precos_arroba()
-        # Só guarda se os preços forem válidos
-        if precos['boi'] > 0 or precos['vaca'] > 0:
-            db.guardar_cotacao_diaria(precos)
-            print("✅ [Scraper] Cotações atualizadas no banco de dados.")
-    except Exception as e:
-        print(f"❌ [Scraper] Erro na rotina: {e}")
-
-# Configura e inicia o agendador de tarefas
-scheduler = BackgroundScheduler(daemon=True)
-scheduler.add_job(rotina_diaria_cotacoes, 'cron', hour=8, minute=0) # Roda todo dia às 08h00
-scheduler.start()
-
-# Opcional: Roda uma vez assim que o servidor liga para garantir que a tabela não fica vazia
-rotina_diaria_cotacoes()
-
-
-# ── Auto-retreino em background ──────────────────────────────────────────────
-_retraining = False
-_retrain_lock = threading.Lock()
-
-def _auto_retrain():
-    global stats, _retraining
-    with _retrain_lock:
-        _retraining = True
-        try:
-            X_extra, y_extra = db.exportar_treino()
-            stats = retrain_com_dados(X_extra, y_extra)
-            print(f"[ML] Auto-retreino concluído | Acurácia: {stats['accuracy_mean']*100:.1f}% | {stats['n_confirmados']} confirmados")
-        except Exception as e:
-            print(f"[ML] Erro no auto-retreino: {e}")
-        finally:
-            _retraining = False
-
-
-# ── Auth routes ─────────────────────────────────────────────────────────────
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    erro = None
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        senha = request.form.get('senha', '')
-        u = db.verificar_senha(email, senha)
-        if u:
-            login_user(User(u), remember=True)
-            return redirect(url_for('index'))
-        erro = 'E-mail ou senha incorretos.'
-    return render_template('login.html', erro=erro)
-
-@app.route('/esqueci-senha')
-def esqueci_senha():
-    return render_template('esqueci_senha.html')
-
-@app.route('/cadastro', methods=['GET', 'POST'])
-def cadastro():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-    erro = None
-    if request.method == 'POST':
-        nome  = request.form.get('nome', '').strip()
-        email = request.form.get('email', '').strip()
-        senha = request.form.get('senha', '')
-        if not nome or not email or len(senha) < 6:
-            erro = 'Preencha todos os campos. Senha mínima: 6 caracteres.'
-        elif db.buscar_usuario_email(email):
-            erro = 'E-mail já cadastrado.'
-        else:
-            uid = db.criar_usuario(email, nome, senha)
-            u   = db.buscar_usuario_id(uid)
-            login_user(User(u), remember=True)
-            return redirect(url_for('index'))
-    return render_template('cadastro.html', erro=erro)
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
-
-
-# ── Fazendas ─────────────────────────────────────────────────────────────────
-@app.route('/api/fazendas', methods=['GET'])
-@login_required
-def api_listar_fazendas():
-    return jsonify({'fazendas': db.listar_fazendas(current_user.id)})
-
-@app.route('/api/fazendas', methods=['POST'])
-@login_required
-def api_criar_fazenda():
-    data = request.json
-    nome = (data.get('nome') or '').strip()
-    if not nome:
-        return jsonify({'erro': 'Nome obrigatório'}), 400
-    fid = db.criar_fazenda(
-        user_id=current_user.id,
-        nome=nome,
-        proprietario=data.get('proprietario', ''),
-        municipio=data.get('municipio', ''),
-        estado=data.get('estado', ''),
-    )
-    return jsonify({'ok': True, 'id': fid})
-
-@app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
-@login_required
-def api_historico_fazenda(fid):
-    f = db.buscar_fazenda(fid, current_user.id)
-    if not f:
-        return jsonify({'erro': 'Fazenda não encontrada'}), 404
-    hist = db.historico_fazenda(fid, current_user.id)
-    return jsonify({'fazenda': dict(f), 'historico': hist})
-
-
-# ── App principal ─────────────────────────────────────────────────────────────
-@app.route('/')
-@login_required
-def index():
-    fazendas = db.listar_fazendas(current_user.id)
-    # Busca as cotações do dia para mandar para o Frontend (index.html)
-    cotacoes_dia = db.obter_cotacoes_atuais() 
-    return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
-                           usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia)
-
-@app.route('/api/classificar', methods=['POST'])
-@login_required
-def api_classificar():
-    data = request.json
-    v = data.get('valores', [])
-    if len(v) != 10 or sum(v) < 10:
-        return jsonify({'erro': 'Envie 10 valores (fêmeas e machos por faixa) com total >= 10'}), 400
-
-    kwargs = {}
-    if 'taxa_natalidade' in data:
-        kwargs['taxa_natalidade'] = float(data['taxa_natalidade'])
-    if 'bois_vendidos' in data:
-        kwargs['bois_vendidos'] = float(data['bois_vendidos'])
-    if 'bezerros_vendidos' in data:
-        kwargs['bezerros_vendidos'] = float(data['bezerros_vendidos'])
-
-    result = classificar(v, **kwargs)
-    ind    = calcular_indicadores(v)
-
-    # Salvar automaticamente no BD para futuros retreinamentos
-    fazenda   = data.get('fazenda', '')
-    municipio = data.get('municipio', '')
-    nat_pct   = float(data.get('taxa_natalidade', 0.75)) * 100
-    registro_id = db.salvar(
-        valores=v,
-        class_ml=result['classificacao'],
-        confianca=result['confianca'],
-        fazenda=fazenda,
-        municipio=municipio,
-        nat_pct=nat_pct,
-    )
-
-    return jsonify({**result, 'indicadores': ind, 'valores': v, 'registro_id': registro_id})
-
-@app.route('/api/confirmar', methods=['POST'])
-def api_confirmar():
-    """Confirma ou corrige a classificação e dispara auto-retreino em background."""
-    data = request.json
-    rid  = data.get('registro_id')
-    cls  = data.get('classificacao', '').strip().upper()
-    if not rid or not cls:
-        return jsonify({'erro': 'Campos registro_id e classificacao são obrigatórios'}), 400
-    try:
-        db.confirmar(int(rid), cls)
-        s = db.stats()
-        # Dispara retreino em background se não houver um em andamento
-        if not _retraining:
-            threading.Thread(target=_auto_retrain, daemon=True).start()
-        return jsonify({'ok': True, 'stats': s, 'retraining': True})
-    except ValueError as e:
-        return jsonify({'erro': str(e)}), 400
-
-@app.route('/api/retrain', methods=['POST'])
-def api_retrain():
-    """Retreina o modelo com dados base + registros confirmados do BD."""
-    global stats
-    X_extra, y_extra = db.exportar_treino()
-    stats = retrain_com_dados(X_extra, y_extra)
-    return jsonify({**stats, 'ok': True})
-
-@app.route('/api/historico', methods=['GET'])
-def api_historico():
-    limit = min(int(request.args.get('limit', 60)), 200)
-    return jsonify({'registros': db.listar(limit), 'stats': db.stats()})
-
-@app.route('/api/db-stats', methods=['GET'])
-def api_db_stats():
-    s = db.stats()
-    s['accuracy'] = stats.get('accuracy_mean', 0)
-    s['retraining'] = _retraining
-    return jsonify(s)
-
-
-@app.route('/api/precos/live', methods=['GET'])
-def api_precos_live():
-    """Retorna as cotações mais recentes armazenadas no banco de dados."""
-    try:
-        cotacoes = db.obter_cotacoes_atuais()
-        if cotacoes and (cotacoes.get('boi', 0) > 0 or cotacoes.get('vaca', 0) > 0):
-            return jsonify({
-                'ok': True,
-                'precos': {
-                    'boi': cotacoes.get('boi', 0),
-                    'vaca': cotacoes.get('vaca', 0),
-                    'boi_china': cotacoes.get('boi_china', 0)
-                }
-            })
-        else:
-            return jsonify({'ok': False, 'erro': 'Nenhuma cotação disponível no banco.'}), 404
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-
-@app.route('/api/cenario', methods=['POST'])
-def api_cenario():
-    data    = request.json
-    v       = data.get('valores', [])
-    cenario = data.get('cenario', 'crescimento')
-    params  = {
-        'nat_pct':       float(data.get('nat',      75)),
-        'mort_pct':      float(data.get('mort',      3)),
-        'desc_pct':      float(data.get('desc',     30)),
-        'preco_arroba':  float(data.get('preco',   320)),
-        'custo_cab_ano': float(data.get('custo',   850)),
-        'peso_arroba':   float(data.get('peso',     16)),
-        'prop_boi':      float(data.get('propboi',  30)),
-        'renov_boi_pct': float(data.get('renovboi', 20)),
-        'venda_bez_pct': float(data.get('vendbez',  30)),
-    }
-    if len(v) != 10:
-        return jsonify({'erro': 'Valores inválidos'}), 400
-    result = simular_cenario(v, cenario, **params)
-    return jsonify(result)
-
-@app.route('/api/cenarios', methods=['GET'])
-def api_cenarios():
-    return jsonify({k: {'nome': v['nome'], 'desc': v['desc'], 'emoji': v['emoji']}
-                    for k, v in CENARIOS.items()})
-
-# ── Rota Nova: Matemática Financeira da Arroba ──────────────────────────────
-@app.route('/api/estimativa-valor', methods=['POST'])
-@login_required
-def api_estimativa_valor():
-    _FAIXA_PATS = [
-        (r'0\s*[AÀ]\s*0?6\s*(M[EÊ]S)?|ATÉ\s*6|ATE\s*6',                        'f00'),
-        (r'0?7\s*[AÀ]\s*12\s*(M[EÊ]S)?',                                          'f05'),
-        (r'0\s*[AÀ]\s*12\s*(M[EÊ]S)?|ATÉ\s*12|ATE\s*12',                         'f00_12'),
-        (r'13\s*[AÀ]\s*24\s*(M[EÊ]S)?',                                            'f13'),
-        (r'25\s*[AÀ]\s*36\s*(M[EÊ]S)?',                                            'f25'),
-    (r'\+\s*[Dd][Ee]\s*36|\+\s*36|ACIMA|MAIOR\s*DE?\s*36|>\s*36',             'fac'),
-]
-    """Calcula o valor estimado de um animal baseado no peso, sexo e cotação do dia."""
-    data = request.json
-    peso_vivo = float(data.get('peso_vivo', 0))
-    sexo = data.get('sexo', 'M').upper() # 'M' ou 'F'
-    
-    if peso_vivo <= 0:
-        return jsonify({"erro": "Peso vivo inválido."}), 400
-
-    cotacoes = db.obter_cotacoes_atuais()
-    preco_arroba = cotacoes.get('boi', 0.0) if sexo == 'M' else cotacoes.get('vaca', 0.0)
-    
-    if preco_arroba == 0.0:
-        return jsonify({"erro": "Cotação indisponível no banco de dados."}), 503
-
-    peso_carcaca_arrobas = peso_vivo / 30.0
-    valor_estimado = peso_carcaca_arrobas * preco_arroba
-
-    return jsonify({
-        "sexo": sexo,
-        "peso_vivo_kg": peso_vivo,
-        "peso_estimado_arrobas": round(peso_carcaca_arrobas, 2),
-        "cotacao_aplicada": preco_arroba,
-        "valor_estimado_reais": round(valor_estimado, 2)
-    })
-
-@app.route('/api/ler-pdf', methods=['POST'])
-def api_ler_pdf():
-    if 'pdf' not in request.files:
-        return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
-    f = request.files['pdf']
-    if not f.filename.lower().endswith('.pdf'):
-        return jsonify({'erro': 'Apenas arquivos PDF são aceitos'}), 400
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-        tmp_path = tmp.name
-        f.save(tmp_path)
-    try:
-        text = extrair_texto_pdf(tmp_path)
-        orig = detectar_origem(text)
-        if orig == 'DECLARACAO_IDARON':
-            dados = parsear_declaracao_idaron(text)
-        elif orig == 'IDARON':
-            dados = parsear_idaron(text, pdf_path=tmp_path)
-        elif orig == 'INDEA':
-            dados = parsear_indea(text)
-        else:
-            dados = parsear_idaron(text, pdf_path=tmp_path)
-            if dados['total'] == 0:
-                dados = parsear_indea(text)
-        dados['origem'] = orig
-        return jsonify(dados)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-
-
-@app.route('/api/parse-text', methods=['POST'])
-def api_parse_text():
-    """Reprocessa um texto extraído de PDF com o parser escolhido.
-
-    Recebe JSON { text: str, origem: optional('IDARON'|'INDEA'|'GENERICO') }
-    Retorna o mesmo formato que `/api/ler-pdf` (sem raw_text salvo).
-    """
-    data = request.get_json() or {}
-    text = data.get('text', '')
-    if not text:
-        return jsonify({'erro': 'Campo "text" é obrigatório.'}), 400
-    origem = data.get('origem')
-    try:
-        orig = origem or detectar_origem(text)
-        if orig == 'IDARON':
-            dados = parsear_idaron(text)
-        elif orig == 'INDEA':
-            dados = parsear_indea(text)
-        else:
-            dados = parsear_idaron(text)
-            if dados['total'] == 0:
-                dados = parsear_indea(text)
-        dados['origem'] = orig
-        return jsonify(dados)
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+import re
+import subprocess
 
 
 # ─────────────────────────────────────────────
@@ -413,7 +25,7 @@ def extrair_texto_pdf(path: str) -> str:
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout
     except FileNotFoundError:
-        pass  # pdftotext não instalado — usa pdfplumber
+        pass
 
     try:
         import pdfplumber
@@ -425,12 +37,13 @@ def extrair_texto_pdf(path: str) -> str:
     except Exception as e:
         raise RuntimeError(f'Não foi possível extrair texto do PDF: {e}')
 
+
 # ─────────────────────────────────────────────
 # DETECÇÃO DE ORIGEM
 # ─────────────────────────────────────────────
 def detectar_origem(text: str) -> str:
     up = text.upper()
-    # NOVO: Reconhece a Declaração IDARON emitida eletronicamente
+    # Declaração IDARON emitida eletronicamente
     if 'DECLARAÇÃO Nº' in up and 'IDARON' in up:
         return 'DECLARACAO_IDARON'
     if ('IDARON' in up
@@ -448,6 +61,7 @@ def detectar_origem(text: str) -> str:
         return 'INDEA'
     return 'GENERICO'
 
+
 # ─────────────────────────────────────────────
 # HELPERS COMUNS
 # ─────────────────────────────────────────────
@@ -458,6 +72,7 @@ def _animais_vazios() -> dict:
         'fac_F': 0, 'fac_M': 0,
     }
 
+
 def _para_valores(animais: dict) -> list:
     return [
         animais['f00_F'], animais['f00_M'],
@@ -467,12 +82,14 @@ def _para_valores(animais: dict) -> list:
         animais['fac_F'], animais['fac_M'],
     ]
 
+
 def _sexo_da_linha(up: str):
     if 'FEMEA' in up or 'FÊMEA' in up:
         return 'F'
     if 'MACHO' in up:
         return 'M'
     return None
+
 
 # ─────────────────────────────────────────────
 # PARSER INDEA-MT
@@ -527,6 +144,7 @@ def parsear_indea(text: str) -> dict:
         'animais': animais, 'valores': valores,
     }
 
+
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO — extração por tabela (formulário de anotações)
 # ─────────────────────────────────────────────
@@ -539,11 +157,13 @@ _FAIXA_PATS = [
     (r'ACIMA|MAIOR\s*DE?\s*36|>\s*36',                         'fac'),
 ]
 
+
 def _faixa_de_celula(cell_up: str):
     for pat, faixa in _FAIXA_PATS:
         if re.search(pat, cell_up):
             return faixa
     return None
+
 
 def _adicionar(animais: dict, faixa: str, sexo: str, qtd: int):
     if faixa == 'f00_12':
@@ -552,6 +172,7 @@ def _adicionar(animais: dict, faixa: str, sexo: str, qtd: int):
         animais[f'f05_{sexo}'] += qtd - metade
     else:
         animais[f'{faixa}_{sexo}'] += qtd
+
 
 def _parsear_tabela_bovinos(table) -> dict:
     animais = _animais_vazios()
@@ -604,6 +225,7 @@ def _parsear_tabela_bovinos(table) -> dict:
 
     return animais
 
+
 def _parse_idaron_tabelas(pdf_path: str) -> dict:
     try:
         import pdfplumber
@@ -632,6 +254,7 @@ def _parse_idaron_tabelas(pdf_path: str) -> dict:
         return animais
     except Exception:
         return _animais_vazios()
+
 
 def _parse_idaron_words(pdf_path: str) -> dict:
     try:
@@ -691,6 +314,7 @@ def _parse_idaron_words(pdf_path: str) -> dict:
         return animais
     except Exception:
         return _animais_vazios()
+
 
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO — texto linha a linha (fallback)
@@ -757,6 +381,7 @@ def _parse_idaron_linhas(text: str) -> dict:
 
     return animais
 
+
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO — orquestrador
 # ─────────────────────────────────────────────
@@ -821,6 +446,185 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
     }
 
 
-if __name__ == '__main__':
-    print("Fluxo de caixa rodando em http://localhost:5050")
-    app.run(debug=True, port=5050)
+# ─────────────────────────────────────────────
+# PARSER DECLARAÇÃO IDARON (emitida eletronicamente)
+# ─────────────────────────────────────────────
+def parsear_declaracao_idaron(text: str) -> dict:
+    """
+    Parser para a Declaração IDARON com tabela horizontal:
+    0 A 6 MESES  7 A 12 MESES  ... TOTAL
+    M F M F ... M F
+    0 0 88 0 316 ... 404 13
+    """
+    animais = _animais_vazios()
+    fazenda = municipio = proprietario = cpf = data_saldo = ''
+
+    # ---- Metadados ----
+    m = re.search(r'FAZENDA\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s\.\-]+)', text, re.I)
+    if m:
+        fazenda = m.group(1).strip()[:60]
+    else:
+        m = re.search(r'endereço:\s*([^.\n]+)', text, re.I)
+        if m:
+            fazenda = m.group(1).strip()[:60]
+
+    m = re.search(r'município\s+de\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-]+?)(?:\s*\-|\n)', text, re.I)
+    if m:
+        municipio = m.group(1).strip()
+
+    m = re.search(r'CPF[:\s]*(\d{11})\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]+?)(?:\n|$)', text, re.I)
+    if m:
+        cpf = m.group(1)
+        proprietario = m.group(2).strip()
+
+    m = re.search(r'Emitido em:\s*(\d{2}/\d{2}/\d{4})', text)
+    if m:
+        data_saldo = m.group(1)
+
+    # ---- Extração dos 10 números da tabela ----
+    # Padrão: captura 10 números após a sequência "M F M F M F M F M F"
+    padrao = r'M\s+F\s+M\s+F\s+M\s+F\s+M\s+F\s+M\s+F\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)'
+    match = re.search(padrao, text)
+    if match:
+        valores = [int(g) for g in match.groups()]
+        # Ordem: f00_M, f00_F, f05_M, f05_F, f13_M, f13_F, f25_M, f25_F, fac_M, fac_F
+        animais['f00_M'] = valores[0]
+        animais['f00_F'] = valores[1]
+        animais['f05_M'] = valores[2]
+        animais['f05_F'] = valores[3]
+        animais['f13_M'] = valores[4]
+        animais['f13_F'] = valores[5]
+        animais['f25_M'] = valores[6]
+        animais['f25_F'] = valores[7]
+        animais['fac_M'] = valores[8]
+        animais['fac_F'] = valores[9]
+
+    # Fallback: captura uma sequência de 12 números (10 valores + 2 totais)
+    if sum(animais.values()) == 0:
+        bloco = re.search(r'(\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+)', text)
+        if bloco:
+            nums = list(map(int, bloco.group(1).split()))
+            if len(nums) == 12:
+                animais['f00_M'] = nums[0]
+                animais['f00_F'] = nums[1]
+                animais['f05_M'] = nums[2]
+                animais['f05_F'] = nums[3]
+                animais['f13_M'] = nums[4]
+                animais['f13_F'] = nums[5]
+                animais['f25_M'] = nums[6]
+                animais['f25_F'] = nums[7]
+                animais['fac_M'] = nums[8]
+                animais['fac_F'] = nums[9]
+
+    valores_lista = _para_valores(animais)
+    return {
+        'fazenda': fazenda,
+        'municipio': municipio,
+        'proprietario': proprietario,
+        'cpf': cpf,
+        'ie': '',
+        'data_saldo': data_saldo,
+        'total': sum(valores_lista),
+        'animais': animais,
+        'valores': valores_lista,
+    }
+
+
+# ─────────────────────────────────────────────
+# PARSER GENÉRICO (fallback)
+# ─────────────────────────────────────────────
+_FAIXA_PATS_GENERICO = [
+    (re.compile(r'\b(?:0?0\s*[aà\-]\s*0?6|at[ée]\s*0?6)(?:\s*m[eê]s(?:es)?)?\b', re.I), 'f00'),
+    (re.compile(r'\b0?7\s*[aà\-]\s*12(?:\s*m[eê]s(?:es)?)?\b', re.I),               'f05'),
+    (re.compile(r'\b0?0\s*[aà\-]\s*0?4(?:\s*m[eê]s(?:es)?)?\b', re.I),               'f00'),
+    (re.compile(r'\b0?5\s*[aà\-]\s*12(?:\s*m[eê]s(?:es)?)?\b', re.I),                'f05'),
+    (re.compile(r'\b(?:0?0\s*[aà\-]\s*12|at[ée]\s*12)(?:\s*m[eê]s(?:es)?)?\b', re.I), 'f00_12'),
+    (re.compile(r'\b13\s*[aà\-]\s*24(?:\s*m[eê]s(?:es)?)?\b', re.I),                 'f13'),
+    (re.compile(r'\b25\s*[aà\-]\s*36(?:\s*m[eê]s(?:es)?)?\b', re.I),                 'f25'),
+    (re.compile(r'(?:\b(?:acima(?:\s*de)?|maior\s*(?:que|de))|>)\s*36\b', re.I),     'fac'),
+]
+
+def _faixa_generica(texto: str):
+    for pat, faixa in _FAIXA_PATS_GENERICO:
+        if pat.search(texto):
+            return faixa
+    return None
+
+_CATEGORIAS_ZOOTECNICAS = [
+    (re.compile(r'\bbezerr([ao])\b', re.I),     'f00',  None),
+    (re.compile(r'\bgarrot([ao])\b', re.I),     'f13',  None),
+    (re.compile(r'\bnovilh([ao])\b', re.I),     'f25',  None),
+    (re.compile(r'\bvaca\b',         re.I),     'fac',  'F'),
+    (re.compile(r'\b(?:touro|boi(?:s)?)\b', re.I), 'fac', 'M'),
+]
+
+def _categoria_zootecnica(up: str):
+    for pat, faixa, sexo_fixo in _CATEGORIAS_ZOOTECNICAS:
+        m = pat.search(up)
+        if not m:
+            continue
+        sexo = sexo_fixo
+        if sexo is None and m.groups():
+            term = m.group(1).upper()
+            sexo = 'F' if term == 'A' else 'M'
+        return faixa, sexo
+    return None, None
+
+def parsear_generico(text: str) -> dict:
+    animais = _animais_vazios()
+    fazenda = municipio = proprietario = cpf = data_saldo = ''
+
+    for pat in [
+        r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)',
+    ]:
+        m = re.search(pat, text, re.I)
+        if m:
+            fazenda = m.group(1).strip().splitlines()[0][:60]
+            break
+
+    m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+?)(?:\s{2,}|\n|$)', text, re.I)
+    if m:
+        municipio = m.group(1).strip()[:60]
+
+    m = re.search(r'\b(\d{3}\.?\d{3}\.?\d{3}[\-\.]?\d{2}|\d{11})\b', text)
+    if m:
+        cpf = re.sub(r'[^\d]', '', m.group(1))
+
+    m = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
+    if m:
+        data_saldo = m.group(1)
+
+    for line in text.split('\n'):
+        bruto = line.strip()
+        if not bruto:
+            continue
+        m_qtd = re.search(r'(\d{1,6})\s*$', bruto)
+        if not m_qtd:
+            continue
+        qtd = int(m_qtd.group(1))
+        if qtd <= 0 or qtd > 500_000:
+            continue
+
+        up = bruto.upper()
+        sexo = _sexo_da_linha(up)
+
+        faixa = _faixa_generica(up)
+        if not faixa or not sexo:
+            cat_faixa, cat_sexo = _categoria_zootecnica(up)
+            if not faixa:
+                faixa = cat_faixa
+            if not sexo:
+                sexo = cat_sexo
+
+        if not faixa or not sexo:
+            continue
+
+        _adicionar(animais, faixa, sexo, qtd)
+
+    valores = _para_valores(animais)
+    return {
+        'fazenda': fazenda, 'municipio': municipio,
+        'proprietario': proprietario, 'cpf': cpf, 'ie': '',
+        'data_saldo': data_saldo, 'total': sum(valores),
+        'animais': animais, 'valores': valores,
+    }

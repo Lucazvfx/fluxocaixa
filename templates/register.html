@@ -28,7 +28,8 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
-        <form method="POST">
+                <form method="POST">
+                    <!-- CSRF token not injected: app does not require Flask-WTF by default -->
             <div class="form-group">
                 <label>Nome Completo</label>
                 <input type="text" name="nome" required autofocus>
