@@ -7,7 +7,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from contextlib import contextmanager
 
-_DATABASE_URL = os.environ.get('DATABASE_URL', '')
+_DATABASE_URL = os.environ.get('postgresql://postgres:gXkkFkDJNnnZWxrYxFsceAUUpJmxWinz@postgres.railway.internal:5432/railway', '')
 _USE_PG = bool(_DATABASE_URL)
 
 # ─────────────────────────────────────────────
