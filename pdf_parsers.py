@@ -491,7 +491,7 @@ def parsear_declaracao_idaron(text: str) -> dict:
         animais['f00_M'] = valores[0]
         animais['f00_F'] = valores[1]
         animais['f05_M'] = valores[2]
-        animais['f05_F'] = valores[3]
+        animaux['f05_F'] = valores[3]
         animais['f13_M'] = valores[4]
         animais['f13_F'] = valores[5]
         animais['f25_M'] = valores[6]
@@ -531,7 +531,7 @@ def parsear_declaracao_idaron(text: str) -> dict:
 
 
 # ─────────────────────────────────────────────
-# PARSER GENÉRICO (fallback)
+# FUNÇÕES AUXILIARES PARA PARSER GENÉRICO
 # ─────────────────────────────────────────────
 _FAIXA_PATS_GENERICO = [
     (re.compile(r'\b(?:0?0\s*[aà\-]\s*0?6|at[ée]\s*0?6)(?:\s*m[eê]s(?:es)?)?\b', re.I), 'f00'),
@@ -570,56 +570,85 @@ def _categoria_zootecnica(up: str):
         return faixa, sexo
     return None, None
 
+
+# ─────────────────────────────────────────────
+# PARSER GENÉRICO (fallback) – VERSÃO CORRIGIDA
+# ─────────────────────────────────────────────
 def parsear_generico(text: str) -> dict:
     animais = _animais_vazios()
     fazenda = municipio = proprietario = cpf = data_saldo = ''
 
-    for pat in [
-        r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)',
-    ]:
+    # Metadados (igual antes)
+    for pat in [r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)']:
         m = re.search(pat, text, re.I)
         if m:
             fazenda = m.group(1).strip().splitlines()[0][:60]
             break
-
     m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+?)(?:\s{2,}|\n|$)', text, re.I)
     if m:
         municipio = m.group(1).strip()[:60]
-
     m = re.search(r'\b(\d{3}\.?\d{3}\.?\d{3}[\-\.]?\d{2}|\d{11})\b', text)
     if m:
         cpf = re.sub(r'[^\d]', '', m.group(1))
-
     m = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
     if m:
         data_saldo = m.group(1)
 
+    # ----- PARSER PRINCIPAL: captura linhas de animais -----
     for line in text.split('\n'):
-        bruto = line.strip()
-        if not bruto:
-            continue
-        m_qtd = re.search(r'(\d{1,6})\s*$', bruto)
-        if not m_qtd:
-            continue
-        qtd = int(m_qtd.group(1))
-        if qtd <= 0 or qtd > 500_000:
+        up = line.upper()
+        if 'BOVINO' not in up:
             continue
 
-        up = bruto.upper()
-        sexo = _sexo_da_linha(up)
+        # Tenta capturar a estrutura: faixa, sexo, quantidade
+        # Exemplo: "BOVINO     00 A 04 MESES          FEMEA   16"
+        match = re.search(r'BOVINO\s+(\d{2}\s*A\s*\d{2}\s*MESES|ACIMA\s*DE\s*\d{2}\s*MESES)\s+(FEMEA|MACHO)\s+(\d+)', up)
+        if match:
+            faixa_str = match.group(1).strip()
+            sexo = match.group(2)
+            qtd = int(match.group(3))
 
-        faixa = _faixa_generica(up)
-        if not faixa or not sexo:
-            cat_faixa, cat_sexo = _categoria_zootecnica(up)
-            if not faixa:
-                faixa = cat_faixa
-            if not sexo:
-                sexo = cat_sexo
+            # Mapeia faixa para a chave interna
+            if '00 A 04' in faixa_str:
+                faixa_key = 'f00'
+            elif '05 A 12' in faixa_str:
+                faixa_key = 'f05'
+            elif '13 A 24' in faixa_str:
+                faixa_key = 'f13'
+            elif '25 A 36' in faixa_str:
+                faixa_key = 'f25'
+            elif 'ACIMA' in faixa_str:
+                faixa_key = 'fac'
+            else:
+                continue
 
-        if not faixa or not sexo:
-            continue
+            sexo_key = 'F' if sexo == 'FEMEA' else 'M'
+            animais[f'{faixa_key}_{sexo_key}'] += qtd
+            continue  # achou, pula para próxima linha
 
-        _adicionar(animais, faixa, sexo, qtd)
+    # Se não encontrou nenhum animal pelo padrão acima, tenta o fallback antigo
+    if sum(animais.values()) == 0:
+        for line in text.split('\n'):
+            up = line.upper()
+            if 'BOVINO' not in up:
+                continue
+            m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+            if not m_qtd:
+                continue
+            qtd = int(m_qtd.group(1))
+            if qtd <= 0 or qtd > 500_000:
+                continue
+            sexo = _sexo_da_linha(up)
+            faixa = _faixa_generica(up)
+            if not faixa or not sexo:
+                cat_faixa, cat_sexo = _categoria_zootecnica(up)
+                if not faixa:
+                    faixa = cat_faixa
+                if not sexo:
+                    sexo = cat_sexo
+            if not faixa or not sexo:
+                continue
+            _adicionar(animais, faixa, sexo, qtd)
 
     valores = _para_valores(animais)
     return {
@@ -627,4 +656,4 @@ def parsear_generico(text: str) -> dict:
         'proprietario': proprietario, 'cpf': cpf, 'ie': '',
         'data_saldo': data_saldo, 'total': sum(valores),
         'animais': animais, 'valores': valores,
-    }
+    }"
