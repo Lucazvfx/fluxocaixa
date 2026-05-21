@@ -1,13 +1,5 @@
 """
 Parsers de PDF de saldo de rebanho — IDARON-RO, INDEA-MT, DECLARAÇÃO IDARON e GENÉRICO.
-
-Expõe:
-  extrair_texto_pdf(path) -> str
-  detectar_origem(text)   -> 'IDARON' | 'INDEA' | 'DECLARACAO_IDARON' | 'GENERICO'
-  parsear_idaron(text, pdf_path=None) -> dict
-  parsear_indea(text)                 -> dict
-  parsear_declaracao_idaron(text)     -> dict
-  parsear_generico(text)              -> dict
 """
 import re
 import subprocess
@@ -43,7 +35,6 @@ def extrair_texto_pdf(path: str) -> str:
 # ─────────────────────────────────────────────
 def detectar_origem(text: str) -> str:
     up = text.upper()
-    # Declaração IDARON emitida eletronicamente
     if 'DECLARAÇÃO Nº' in up and 'IDARON' in up:
         return 'DECLARACAO_IDARON'
     if ('IDARON' in up
@@ -127,11 +118,16 @@ def parsear_indea(text: str) -> dict:
         sexo = _sexo_da_linha(up)
         if not sexo:
             continue
-        if   '00 A 04' in up or '0 A 04' in up or '0 A 4' in up: faixa = 'f00'
-        elif '05 A 12' in up or '5 A 12' in up:                  faixa = 'f05'
-        elif '13 A 24' in up:                                    faixa = 'f13'
-        elif '25 A 36' in up:                                    faixa = 'f25'
-        elif 'ACIMA'   in up:                                    faixa = 'fac'
+        if   '00 A 04' in up or '0 A 04' in up or '0 A 4' in up:
+            faixa = 'f00'
+        elif '05 A 12' in up or '5 A 12' in up:
+            faixa = 'f05'
+        elif '13 A 24' in up:
+            faixa = 'f13'
+        elif '25 A 36' in up:
+            faixa = 'f25'
+        elif 'ACIMA' in up:
+            faixa = 'fac'
         else:
             continue
         animais[f'{faixa}_{sexo}'] = qtd
@@ -146,7 +142,7 @@ def parsear_indea(text: str) -> dict:
 
 
 # ─────────────────────────────────────────────
-# PARSER IDARON-RO — extração por tabela (formulário de anotações)
+# PARSER IDARON-RO (tabelas, words, linhas) – mantido igual ao original
 # ─────────────────────────────────────────────
 _FAIXA_PATS = [
     (r'0\s*[AÀ]\s*0?6\s*(M[EÊ]S)?|ATÉ\s*6|ATE\s*6',           'f00'),
@@ -157,13 +153,11 @@ _FAIXA_PATS = [
     (r'ACIMA|MAIOR\s*DE?\s*36|>\s*36',                         'fac'),
 ]
 
-
 def _faixa_de_celula(cell_up: str):
     for pat, faixa in _FAIXA_PATS:
         if re.search(pat, cell_up):
             return faixa
     return None
-
 
 def _adicionar(animais: dict, faixa: str, sexo: str, qtd: int):
     if faixa == 'f00_12':
@@ -173,24 +167,19 @@ def _adicionar(animais: dict, faixa: str, sexo: str, qtd: int):
     else:
         animais[f'{faixa}_{sexo}'] += qtd
 
-
 def _parsear_tabela_bovinos(table) -> dict:
     animais = _animais_vazios()
     if not table or len(table) < 2:
         return animais
-
     rows = [[str(c or '').upper().strip() for c in row] for row in table]
-
     faixa_col = {}
     for row in rows:
         for c_idx, cell in enumerate(row):
             f = _faixa_de_celula(cell)
             if f and c_idx not in faixa_col:
                 faixa_col[c_idx] = f
-
     if not faixa_col:
         return animais
-
     sexo_col = {}
     for row in rows:
         for c_idx, cell in enumerate(row):
@@ -198,7 +187,6 @@ def _parsear_tabela_bovinos(table) -> dict:
                 sexo_col[c_idx] = 'F'
             elif cell in ('M', 'MACHO') or re.match(r'^MACHO$', cell):
                 sexo_col[c_idx] = 'M'
-
     col_map = {}
     if sexo_col:
         for c_idx, sexo in sexo_col.items():
@@ -210,7 +198,6 @@ def _parsear_tabela_bovinos(table) -> dict:
         sorted_f = sorted(faixa_col.items())
         for i, (c_idx, faixa) in enumerate(sorted_f):
             col_map[c_idx] = (faixa, 'F' if i % 2 == 0 else 'M')
-
     for row in rows:
         for c_idx, cell in enumerate(row):
             if c_idx not in col_map:
@@ -222,15 +209,12 @@ def _parsear_tabela_bovinos(table) -> dict:
                 continue
             faixa, sexo = col_map[c_idx]
             _adicionar(animais, faixa, sexo, qtd)
-
     return animais
-
 
 def _parse_idaron_tabelas(pdf_path: str) -> dict:
     try:
         import pdfplumber
         animais = _animais_vazios()
-
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
                 for settings in [
@@ -255,23 +239,19 @@ def _parse_idaron_tabelas(pdf_path: str) -> dict:
     except Exception:
         return _animais_vazios()
 
-
 def _parse_idaron_words(pdf_path: str) -> dict:
     try:
         import pdfplumber
         animais = _animais_vazios()
-
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:
                 words = page.extract_words(x_tolerance=5, y_tolerance=5)
                 if not words:
                     continue
-
                 linhas: dict[float, list] = {}
                 for w in words:
                     y = round(w['top'] / 4) * 4
                     linhas.setdefault(y, []).append(w)
-
                 faixa_x: dict[float, str] = {}
                 for y, ws in linhas.items():
                     texto = ' '.join(w['text'].upper() for w in ws)
@@ -279,10 +259,8 @@ def _parse_idaron_words(pdf_path: str) -> dict:
                     if f:
                         x_mid = sum((w['x0'] + w['x1']) / 2 for w in ws) / len(ws)
                         faixa_x[x_mid] = f
-
                 if not faixa_x:
                     continue
-
                 col_map: dict[float, tuple] = {}
                 for y, ws in linhas.items():
                     for w in ws:
@@ -293,11 +271,9 @@ def _parse_idaron_words(pdf_path: str) -> dict:
                             nearest = min(faixa_x, key=lambda x: abs(x - x_mid))
                             if abs(nearest - x_mid) < 60:
                                 col_map[x_mid] = (faixa_x[nearest], sexo)
-
                 if not col_map:
                     for i, (xf, faixa) in enumerate(sorted(faixa_x.items())):
                         col_map[xf] = (faixa, 'F' if i % 2 == 0 else 'M')
-
                 for y, ws in linhas.items():
                     for w in ws:
                         if not re.match(r'^\d+$', w['text']):
@@ -310,18 +286,12 @@ def _parse_idaron_words(pdf_path: str) -> dict:
                         if abs(nearest - x_mid) < 40:
                             faixa, sexo = col_map[nearest]
                             _adicionar(animais, faixa, sexo, qtd)
-
         return animais
     except Exception:
         return _animais_vazios()
 
-
-# ─────────────────────────────────────────────
-# PARSER IDARON-RO — texto linha a linha (fallback)
-# ─────────────────────────────────────────────
 def _parse_idaron_linhas(text: str) -> dict:
     animais = _animais_vazios()
-
     for line in text.split('\n'):
         up = line.upper()
         if 'BOVINO' not in up:
@@ -335,7 +305,6 @@ def _parse_idaron_linhas(text: str) -> dict:
         sexo = _sexo_da_linha(up)
         if not sexo:
             continue
-
         if re.search(r'0\s*A\s*12', up) or 'ATÉ 12' in up or 'ATE 12' in up:
             metade = qtd // 2
             animais[f'f00_{sexo}'] += metade
@@ -354,7 +323,6 @@ def _parse_idaron_linhas(text: str) -> dict:
             animais[f'f25_{sexo}'] = qtd
         elif 'ACIMA' in up:
             animais[f'fac_{sexo}'] = qtd
-
     _categorias = [
         (['BEZERRA', 'BEZERRO'],   'f05', None),
         (['GARROTA', 'GARROTE'],   'f13', None),
@@ -378,20 +346,13 @@ def _parse_idaron_linhas(text: str) -> dict:
                 if sexo and animais[f'{faixa}_{sexo}'] == 0:
                     animais[f'{faixa}_{sexo}'] = qtd
                 break
-
     return animais
 
-
-# ─────────────────────────────────────────────
-# PARSER IDARON-RO — orquestrador
-# ─────────────────────────────────────────────
 def parsear_idaron(text: str, pdf_path: str = None) -> dict:
     fazenda = municipio = proprietario = cpf = data_saldo = ie = ''
-
     m = re.search(r'\bI\.?E\.?\b[:\s]+([A-Z0-9\.\-\/]+)', text, re.I)
     if m:
         ie = m.group(1).strip()
-
     for pat in [
         r'NOME\s+DA\s+PROPRIEDADE[:\s]+(.+)',
         r'PROPRIEDADE[:\s]+(.+)',
@@ -402,14 +363,12 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
         if m:
             fazenda = m.group(1).strip()[:60]
             break
-
     m = re.search(
         r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-]+?(?:/\s*RO)?)(?:\s{2,}|\n|$)',
         text, re.I
     )
     if m:
         municipio = m.group(1).strip()
-
     m = re.search(
         r'(?:CPF|PRODUTOR)[:\s/]*'
         r'(\d{3}\.?\d{3}\.?\d{3}[\-\.]?\d{2})'
@@ -421,22 +380,16 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
     if m:
         cpf = re.sub(r'[^\d]', '', m.group(1))
         proprietario = m.group(2).strip()
-
     m = re.search(r'(\d{2}/\d{2}/\d{4})', text)
     if m:
         data_saldo = m.group(1)
-
     animais = _animais_vazios()
-
     if pdf_path:
         animais = _parse_idaron_tabelas(pdf_path)
-
     if pdf_path and sum(animais.values()) == 0:
         animais = _parse_idaron_words(pdf_path)
-
     if sum(animais.values()) == 0:
         animais = _parse_idaron_linhas(text)
-
     valores = _para_valores(animais)
     return {
         'fazenda': fazenda, 'municipio': municipio,
@@ -450,16 +403,8 @@ def parsear_idaron(text: str, pdf_path: str = None) -> dict:
 # PARSER DECLARAÇÃO IDARON (emitida eletronicamente)
 # ─────────────────────────────────────────────
 def parsear_declaracao_idaron(text: str) -> dict:
-    """
-    Parser para a Declaração IDARON com tabela horizontal:
-    0 A 6 MESES  7 A 12 MESES  ... TOTAL
-    M F M F ... M F
-    0 0 88 0 316 ... 404 13
-    """
     animais = _animais_vazios()
     fazenda = municipio = proprietario = cpf = data_saldo = ''
-
-    # ---- Metadados ----
     m = re.search(r'FAZENDA\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s\.\-]+)', text, re.I)
     if m:
         fazenda = m.group(1).strip()[:60]
@@ -467,39 +412,30 @@ def parsear_declaracao_idaron(text: str) -> dict:
         m = re.search(r'endereço:\s*([^.\n]+)', text, re.I)
         if m:
             fazenda = m.group(1).strip()[:60]
-
     m = re.search(r'município\s+de\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-]+?)(?:\s*\-|\n)', text, re.I)
     if m:
         municipio = m.group(1).strip()
-
     m = re.search(r'CPF[:\s]*(\d{11})\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]+?)(?:\n|$)', text, re.I)
     if m:
         cpf = m.group(1)
         proprietario = m.group(2).strip()
-
     m = re.search(r'Emitido em:\s*(\d{2}/\d{2}/\d{4})', text)
     if m:
         data_saldo = m.group(1)
-
-    # ---- Extração dos 10 números da tabela ----
-    # Padrão: captura 10 números após a sequência "M F M F M F M F M F"
     padrao = r'M\s+F\s+M\s+F\s+M\s+F\s+M\s+F\s+M\s+F\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)'
     match = re.search(padrao, text)
     if match:
         valores = [int(g) for g in match.groups()]
-        # Ordem: f00_M, f00_F, f05_M, f05_F, f13_M, f13_F, f25_M, f25_F, fac_M, fac_F
         animais['f00_M'] = valores[0]
         animais['f00_F'] = valores[1]
         animais['f05_M'] = valores[2]
-        animaux['f05_F'] = valores[3]
+        animais['f05_F'] = valores[3]
         animais['f13_M'] = valores[4]
         animais['f13_F'] = valores[5]
         animais['f25_M'] = valores[6]
         animais['f25_F'] = valores[7]
         animais['fac_M'] = valores[8]
         animais['fac_F'] = valores[9]
-
-    # Fallback: captura uma sequência de 12 números (10 valores + 2 totais)
     if sum(animais.values()) == 0:
         bloco = re.search(r'(\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+)', text)
         if bloco:
@@ -515,7 +451,6 @@ def parsear_declaracao_idaron(text: str) -> dict:
                 animais['f25_F'] = nums[7]
                 animais['fac_M'] = nums[8]
                 animais['fac_F'] = nums[9]
-
     valores_lista = _para_valores(animais)
     return {
         'fazenda': fazenda,
@@ -531,10 +466,7 @@ def parsear_declaracao_idaron(text: str) -> dict:
 
 
 # ─────────────────────────────────────────────
-# FUNÇÕES AUXILIARES PARA PARSER GENÉRICO
-# ─────────────────────────────────────────────
-# ─────────────────────────────────────────────
-# FUNÇÕES AUXILIARES PARA PARSER GENÉRICO
+# AUXILIARES PARA O PARSER GENÉRICO
 # ─────────────────────────────────────────────
 _FAIXA_PATS_GENERICO = [
     (re.compile(r'\b(?:0?0\s*[aà\-]\s*0?6|at[ée]\s*0?6)(?:\s*m[eê]s(?:es)?)?\b', re.I), 'f00'),
@@ -575,81 +507,82 @@ def _categoria_zootecnica(up: str):
 
 
 # ─────────────────────────────────────────────
-# PARSER GENÉRICO (fallback) – VERSÃO CORRIGIDA
+# PARSER GENÉRICO (FINAL, ROBUSTO)
 # ─────────────────────────────────────────────
 def parsear_generico(text: str) -> dict:
     animais = _animais_vazios()
     fazenda = municipio = proprietario = cpf = data_saldo = ''
 
+    # Limpeza
+    text_clean = re.sub(r'<[^>]+>', ' ', text)        # remove HTML
+    text_clean = re.sub(r'\s+', ' ', text_clean)      # normaliza espaços
+    # Insere espaços antes de palavras-chave que podem estar grudadas
+    text_clean = re.sub(r'(BOVINO)', r' \1 ', text_clean, flags=re.I)
+    text_clean = re.sub(r'(FEMEA|MACHO)', r' \1 ', text_clean, flags=re.I)
+    text_clean = re.sub(r'(\d{2}\s*A\s*\d{2}\s*MESES|ACIMA\s*DE\s*\d{2}\s*MESES)', r' \1 ', text_clean, flags=re.I)
+    text_clean = re.sub(r'\s+', ' ', text_clean).strip()
+
     # Metadados
-    for pat in [r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)']:
-        m = re.search(pat, text, re.I)
-        if m:
-            fazenda = m.group(1).strip().splitlines()[0][:60]
-            break
-    m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+?)(?:\s{2,}|\n|$)', text, re.I)
+    m = re.search(r'FAZENDA[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s\.\-]+)', text_clean, re.I)
+    if m:
+        fazenda = m.group(1).strip()[:60]
+    m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+)', text_clean, re.I)
     if m:
         municipio = m.group(1).strip()[:60]
-    m = re.search(r'\b(\d{3}\.?\d{3}\.?\d{3}[\-\.]?\d{2}|\d{11})\b', text)
-    if m:
-        cpf = re.sub(r'[^\d]', '', m.group(1))
-    m = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
-    if m:
-        data_saldo = m.group(1)
 
-    # Parser principal: captura linhas com BOVINO, faixa, sexo e quantidade
-    for line in text.split('\n'):
-        up = line.upper()
-        if 'BOVINO' not in up:
+    # Padrão principal
+    padrao = r'BOVINO\s+(\d{2}\s*A\s*\d{2}\s*MESES|ACIMA\s*DE\s*\d{2}\s*MESES)\s+(FEMEA|MACHO)\s+(\d+)'
+    matches = re.findall(padrao, text_clean, re.IGNORECASE)
+    for faixa_str, sexo, qtd_str in matches:
+        qtd = int(qtd_str)
+        faixa_str = faixa_str.upper()
+        if '00 A 04' in faixa_str:
+            faixa_key = 'f00'
+        elif '05 A 12' in faixa_str:
+            faixa_key = 'f05'
+        elif '13 A 24' in faixa_str:
+            faixa_key = 'f13'
+        elif '25 A 36' in faixa_str:
+            faixa_key = 'f25'
+        elif 'ACIMA' in faixa_str:
+            faixa_key = 'fac'
+        else:
             continue
+        sexo_key = 'F' if sexo.upper() == 'FEMEA' else 'M'
+        animais[f'{faixa_key}_{sexo_key}'] += qtd
 
-        # Exemplo esperado: "BOVINO     00 A 04 MESES          FEMEA   16"
-        match = re.search(r'BOVINO\s+(\d{2}\s*A\s*\d{2}\s*MESES|ACIMA\s*DE\s*\d{2}\s*MESES)\s+(FEMEA|MACHO)\s+(\d+)', up)
-        if match:
-            faixa_str = match.group(1).strip()
-            sexo = match.group(2)
-            qtd = int(match.group(3))
-
-            if '00 A 04' in faixa_str:
-                faixa_key = 'f00'
-            elif '05 A 12' in faixa_str:
-                faixa_key = 'f05'
-            elif '13 A 24' in faixa_str:
-                faixa_key = 'f13'
-            elif '25 A 36' in faixa_str:
-                faixa_key = 'f25'
-            elif 'ACIMA' in faixa_str:
-                faixa_key = 'fac'
-            else:
-                continue
-
-            sexo_key = 'F' if sexo == 'FEMEA' else 'M'
-            animais[f'{faixa_key}_{sexo_key}'] += qtd
-            continue
-
-    # Fallback: método mais flexível (caso o regex principal não capture)
+    # Fallback: quebra em blocos por BOVINO
     if sum(animais.values()) == 0:
-        for line in text.split('\n'):
-            up = line.upper()
-            if 'BOVINO' not in up:
-                continue
-            m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
-            if not m_qtd:
-                continue
-            qtd = int(m_qtd.group(1))
-            if qtd <= 0 or qtd > 500_000:
-                continue
-            sexo = _sexo_da_linha(up)
-            faixa = _faixa_generica(up)
-            if not faixa or not sexo:
-                cat_faixa, cat_sexo = _categoria_zootecnica(up)
-                if not faixa:
-                    faixa = cat_faixa
-                if not sexo:
-                    sexo = cat_sexo
-            if not faixa or not sexo:
-                continue
-            _adicionar(animais, faixa, sexo, qtd)
+        blocos = re.split(r'(BOVINO)', text_clean, flags=re.I)
+        for i, bloco in enumerate(blocos):
+            if bloco.upper() == 'BOVINO' and i+1 < len(blocos):
+                conteudo = blocos[i+1]
+                faixa_match = re.search(r'(\d{2}\s*A\s*\d{2}\s*MESES|ACIMA\s*DE\s*\d{2}\s*MESES)', conteudo, re.I)
+                if not faixa_match:
+                    continue
+                faixa_str = faixa_match.group(1).upper()
+                sexo_match = re.search(r'(FEMEA|MACHO)', conteudo, re.I)
+                if not sexo_match:
+                    continue
+                sexo = sexo_match.group(1).upper()
+                numeros = re.findall(r'\d+', conteudo)
+                if not numeros:
+                    continue
+                qtd = int(numeros[-1])
+                if '00 A 04' in faixa_str:
+                    faixa_key = 'f00'
+                elif '05 A 12' in faixa_str:
+                    faixa_key = 'f05'
+                elif '13 A 24' in faixa_str:
+                    faixa_key = 'f13'
+                elif '25 A 36' in faixa_str:
+                    faixa_key = 'f25'
+                elif 'ACIMA' in faixa_str:
+                    faixa_key = 'fac'
+                else:
+                    continue
+                sexo_key = 'F' if sexo == 'FEMEA' else 'M'
+                animais[f'{faixa_key}_{sexo_key}'] += qtd
 
     valores = _para_valores(animais)
     return {
