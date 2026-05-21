@@ -1,0 +1,7 @@
+
+git add .echo __pycache__/ > .gitignore
+echo *.pyc >> .gitignore
+echo gestao_model.pkl >> .gitignore
+echo dataset_sintetico_bovino.csv >> .gitignore
+echo gestao.db >> .gitignore
+echo .env >> .gitignore

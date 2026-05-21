@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxo de caixa</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="/static/favicon-cow.png">
+<style>
+:root{
+--bg:#060810;
+  --s:#0C0F18;
+  --c:#111520;
+  --c2:#161B2A;
+  --b:#1E2535;
+  --b2:#28304A;
+  --g:#4ADE80;
+  --cy:#4ADE80;
+  --am:#FBBF24;
+  --rd:#F87171;
+  --pu:#A78BFA;
+  --tx:#E8ECF5;
+  --mu:#4A5570;
+  --sb:#8892AA;
+  --fn: 'Barlow Condensed', sans-serif;--fb: 'Barlow', sans-serif;--fm:'DM Mono', monospace;
+  --r:16px;--rs:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 60% 40% at 15% 10%,rgba(74,222,128,.05) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 30% at 85% 85%,rgba(34,211,238,.04) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
+
+header{position:sticky;top:0;z-index:200;background:rgba(6,8,16,.93);backdrop-filter:blur(24px);border-bottom:1px solid var(--b);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
+.logo{font-family:var(--fn);font-weight:800;font-size:1.4rem;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+.logo-mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#4ADE80,#4ADE80);display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.logo em{font-style:normal;background:linear-gradient(90deg,#4ADE80,#4ADE80);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr-r{display:flex;align-items:center;gap:12px}
+.ml-badge{font-family:var(--fm);font-size:.54rem;letter-spacing:2px;background:rgba(74,222,128,.1);color:var(--g);border:1px solid rgba(74,222,128,.25);padding:4px 12px;border-radius:20px}
+.ml-acc{font-family:var(--fm);font-size:.58rem;color:var(--g);background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);padding:4px 10px;border-radius:8px}
+
+main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-index:1}
+
+.tab-bar{display:flex;gap:4px;background:var(--c);border:1px solid var(--b);border-radius:var(--r);padding:4px;margin-bottom:36px;width:fit-content}
+.tab-btn{font-family:var(--fn);font-weight:700;font-size:.76rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--mu);padding:10px 20px;border-radius:12px;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tab-btn:hover{color:var(--tx);background:var(--b)}
+.tab-btn.active{background:var(--g);color:#000}
+
+.panel{display:none;animation:rise .35s cubic-bezier(.22,1,.36,1)}
+.panel.active{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--c);border:1px solid var(--b);border-radius:var(--r);overflow:hidden}
+.ch{padding:16px 22px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between}
+.ct{font-family:var(--fn);font-weight:700;font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.cd{width:5px;height:5px;border-radius:50%;background:var(--g);flex-shrink:0}
+.cb{padding:22px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g13{display:grid;grid-template-columns:1fr 3fr;gap:16px;margin-bottom:16px}
+
+.ptitle{font-family:var(--fn);font-weight:800;font-size:2.8rem;letter-spacing:-1px;line-height:1;margin-bottom:6px}
+.ptitle em{font-style:normal;background:linear-gradient(90deg,var(--g),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.psub{font-size:.9rem;color:var(--sb);margin-bottom:28px}
+
+/* INPUT TABLE */
+.itbl{width:100%;border-collapse:collapse}
+.itbl thead th{font-family:var(--fm);font-size:.57rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:10px 14px;text-align:left;border-bottom:1px solid var(--b)}
+.itbl thead th.c{text-align:center}
+.itbl tbody tr{border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s}
+.itbl tbody tr:hover{background:rgba(255,255,255,.02)}
+.itbl td{padding:8px 14px;font-size:.84rem}
+.fc{display:inline-flex;align-items:center;font-family:var(--fm);font-size:.67rem;padding:4px 10px;border-radius:6px;border:1px solid}
+/* CORRIGIDO: sem fundo, fonte igual ao resto */
+.ni{width:110px;background:transparent;border:1px solid var(--b2);border-radius:var(--rs);padding:8px 12px;font-family:var(--fb);font-size:.88rem;outline:none;transition:border-color .2s;text-align:center;-moz-appearance:textfield}
+.ni::-webkit-inner-spin-button{-webkit-appearance:none}
+.ni.nf{color:var(--g)}.ni.nm{color:var(--am)}
+.ni:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(74,222,128,.1)}
+.tdc{text-align:center}
+.tdtot{font-family:var(--fm);font-size:.8rem;color:var(--tx);text-align:center;font-weight:600}
+
+.tstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--b);border-radius:var(--rs);overflow:hidden;border:1px solid var(--b);margin-top:18px}
+.tsc{background:var(--c2);padding:14px 16px}
+.tsc-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
+.tsc-v{font-family:var(--fn);font-weight:800;font-size:1.5rem;letter-spacing:-.5px;line-height:1}
+.cg{color:var(--g)}.ca{color:var(--am)}.cc{color:var(--cy)}.cr{color:var(--rd)}.cp{color:var(--pu)}
+
+.fgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)}
+.field input,.field select{background:var(--c2);border:1px solid var(--b2);border-radius:var(--rs);padding:10px 14px;color:var(--tx);font-family:var(--fb);font-size:.88rem;outline:none;transition:border-color .2s}
+.field input:focus,.field select:focus{border-color:var(--g)}
+.field select option{background:var(--c)}
+
+/* UPLOAD */
+.upzone{border:2px dashed var(--b2);border-radius:var(--r);padding:52px 32px;text-align:center;cursor:pointer;transition:all .3s;background:var(--c)}
+.upzone:hover,.upzone.drag{border-color:var(--g);background:rgba(74,222,128,.04)}
+.upzone-icon{font-size:3rem;margin-bottom:14px;display:block}
+.upzone-title{font-family:var(--fn);font-weight:800;font-size:1.6rem;letter-spacing:-.5px;margin-bottom:6px}
+.upzone-title span{color:var(--g)}
+.upzone-sub{font-size:.85rem;color:var(--mu);margin-bottom:18px}
+
+/* BUTTONS */
+.btn-p{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;margin-top:20px;background:linear-gradient(135deg,#4ADE80,#4ADE80);border:none;border-radius:var(--r);padding:16px 40px;font-family:var(--fn);font-weight:800;font-size:1rem;letter-spacing:2px;text-transform:uppercase;color:#000;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.btn-p::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,#4ADE80,#4ADE80);opacity:0;transition:opacity .3s}
+.btn-p:hover::before{opacity:1}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(74,222,128,.3)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-p span{position:relative;z-index:1}
+.btn-sm{display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;font-family:var(--fn);font-weight:700;font-size:.7rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);cursor:pointer;transition:all .2s}
+.btn-sm:hover{border-color:var(--g);color:var(--g)}
+
+/* RESULT */
+.rhero{border-radius:var(--r);padding:44px;margin-bottom:18px;position:relative;overflow:hidden;border:1px solid}
+.rhero-grid{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center}
+.rhero-ey{font-family:var(--fm);font-size:.6rem;letter-spacing:3px;text-transform:uppercase;opacity:.6;margin-bottom:10px}
+.rhero-tipo{font-family:var(--fn);font-weight:800;font-size:4.5rem;line-height:.9;letter-spacing:-2px;text-transform:uppercase}
+.rhero-sub{font-family:var(--fm);font-size:.78rem;margin-top:10px;opacity:.6}
+.rhero-em{font-size:7rem;opacity:.15;line-height:1}
+
+.cbar{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.cbar-l{font-family:var(--fm);font-size:.6rem;letter-spacing:1px;width:120px;flex-shrink:0;text-transform:uppercase}
+.cbar-t{flex:1;height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.cbar-f{height:100%;border-radius:4px;transition:width 1.3s cubic-bezier(.34,1.4,.64,1)}
+.cbar-p{font-family:var(--fm);font-size:.62rem;width:44px;text-align:right}
+
+.sstrip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.sc2{background:var(--c);padding:18px 16px}
+.sc2-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
+.sc2-v{font-family:var(--fn);font-weight:800;font-size:1.4rem;letter-spacing:-.5px;line-height:1}
+
+.pyrvis{display:flex;flex-direction:column;gap:7px}
+.pyr-row{display:flex;align-items:center;gap:10px}
+.pyr-l{font-family:var(--fm);font-size:.57rem;color:var(--mu);width:90px;flex-shrink:0;text-align:right}
+.pyr-t{flex:1;display:flex;gap:3px;height:30px}
+.pyr-seg{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;min-width:0;transition:width 1.2s cubic-bezier(.34,1.4,.64,1);overflow:hidden}
+.pyr-seg span{font-family:var(--fm);font-size:.57rem;color:rgba(0,0,0,.8);font-weight:600;white-space:nowrap}
+
+.mrow{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.mrow:last-child{border-bottom:none}
+.mk{font-size:.82rem;color:var(--sb)}
+.mv{font-family:var(--fm);font-size:.78rem;color:var(--tx)}
+.mv.g{color:var(--g)}.mv.a{color:var(--am)}.mv.r{color:var(--rd)}.mv.c{color:var(--cy)}
+
+.rec-item{background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:14px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
+.rec-ico{font-size:1.3rem;flex-shrink:0;margin-top:1px}
+.rec-txt{font-size:.82rem;color:var(--sb);line-height:1.6}
+.rec-txt strong{color:var(--tx)}
+.rtag{display:inline-block;font-family:var(--fm);font-size:.5rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-bottom:4px}
+
+/* CENÁRIOS */
+.sc-card{background:var(--c2);border:1px solid var(--b);border-radius:var(--r);padding:20px;margin-bottom:10px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.sc-card:hover{border-color:var(--b2);transform:translateY(-2px)}
+.sc-card.sel{border-color:var(--g);background:rgba(74,222,128,.05)}
+.sc-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.sc-opt::before{background:var(--g)}.sc-cres::before{background:var(--cy)}
+.sc-spec::before{background:var(--am)}.sc-cons::before{background:var(--rd)}
+.sc-name{font-family:var(--fn);font-weight:700;font-size:1rem;margin-bottom:4px}
+.sc-desc{font-size:.82rem;color:var(--sb);line-height:1.5}
+
+.proj-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.pjc{background:var(--c);padding:18px 16px}
+.pjc-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
+.pjc-v{font-family:var(--fn);font-weight:800;font-size:1.5rem;letter-spacing:-.5px;line-height:1}
+.pjc-d{font-family:var(--fm);font-size:.6rem;margin-top:4px}
+
+.ytbl{width:100%;border-collapse:collapse}
+.ytbl th{font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:10px 14px;text-align:left;border-bottom:1px solid var(--b)}
+.ytbl th.r{text-align:right}
+.ytbl td{padding:11px 14px;font-size:.84rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.ytbl td.r{text-align:right;font-family:var(--fm);font-size:.78rem}
+.ytbl td.g{color:var(--g);font-family:var(--fm);font-size:.78rem;text-align:right}
+.ytbl td.a{color:var(--am);font-family:var(--fm);font-size:.78rem;text-align:right}
+.ytbl td.r2{color:var(--rd);font-family:var(--fm);font-size:.78rem;text-align:right}
+.ytbl tbody tr:hover td{background:rgba(255,255,255,.02)}
+
+.tc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.tc{border-radius:var(--rs);padding:16px;border:1px solid var(--b);background:var(--c2);position:relative}
+.tc-sel{position:absolute;top:10px;right:10px;font-family:var(--fm);font-size:.48rem;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.tc-ico{font-size:1.7rem;margin-bottom:7px;display:block}
+.tc-name{font-family:var(--fn);font-weight:700;font-size:.8rem;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.tc-desc{font-size:.73rem;color:var(--mu);line-height:1.5}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--c2);border:1px solid var(--b2);border-radius:var(--rs);padding:14px 20px;font-family:var(--fm);font-size:.75rem;z-index:999;opacity:0;transform:translateY(20px);transition:all .3s;max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.err{border-color:rgba(248,113,113,.4);color:var(--rd)}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:rgba(6,8,16,.85);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;backdrop-filter:blur(8px)}
+.loading-overlay.show{display:flex}
+.lspin{width:50px;height:50px;border:3px solid var(--b2);border-top-color:var(--g);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ltxt{font-family:var(--fn);font-size:1rem;letter-spacing:.5px}
+
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+@media(max-width:900px){.g2,.g3,.g13,.fgrid,.sstrip,.tc-grid{grid-template-columns:1fr 1fr}main,header{padding-left:20px;padding-right:20px}.rhero-tipo{font-size:3rem}.rhero-em{display:none}.tstrip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.g2,.g3,.sstrip,.tc-grid{grid-template-columns:1fr}}
+
+/* ── CICLO COMPLETO ── */
+.sc-sn{font-family:var(--fn);font-weight:700;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap}
+.sc-sn:hover{border-color:var(--am);color:var(--am)}
+.sc-sn.act{background:var(--am);border-color:var(--am);color:#000}
+.sc-spanel{display:none}.sc-spanel.act{display:block;animation:rise .3s cubic-bezier(.22,1,.36,1)}
+.brow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.brow-l{font-family:var(--fm);font-size:.58rem;color:var(--mu);width:120px;flex-shrink:0;text-align:right}
+.brow-t{flex:1;height:26px;background:var(--c2);border-radius:4px;overflow:hidden;border:1px solid var(--b)}
+.brow-f{height:100%;border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 1s cubic-bezier(.34,1.4,.64,1)}
+.brow-f span{font-family:var(--fm);font-size:.57rem;color:rgba(0,0,0,.8);font-weight:600;white-space:nowrap}
+.flow-wrap{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.flow-step{background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:12px 16px;text-align:center;min-width:80px}
+.flow-arr{color:var(--mu);font-size:1rem;padding:0 2px;align-self:center}
+.flow-n{font-family:var(--fn);font-weight:800;font-size:1.4rem;line-height:1}
+.flow-l{font-family:var(--fm);font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-top:3px}
+.lvl-badge{font-family:var(--fm);font-size:.54rem;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:4px}
+.lvl-badge.baixo{background:rgba(248,113,113,.15);color:var(--rd);border:1px solid rgba(248,113,113,.25)}
+.lvl-badge.medio{background:rgba(251,191,36,.15);color:var(--am);border:1px solid rgba(251,191,36,.25)}
+.lvl-badge.alto{background:rgba(74,222,128,.15);color:var(--g);border:1px solid rgba(74,222,128,.25)}
+.cetbl{width:100%;border-collapse:collapse}
+.cetbl th{font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);padding:8px 12px;text-align:left;border-bottom:1px solid var(--b)}
+.cetbl td{padding:7px 12px;font-size:.84rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.cetbl input[type=number]{background:var(--c2);border:1px solid var(--b2);border-radius:6px;padding:5px 8px;color:var(--tx);font-family:var(--fm);font-size:.78rem;width:85px;text-align:center;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.cetbl input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.cetbl input[type=number]:focus{border-color:var(--g)}
+.res-box{border-radius:var(--r);padding:20px 24px;margin-top:16px;border:1px solid;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.res-box.pos{border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06)}
+.res-box.neg{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.06)}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading-ov">
+  <div class="lspin"></div>
+  <div class="ltxt" id="loading-txt">Processando...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<header>
+  <div class="logo"><div class=""></div>Fluxo de caixa<em></em></div>
+  <div class="hdr-r">
+    <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
+    <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
+    <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi (R$/arroba)">Boi: --</span>
+    <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca (R$/arroba)">Vaca: --</span>
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
+  </div>
+</header>
+
+<main>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showTab('entrada',this)">Inserir Dados</button>
+    <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
+    <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
+  </div>
+
+<!-- ═══ ENTRADA MANUAL ═══ -->
+<div class="panel active" id="panel-entrada">
+  <div class="ptitle">Inserir dados do <em>rebanho</em></div>
+  <p class="psub">Preencha as quantidades por faixa etária.</p>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Dados</div></div>
+    <div class="cb">
+      <div class="fgrid">
+        <div class="field"><label>Fazenda</label><input type="text" id="f_faz" placeholder="Ex: Fazenda Santa Cruz"></div>
+        <div class="field"><label>Município / Estado</label><input type="text" id="f_mun" placeholder="Ex: Juara - MT"></div>
+        <div class="field"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch">
+      <div class="ct"><div class="cd" style="background:var(--cy)"></div>Composição por Faixa Etária</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-sm" onclick="fillEx('ciclo')">Ciclo Completo</button>
+        <button class="btn-sm" onclick="fillEx('cria')">Cria</button>
+        <button class="btn-sm" onclick="fillEx('recria')">Recria</button>
+        <button class="btn-sm" onclick="fillEx('engorda')">Engorda</button>
+        <button class="btn-sm" onclick="document.getElementById('insr-pdf-inp').click()">📂 Ler PDF</button>
+        <input type="file" id="insr-pdf-inp" accept=".pdf" style="display:none" onchange="lerPDFInserir(this.files[0]);this.value=''">
+        <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
+      </div>
+    </div>
+    <div class="cb" style="padding:0">
+      <table class="itbl">
+        <thead><tr><th>Faixa Etária</th><th class="c"> Fêmeas</th><th class="c"> Machos</th><th class="c">Total Faixa</th><th class="c">% Rebanho</th></tr></thead>
+        <tbody id="input-tbody"></tbody>
+      </table>
+      <div style="padding:18px">
+        <div class="tstrip">
+          <div class="tsc"><div class="tsc-l">Total Geral</div><div class="tsc-v cg" id="t-g">0</div></div>
+          <div class="tsc"><div class="tsc-l">Fêmeas</div><div class="tsc-v cg" id="t-f">0</div></div>
+          <div class="tsc"><div class="tsc-l">Machos</div><div class="tsc-v ca" id="t-m">0</div></div>
+          <div class="tsc"><div class="tsc-l">Cria 0–12m</div><div class="tsc-v cc" id="t-c">0</div></div>
+          <div class="tsc"><div class="tsc-l">Recria 13–24m</div><div class="tsc-v ca" id="t-r">0</div></div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn-sm" onclick="toggleConds()" id="btn-conds" style="width:100%;justify-content:center">⚙ Condições de Classificação <span style="font-size:.65rem;opacity:.6">(opcional)</span></button>
+          <div id="conds-wrap" style="display:none;margin-top:12px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="c-nat" placeholder="75" min="1" max="100" step="1" oninput="upd()"></div>
+              <div class="field"><label>Bois Vendidos (cab.)</label><input type="number" id="c-boisv" placeholder="Automático" min="0" oninput="upd()"></div>
+              <div class="field"><label>Bezerros Vendidos (cab.)</label><input type="number" id="c-bezv" placeholder="Automático" min="0" oninput="upd()"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-p" id="btn-class" onclick="classificar()"><span>Classificar</span></button>
+</div>
+
+<!-- ═══ PDF ═══ -->
+<div class="panel" id="panel-pdf">
+  <div class="ptitle">Ler PDF do <em>INDEA</em></div>
+  <p class="psub">Upload do "Saldo Atual da Exploração".</p>
+  <div class="upzone" id="dz" onclick="document.getElementById('pdf-inp').click()">
+    <span class="upzone-icon"></span>
+    <h2 class="upzone-title">Carregue o PDF<span></span></h2>
+    <p class="upzone-sub">Saldo Atual da Exploração · Arraste ou clique</p>
+    <button class="btn-sm" style="margin:0 auto" onclick="event.stopPropagation();document.getElementById('pdf-inp').click()">📂 Selecionar PDF</button>
+    <input type="file" id="pdf-inp" accept=".pdf" style="display:none" onchange="lerPDF(this.files[0])">
+  </div>
+  <div id="pdf-status" style="margin-top:16px;display:none"></div>
+</div>
+
+<!-- ═══ RESULTADO ═══ -->
+<div class="panel" id="panel-resultado">
+  <div id="result-wrap"></div>
+  <div class="card" id="card-confirmar" style="display:none;margin-top:16px">
+    <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Confirmar para Treino do Modelo</div><span id="conf-saved" style="font-family:var(--fm);font-size:.65rem;color:var(--g);display:none">✓ Salvo!</span></div>
+    <div class="cb" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:140px"><label>Classificação ML</label><input type="text" id="conf-ml-tipo" readonly style="background:var(--c2);color:var(--mu)"></div>
+      <div class="field" style="flex:1;min-width:160px"><label>Classificação Correta</label><select id="conf-tipo"><option value="CRIA">CRIA</option><option value="RECRIA">RECRIA</option><option value="ENGORDA">ENGORDA</option><option value="CICLO_COMPLETO">CICLO COMPLETO</option></select></div>
+      <button class="btn-p" onclick="confirmarClassificacao()" style="flex-shrink:0"><span>✓ Confirmar</span></button>
+    </div>
+    <div style="padding:0 22px 16px;font-family:var(--fm);font-size:.65rem;color:var(--mu)">Cada confirmação melhora o modelo. Após acumular dados, clique em <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.</div>
+  </div>
+</div>
+
+<!-- ═══ CENÁRIOS ═══ -->
+<div class="panel" id="panel-cenarios">
+  <div class="ptitle">Ciclo Completo — <em>Análise Detalhada</em></div>
+  <p class="psub">Gestão financeira completa: rebanho, reprodução, vendas e projeção 5 anos.</p>
+
+  <!-- Sub-nav -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;overflow-x:auto;padding-bottom:2px">
+    <button class="sc-sn act" onclick="showScSub('dash',this)">Dashboard</button>
+    <button class="sc-sn" onclick="showScSub('params',this)">Parâmetros</button>
+    <button class="sc-sn" onclick="showScSub('rebanho',this)">Rebanho</button>
+    <button class="sc-sn" onclick="showScSub('rep',this)">Reprodução</button>
+    <button class="sc-sn" onclick="showScSub('vendas',this)">Vendas</button>
+    <button class="sc-sn" onclick="showScSub('fin',this)">Financeiro</button>
+    <button class="sc-sn" onclick="showScSub('5anos',this)">Projeção 5 Anos</button>
+  </div>
+
+  <!-- KPI sempre visível -->
+  <div id="s-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--r);overflow:hidden;margin-bottom:16px">
+    <div class="pjc"><div class="pjc-l">Total Rebanho</div><div class="pjc-v cg" id="s-kpi-reb">—</div></div>
+    <div class="pjc"><div class="pjc-l">Bezerros/Ano</div><div class="pjc-v cg" id="s-kpi-bez">—</div></div>
+    <div class="pjc"><div class="pjc-l">Total Vendido</div><div class="pjc-v ca" id="s-kpi-vnd">—</div></div>
+    <div class="pjc"><div class="pjc-l">Resultado</div><div class="pjc-v" id="s-kpi-res">—</div></div>
+  </div>
+
+  <!-- ── Dashboard ── -->
+  <div class="sc-spanel act" id="scp-dash">
+    <div class="g2"><div class="card"><div class="ch"><div class="ct"><div class="cd"></div>Composição do Rebanho</div></div><div class="cb" id="s-bar-rebanho"><div style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Configure os parâmetros e clique em Recalcular.</div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Animais Vendidos</div></div><div class="cb" id="s-bar-vendas"></div></div>
+    </div>
+    <div class="g2" style="margin-top:0"><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Receita por Categoria</div></div><div class="cb" id="s-bar-receita"></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Fluxo de Renovação de Bois</div></div><div class="cb" id="s-flow-bois" style="overflow-x:auto"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Parâmetros ── -->
+  <div class="sc-spanel" id="scp-params">
+    <div class="g2">
+      <div>
+        <div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Animais Base</div><button class="btn-sm" onclick="syncFromClass()">↺ Sincronizar da classificação</button></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo()"></div></div></div>
+        </div>
+        <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Nível Tecnológico</label><select id="s-nivel" onchange="recalcCiclo()"><option value="baixo">Baixo</option><option value="medio" selected>Médio</option><option value="alto">Alto</option></select></div></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Preço Boi (R$/cab.)</label><input type="number" id="s-preco-boi" value="4500" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Matriz (R$/cab.)</label><input type="number" id="s-preco-mat" value="3200" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div></div><div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div></div>
+        </div>
+        <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Custos por Nível (R$/cab/ano)</div><div id="s-lvl-badge"></div></div>
+          <div class="cb" style="overflow-x:auto"><table class="cetbl"><thead><tr><th>Categoria</th><th>Baixo</th><th>Médio</th><th>Alto</th></tr></thead><tbody id="s-cost-tbody"></tbody></table>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)"><span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Custo Total do Rebanho</span><span id="s-custo-total" style="font-family:var(--fn);font-weight:800;font-size:1.6rem;color:var(--rd)">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Card: Parâmetros por Ciclo -->
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Parâmetros por Ciclo de Produção</div><span style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">Salvos no seu navegador</span></div>
+      <div class="cb">
+        <div class="fgrid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="field"><label>Ciclo</label><select id="ciclo-alvo" onchange="carregarParametrosDoCiclo(); atualizarTituloCiclo()"><option value="CRIA">CRIA</option><option value="RECRIA">RECRIA</option><option value="ENGORDA">ENGORDA</option><option value="CICLO_COMPLETO" selected>Ciclo Completo</option></select></div>
+          <div class="field"><label>Relação Boi/Matriz (1:X)</label><input type="number" id="param-propboi" step="1" value="30" onchange="marcarParametroAlterado()"></div>
+          <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="param-renovboi" step="1" value="20" onchange="marcarParametroAlterado()"></div>
+          <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="param-desc" step="1" value="30" onchange="marcarParametroAlterado()"></div>
+          <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="param-vendbez" step="1" value="30" onchange="marcarParametroAlterado()"></div>
+          <div class="field"><label>Taxa de Natalidade (%)</label><input type="number" id="param-nat" step="1" value="75" onchange="marcarParametroAlterado()"></div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:16px"><button class="btn-sm" onclick="salvarParametrosDoCiclo()">💾 Salvar para este ciclo</button><button class="btn-sm" onclick="resetarParametrosDoCiclo()">↺ Restaurar padrões</button></div>
+        <div id="param-status" style="font-family:var(--fm);font-size:.6rem;color:var(--g);margin-top:8px"></div>
+      </div>
+    </div>
+    <button class="btn-p" style="margin-top:16px" onclick="recalcCiclo()"><span>↻ Recalcular Tudo</span></button>
+  </div>
+
+  <!-- ── Rebanho ── -->
+  <div class="sc-spanel" id="scp-rebanho">
+    <div class="g2"><div class="card"><div class="ch"><div class="ct"><div class="cd"></div>Categorias do Rebanho</div></div><div style="overflow-x:auto"><table class="ytbl" id="s-tbl-rebanho"><thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">%</th></tr></thead><tbody></tbody><tfoot><tr><td style="font-family:var(--fn);font-weight:700;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g r" id="s-tot-reb" style="border-top:1px solid var(--b2)">—</td><td class="r" style="border-top:1px solid var(--b2)">100%</td></tr></tfoot></table></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Produção de Bezerros</div></div><div class="cb" id="s-prod-bez"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Reprodução ── -->
+  <div class="sc-spanel" id="scp-rep">
+    <div class="g2"><div class="card"><div class="ch"><div class="ct"><div class="cd"></div>Bois Reprodutores</div></div><div class="cb" id="s-rep-bois"></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Renovação de Matrizes</div></div><div class="cb" id="s-rep-mat"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Vendas ── -->
+  <div class="sc-spanel" id="scp-vendas">
+    <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Resumo de Vendas</div></div><div style="overflow-x:auto"><table class="ytbl" id="s-tbl-vendas"><thead><tr><th>Categoria</th><th class="r">Quantidade</th><th class="r">%</th><th>Memória de Cálculo</th></tr></thead><tbody></tbody><tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Total Vendido</td><td class="a r" id="s-tot-vnd" style="border-top:1px solid var(--b2)">—</td><td style="border-top:1px solid var(--b2)"></td><td style="border-top:1px solid var(--b2)"></td></tr></tfoot></table></div></div>
+  </div>
+
+  <!-- ── Financeiro ── -->
+  <div class="sc-spanel" id="scp-fin">
+    <div class="g2"><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Receitas</div></div><div style="overflow-x:auto"><table class="ytbl" id="s-tbl-rec"><thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">Preço Unit.</th><th class="r">Receita</th></tr></thead><tbody></tbody><tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Receita Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="g" id="s-rec-tot" style="border-top:1px solid var(--b2)">—</td></tr></tfoot></table></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--rd)"></div>Custos de Produção</div></div><div style="overflow-x:auto"><table class="ytbl" id="s-tbl-cus"><thead><tr><th>Categoria</th><th class="r">Qtd</th><th class="r">Custo/Cab</th><th class="r">Total</th></tr></thead><tbody></tbody><tfoot><tr><td style="font-family:var(--fn);font-weight:700;border-top:1px solid var(--b2);padding:12px 14px">Custo Total</td><td colspan="2" style="border-top:1px solid var(--b2)"></td><td class="cr" id="s-cus-tot" style="border-top:1px solid var(--b2)">—</td></tr></tfoot></table></div><div class="cb" id="s-res-box"></div></div>
+    </div>
+  </div>
+
+  <!-- ── Projeção 5 Anos ── -->
+  <div class="sc-spanel" id="scp-5anos">
+    <div class="g2" style="margin-bottom:20px">
+      <div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione o cenário</div>
+        <div id="sc-list"><div class="sc-card sc-opt sel" onclick="selSc('otimista',this)"><div class="sc-name">Otimista</div><div class="sc-desc">IATF, suplementação, genética melhorada. Alta produtividade.</div></div>
+          <div class="sc-card sc-cres" onclick="selSc('crescimento',this)"><div class="sc-name">Crescimento Gradual</div><div class="sc-desc">Expansão sustentável com reinvestimento de resultados.</div></div>
+          <div class="sc-card sc-spec" onclick="selSc('especulativo',this)"><div class="sc-name">Alta Venda</div><div class="sc-desc">Maximiza venda aproveitando preço favorável.</div></div>
+          <div class="sc-card sc-cons" onclick="selSc('conservador',this)"><div class="sc-name">Conservador — Manutenção</div><div class="sc-desc">Estabilidade mínima em cenário de baixa de preços.</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
+    </div>
+    <div id="sc-result"></div>
+  </div>
+</div>
+</main>
+
+<script>
+  // Fallback values provided by server-side (populated by rota index())
+  const _COTACOES_FALLBACK = { boi: {{ cotacoes['boi']|default(0) }}, vaca: {{ cotacoes['vaca']|default(0) }} };
+  function _fmtValor(v){ const n = Number(v) || 0; return n.toFixed(2) + ' R$'; }
+  function showToast(msg, isError=false){ const t = document.getElementById('toast'); if(!t) return; t.textContent = msg; t.classList.toggle('err', !!isError); t.classList.add('show'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=> t.classList.remove('show'), 6000); }
+  async function atualizarPrecos(){
+    try{ const res = await fetch('/api/precos/live');
+      if(!res.ok){ try{ const err = await res.json(); const m = err.msg || err.erro || JSON.stringify(err); showToast(m, true); }catch(e){ showToast('Erro ao obter preços (network). Usando última cotação conhecida.', true); } }
+      else { const j = await res.json(); if(j && j.ok && j.precos){ const p = j.precos; document.getElementById('hdr-boi').textContent = 'Boi: ' + _fmtValor(p.boi); document.getElementById('hdr-vaca').textContent = 'Vaca: ' + _fmtValor(p.vaca); return; } if(j && (j.erro || j.msg)){ const m = j.msg || j.erro; showToast(m, true); } }
+    }catch(e){ showToast('Não foi possível conectar ao serviço de preços. Usando última cotação conhecida.', true); }
+    document.getElementById('hdr-boi').textContent = 'Boi: ' + _fmtValor(_COTACOES_FALLBACK.boi);
+    document.getElementById('hdr-vaca').textContent = 'Vaca: ' + _fmtValor(_COTACOES_FALLBACK.vaca);
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{ atualizarPrecos(); setInterval(atualizarPrecos, 1000 * 60 * 30); });
+</script>
+
+<script>
+const FAIXAS=[{key:'f00',l:'00–04 meses',cF:'#FBBF24',cM:'#F59E0B'},{key:'f05',l:'05–12 meses',cF:'#34D399',cM:'#10B981'},{key:'f13',l:'13–24 meses',cF:'#22D3EE',cM:'#0891B2'},{key:'f25',l:'25–36 meses',cF:'#A78BFA',cM:'#7C3AED'},{key:'fac',l:'Acima 36m',  cF:'#4ADE80',cM:'#16A34A'}];
+const TC={CRIA:'#4ADE80',RECRIA:'#22D3EE',ENGORDA:'#F87171',CICLO_COMPLETO:'#FBBF24'};
+const TE={CRIA:'',RECRIA:'',ENGORDA:'',CICLO_COMPLETO:''};
+const TL={CRIA:'CRIA',RECRIA:'RECRIA',ENGORDA:'ENGORDA',CICLO_COMPLETO:'CICLO COMPLETO'};
+const TD={CRIA:'Foco em produção de bezerros. Predomínio de vacas/matrizes adultas, alta taxa de cria.',RECRIA:'Fase de desenvolvimento pós-desmame. Alta concentração 13–24m.',ENGORDA:'Terminação para abate. Machos adultos em peso de corte predominam.',CICLO_COMPLETO:'Todas as fases integradas: cria, recria e terminação na mesma propriedade.'};
+const fN=n=>Math.round(n).toLocaleString('pt-BR');
+const fR=n=>'R$ '+Math.round(n).toLocaleString('pt-BR');
+const fP=n=>(n*100).toFixed(1)+'%';
+let lastVals=null, curSc='otimista';
+
+// ================== PARÂMETROS POR CICLO ==================
+const DEFAULT_PARAMS_CICLO = { CRIA: { prop_boi:20, renov_boi_pct:15, desc_mat_pct:20, venda_bez_pct:10, nat_pct:75 }, RECRIA: { prop_boi:0, renov_boi_pct:0, desc_mat_pct:0, venda_bez_pct:80, nat_pct:0 }, ENGORDA: { prop_boi:0, renov_boi_pct:0, desc_mat_pct:0, venda_bez_pct:100, nat_pct:0 }, CICLO_COMPLETO: { prop_boi:30, renov_boi_pct:20, desc_mat_pct:30, venda_bez_pct:30, nat_pct:75 } };
+let paramsPorCiclo = {};
+function initParamsPorCiclo() { const saved = localStorage.getItem('boviml_params_ciclo'); if (saved) { try { paramsPorCiclo = JSON.parse(saved); } catch(e) { paramsPorCiclo = cloneDefault(); } } else { paramsPorCiclo = cloneDefault(); } for (let ciclo of ['CRIA','RECRIA','ENGORDA','CICLO_COMPLETO']) if (!paramsPorCiclo[ciclo]) paramsPorCiclo[ciclo] = { ...DEFAULT_PARAMS_CICLO[ciclo] }; }
+function cloneDefault() { return { CRIA: { ...DEFAULT_PARAMS_CICLO.CRIA }, RECRIA: { ...DEFAULT_PARAMS_CICLO.RECRIA }, ENGORDA: { ...DEFAULT_PARAMS_CICLO.ENGORDA }, CICLO_COMPLETO: { ...DEFAULT_PARAMS_CICLO.CICLO_COMPLETO } }; }
+function carregarParametrosDoCiclo() { const ciclo = document.getElementById('ciclo-alvo').value; const p = paramsPorCiclo[ciclo] || DEFAULT_PARAMS_CICLO[ciclo]; document.getElementById('param-propboi').value = p.prop_boi; document.getElementById('param-renovboi').value = p.renov_boi_pct; document.getElementById('param-desc').value = p.desc_mat_pct; document.getElementById('param-vendbez').value = p.venda_bez_pct; document.getElementById('param-nat').value = p.nat_pct; document.getElementById('param-status').innerHTML = ''; }
+function salvarParametrosDoCiclo() { const ciclo = document.getElementById('ciclo-alvo').value; paramsPorCiclo[ciclo] = { prop_boi: parseFloat(document.getElementById('param-propboi').value) || 0, renov_boi_pct: parseFloat(document.getElementById('param-renovboi').value) || 0, desc_mat_pct: parseFloat(document.getElementById('param-desc').value) || 0, venda_bez_pct: parseFloat(document.getElementById('param-vendbez').value) || 0, nat_pct: parseFloat(document.getElementById('param-nat').value) || 0 }; localStorage.setItem('boviml_params_ciclo', JSON.stringify(paramsPorCiclo)); document.getElementById('param-status').innerHTML = '✓ Salvo para ' + ciclo; setTimeout(() => document.getElementById('param-status').innerHTML = '', 3000); sincronizarParametrosParaSimulacao(ciclo); }
+function resetarParametrosDoCiclo() { const ciclo = document.getElementById('ciclo-alvo').value; paramsPorCiclo[ciclo] = { ...DEFAULT_PARAMS_CICLO[ciclo] }; localStorage.setItem('boviml_params_ciclo', JSON.stringify(paramsPorCiclo)); carregarParametrosDoCiclo(); document.getElementById('param-status').innerHTML = '↺ Padrões restaurados'; sincronizarParametrosParaSimulacao(ciclo); }
+function sincronizarParametrosParaSimulacao(ciclo) { const p = paramsPorCiclo[ciclo]; if (!p) return; document.getElementById('s-propboi').value = p.prop_boi; document.getElementById('s-renovboi').value = p.renov_boi_pct; document.getElementById('s-desc').value = p.desc_mat_pct; document.getElementById('s-vendbez').value = p.venda_bez_pct; document.getElementById('s-nat').value = p.nat_pct; recalcCiclo(); }
+function afterClassificationSync(cicloIdentificado) { if (cicloIdentificado && paramsPorCiclo[cicloIdentificado]) { sincronizarParametrosParaSimulacao(cicloIdentificado); document.getElementById('ciclo-alvo').value = cicloIdentificado; carregarParametrosDoCiclo(); atualizarTituloCiclo(); } }
+function atualizarTituloCiclo() { const ciclo = document.getElementById('ciclo-alvo').value; const nomeCiclo = ciclo === 'CICLO_COMPLETO' ? 'Ciclo Completo' : ciclo; const tituloPrincipal = document.querySelector('#panel-cenarios .ptitle'); if (tituloPrincipal) { tituloPrincipal.innerHTML = `${nomeCiclo} — <em>Análise Detalhada</em>`; } const subNav = document.querySelector('#scp-5anos .ch .ct'); if (subNav) { subNav.innerHTML = `<div class="cd" style="background:var(--am)"></div>Projeção 5 Anos – ${nomeCiclo}`; } }
+
+function buildTable(){ const tb=document.getElementById('input-tbody'); tb.innerHTML=''; FAIXAS.forEach(f=>{ tb.innerHTML+=`<tr><td><span class="fc" style="color:${f.cF};border-color:${f.cF}25;background:${f.cF}0D">${f.l}</span></td><td class="tdc"><input type="number" class="ni nf" id="${f.key}_F" value="0" min="0" oninput="upd()"></td><td class="tdc"><input type="number" class="ni nm" id="${f.key}_M" value="0" min="0" oninput="upd()"></td><td class="tdc tdtot" id="${f.key}_T">0</td><td class="tdc tdtot" id="${f.key}_P" style="color:var(--mu)">0%</td></tr>`; }); upd(); }
+function getVals(){return FAIXAS.flatMap(f=>[parseFloat(document.getElementById(f.key+'_F').value)||0,parseFloat(document.getElementById(f.key+'_M').value)||0])}
+function upd(){ const v=getVals(),tot=v.reduce((a,b)=>a+b,0)||1; FAIXAS.forEach((f,i)=>{const t=v[i*2]+v[i*2+1];document.getElementById(f.key+'_T').textContent=fN(t);document.getElementById(f.key+'_P').textContent=(t/tot*100).toFixed(1)+'%'}); document.getElementById('t-g').textContent=fN(v.reduce((a,b)=>a+b,0)); document.getElementById('t-f').textContent=fN(FAIXAS.reduce((a,f,i)=>a+v[i*2],0)); document.getElementById('t-m').textContent=fN(FAIXAS.reduce((a,f,i)=>a+v[i*2+1],0)); document.getElementById('t-c').textContent=fN(v[0]+v[1]+v[2]+v[3]); document.getElementById('t-r').textContent=fN(v[4]+v[5]); }
+const EX={ ciclo: {v:[300,280,400,200,900,1200,250,80,600,40],faz:'Fazenda Modelo',mun:'Sinop - MT',prop:'Exemplo'}, cria: {v:[300,280,200,80,100,40,150,10,600,15],faz:'Fazenda Bela Vista',mun:'Alta Floresta - MT',prop:'Exemplo'}, recria:{v:[50,45,80,70,400,600,100,80,80,20],faz:'Fazenda Santa Fé',mun:'Guarantã - MT',prop:'Exemplo'}, engorda:{v:[10,8,20,18,50,80,20,120,10,400],faz:'Fazenda Confinamento',mun:'Primavera do Leste - MT',prop:'Exemplo'}, indea: {v:[300,280,563,187,1105,1344,298,80,593,39],faz:'FAZENDA N KARA I/II',mun:'JUARA - MT',prop:'NEWTON KARA JOSE'} };
+function fillEx(t){const e=EX[t];FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=e.v[i*2];document.getElementById(f.key+'_M').value=e.v[i*2+1]});document.getElementById('f_faz').value=e.faz;document.getElementById('f_mun').value=e.mun;document.getElementById('f_prop').value=e.prop;upd()}
+function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value=0;document.getElementById(f.key+'_M').value=0});upd()}
+let lastRegistroId=null;
+async function classificar(){ const v=getVals(); if(v.reduce((a,b)=>a+b,0)<10){toast('Insira pelo menos 10 animais.',true);return} showLoading('Classificando com ML...'); try{ const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value}; const natV=document.getElementById('c-nat').value; const boisvV=document.getElementById('c-boisv').value; const bezvV=document.getElementById('c-bezv').value; if(natV!=='') body.taxa_natalidade=parseFloat(natV)/100; if(boisvV!=='') body.bois_vendidos=parseFloat(boisvV); if(bezvV!=='') body.bezerros_vendidos=parseFloat(bezvV); const res=await fetch('/api/classificar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const data=await res.json(); if(data.erro){toast(data.erro,true);return} lastVals=v; lastRegistroId=data.registro_id||null; renderResult(data); showTab('resultado',null); document.getElementById('tab-res').style.display='flex'; document.getElementById('tab-cen').style.display='flex'; const cc=document.getElementById('card-confirmar'); const mlTipo=document.getElementById('conf-ml-tipo'); const selTipo=document.getElementById('conf-tipo'); if(cc&&lastRegistroId){ mlTipo.value=data.classificacao||''; selTipo.value=data.classificacao||'CRIA'; document.getElementById('conf-saved').style.display='none'; cc.style.display='block'; } document.getElementById('s-mat').value=v[6]+v[8]; document.getElementById('s-fem').value=v[0]+v[2]+v[4]; document.getElementById('s-mac').value=v[1]+v[3]+v[5]; document.getElementById('s-boi').value=v[7]+v[9]; if (data.classificacao) afterClassificationSync(data.classificacao); recalcCiclo(); runSc(); atualizarDbStats(); }finally{hideLoading()} }
+async function lerPDFInserir(file){ if(!file)return; showLoading('Lendo PDF...'); const fd=new FormData();fd.append('pdf',file); try{ const res=await fetch('/api/ler-pdf',{method:'POST',body:fd}); const data=await res.json(); if(data.erro){toast(data.erro,true);return} FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=data.valores[i*2];document.getElementById(f.key+'_M').value=data.valores[i*2+1]}); document.getElementById('f_faz').value=data.fazenda||''; document.getElementById('f_mun').value=data.municipio||''; document.getElementById('f_prop').value=data.proprietario||''; upd(); toast('PDF carregado: '+(data.fazenda||'Exploração')+' ('+fN(data.total)+' animais)'); }finally{hideLoading()} }
+let _condsOpen=false; function toggleConds(){ _condsOpen=!_condsOpen; document.getElementById('conds-wrap').style.display=_condsOpen?'block':'none'; document.getElementById('btn-conds').style.borderColor=_condsOpen?'var(--g)':''; document.getElementById('btn-conds').style.color=_condsOpen?'var(--g)':''; }
+async function lerPDF(file){ if(!file)return; showLoading('Lendo PDF no servidor Python...'); const fd=new FormData();fd.append('pdf',file); try{ const res=await fetch('/api/ler-pdf',{method:'POST',body:fd}); const data=await res.json(); if(data.erro){toast(data.erro,true);return} mostrarPDFPreview(data); }finally{hideLoading()} }
+function mostrarPDFPreview(data){ const v=data.valores; const rows=FAIXAS.map((f,i)=>`<tr><td>${f.l}</td><td class="g">${fN(v[i*2])}</td><td class="a">${fN(v[i*2+1])}</td><td class="r">${fN(v[i*2]+v[i*2+1])}</td></tr>`).join(''); document.getElementById('pdf-status').style.display='block'; document.getElementById('pdf-status').innerHTML=`<div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Dados Extraídos do PDF</div></div><div class="cb"><div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Origem detectada:</div><div id="pdf-origem" style="font-family:var(--fb);font-weight:700">${data.origem||'—'}</div><div style="margin-left:auto;display:flex;gap:8px;align-items:center"><label style="font-family:var(--fm);font-size:.55rem;color:var(--mu)">Reprocessar como</label><select id="pdf-parser-select" style="background:var(--c2);border:1px solid var(--b2);padding:6px;border-radius:6px"><option value="IDARON">IDARON</option><option value="INDEA">INDEA</option><option value="GENERICO">GENÉRICO</option></select><button class="btn-sm" onclick="reparsarPDF()">↻ Reprocessar</button></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px"><div><div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Fazenda</div><div>${data.fazenda||'—'}</div></div><div><div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Município</div><div>${data.municipio||'—'}</div></div><div><div style="font-family:var(--fm);font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Proprietário</div><div>${data.proprietario||'—'}</div></div></div><table class="ytbl"><thead><tr><th>Faixa</th><th class="r" style="color:var(--g)">♀ Fêmeas</th><th class="r" style="color:var(--am)">♂ Machos</th><th class="r">Total</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td style="font-family:var(--fn);font-weight:700;letter-spacing:1px;text-transform:uppercase;border-top:1px solid var(--b2);padding:12px 14px">Total</td><td class="g" style="border-top:1px solid var(--b2)">${fN(v.filter((_,i)=>i%2===0).reduce((a,b)=>a+b,0))}</td><td class="a" style="border-top:1px solid var(--b2)">${fN(v.filter((_,i)=>i%2!==0).reduce((a,b)=>a+b,0))}</td><td class="r" style="font-family:var(--fn);font-weight:800;font-size:1rem;color:var(--am);border-top:1px solid var(--b2)">${fN(data.total)}</td></tr></tfoot></table></div></div><button class="btn-p" style="margin-top:16px" onclick="classificarPDF(${JSON.stringify(v)},${JSON.stringify(data)})"><span>🧠 Classificar com Machine Learning</span></button>`; document.getElementById('dz').innerHTML=`<span class="upzone-icon">✅</span><h2 class="upzone-title">PDF carregado: <span>${data.fazenda||'Exploração'}</span></h2><p class="upzone-sub">${fN(data.total)} animais · Clique para carregar outro</p><input type="file" id="pdf-inp" accept=".pdf" style="display:none" onchange="lerPDF(this.files[0])">`; }
+async function reparsarPDF(){ const sel = document.getElementById('pdf-parser-select').value; if(!window._last_pdf_raw){ toast('Texto do PDF não disponível para reparsing.', true); return; } showLoading('Reprocessando...'); try{ const res = await fetch('/api/parse-text', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text: window._last_pdf_raw, origem: sel})}); const d = await res.json(); if(d.erro){ toast(d.erro,true); return } mostrarPDFPreview(d); toast('Reprocessado usando ' + sel); }catch(e){ toast('Erro ao reprocessar: '+e.message, true); }finally{hideLoading()} }
+async function classificarPDF(v,meta){ if(meta){document.getElementById('f_faz').value=meta.fazenda||'';document.getElementById('f_mun').value=meta.municipio||'';document.getElementById('f_prop').value=meta.proprietario||''} FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=v[i*2];document.getElementById(f.key+'_M').value=v[i*2+1]}); upd(); await classificar(); }
+function renderResult(data){ const tipo=data.tipo, col=TC[tipo]; const ind=data.indicadores; const faz=document.getElementById('f_faz').value||'—'; const mun=document.getElementById('f_mun').value||'—'; const prop=document.getElementById('f_prop').value||'—'; const v=data.valores; const probs=data.probabilidades; const confBars=Object.entries(probs).map(([t,p])=>`<div class="cbar"><div class="cbar-l" style="color:${TC[t]}">${TE[t]} ${TL[t]}</div><div class="cbar-t"><div class="cbar-f" style="width:0%;background:${TC[t]}" data-w="${p}"></div></div><div class="cbar-p" style="color:${TC[t]}">${p}%</div></div>`).join(''); const maxAn=Math.max(...FAIXAS.map((f,i)=>v[i*2]+v[i*2+1]),1); const pyramid=[...FAIXAS].reverse().map((f,ri)=>{ const i=FAIXAS.length-1-ri; const fv=v[i*2],mv=v[i*2+1]; const fp=fv/maxAn*100,mp=mv/maxAn*100; return`<div class="pyr-row"><div class="pyr-l">${f.l}</div><div class="pyr-t">${fv>0?`<div class="pyr-seg" style="width:0%;background:${f.cF}" data-w="${Math.max(fp,3)}"><span>♀${fN(fv)}</span></div>`:''}${mv>0?`<div class="pyr-seg" style="width:0%;background:${f.cM}" data-w="${Math.max(mp,3)}"><span>♂${fN(mv)}</span></div>`:''}</div></div>`; }).join(''); const recs=getRecs(tipo,ind); const tipoCards=['CRIA','RECRIA','ENGORDA','CICLO_COMPLETO'].map(t=>{ const sel=t===tipo; return`<div class="tc" style="${sel?`border-color:${TC[t]};background:${TC[t]}12;border-width:2px`:''}">${sel?`<div class="tc-sel" style="background:${TC[t]}25;color:${TC[t]}">← IDENTIFICADO</div>`:''}<span class="tc-ico">${TE[t]}</span><div class="tc-name" style="color:${sel?TC[t]:'var(--sb)'}">${TL[t]}</div><div class="tc-desc">${TD[t]}</div></div>`; }).join(''); document.getElementById('result-wrap').innerHTML=`<div class="rhero" style="border-color:${col}40;background:${col}08"><div class="rhero-grid"><div><div class="rhero-ey">Tipo de Exploração · ${faz} · ${mun}</div><div class="rhero-tipo" style="color:${col}">${TL[tipo]}</div><div class="rhero-sub">${prop} &nbsp;·&nbsp; Confiança: ${data.confianca}%</div><div style="margin-top:22px">${confBars}</div></div><div class="rhero-em">${TE[tipo]}</div></div></div><div class="sstrip"><div class="sc2"><div class="sc2-l">Total Rebanho</div><div class="sc2-v cg">${fN(ind.total)}</div></div><div class="sc2"><div class="sc2-l">Fêmeas</div><div class="sc2-v cg">${fN(ind.total_femeas)}</div></div><div class="sc2"><div class="sc2-l">Machos</div><div class="sc2-v ca">${fN(ind.total_machos)}</div></div><div class="sc2"><div class="sc2-l">Cria 0–12m</div><div class="sc2-v cc">${fN(ind.cria)}</div></div><div class="sc2"><div class="sc2-l">Recria 13–24m</div><div class="sc2-v ca">${fN(ind.recria)}</div></div><div class="sc2"><div class="sc2-l">Adultos 25m+</div><div class="sc2-v cp">${fN(ind.adultos)}</div></div></div><div class="g2"><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Pirâmide Etária</div></div><div class="cb"><div class="pyrvis">${pyramid}</div></div></div><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Indicadores Zootécnicos</div></div><div class="cb">${mr('Cria (0–12m)',fP(ind.pct_cria/100),ind.pct_cria>20?'g':'a')}${mr('Recria (13–24m)',fP(ind.pct_recria/100),ind.pct_recria>25?'g':'a')}${mr('Adultos (25m+)',fP(ind.pct_adultos/100),'c')}${mr('Matrizes adultas',fN(ind.fem_adultas)+' cab.',ind.fem_adultas>200?'g':'a')}${mr('Razão ♀/♂',ind.ratio_fm,ind.ratio_fm>1?'g':'r')}${mr('Bezerros estimados/ano',fN(ind.bezerros_est)+' cab.','g')}${mr('% Matrizes',fP(ind.pct_matrizes/100),'c')}</div></div></div><div class="g2" style="margin-top:0"><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--rd)"></div>Recomendações Técnicas</div></div><div class="cb">${recs}</div></div><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Distribuição do Rebanho</div></div><div class="cb" id="dist-bars"></div></div></div><div class="tc-grid">${tipoCards}</div><div style="display:flex;gap:10px;margin-top:24px"><button class="btn-sm" onclick="document.getElementById('tab-cen').click()">Ver Simulação de Cenários</button><button class="btn-sm" onclick="resetApp()">↩ Nova Classificação</button><button class="btn-sm" onclick="window.print()">Imprimir</button></div>`; setTimeout(()=>{ document.querySelectorAll('.cbar-f[data-w]').forEach(el=>el.style.width=el.dataset.w+'%'); document.querySelectorAll('.pyr-seg[data-w]').forEach(el=>el.style.width=el.dataset.w+'%'); },120); const tot=ind.total||1; const dist=[{l:'Cria 0–12m',val:ind.cria,col:'#22D3EE'},{l:'Recria 13–24m',val:ind.recria,col:'#A78BFA'},{l:'Reprod 25–36m',val:ind.adultos-ind.fem_adultas-ind.mac_adultos,col:'#FBBF24'},{l:'Adultos +36m',val:ind.fem_adultas+ind.mac_adultos,col:'#4ADE80'}]; document.getElementById('dist-bars').innerHTML=dist.map(d=>{ const p=Math.max(Math.round(d.val/tot*100),d.val>0?3:0); return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);width:110px;text-align:right;flex-shrink:0">${d.l}</div><div style="flex:1;height:24px;background:var(--c2);border-radius:4px;overflow:hidden;border:1px solid var(--b)"><div style="width:0%;height:100%;background:${d.col};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;transition:width 1s cubic-bezier(.34,1.4,.64,1)" data-w="${p}"><span style="font-family:var(--fm);font-size:.58rem;color:rgba(0,0,0,.8);font-weight:600">${fP(d.val/tot)}</span></div></div></div>`; }).join(''); setTimeout(()=>{ document.querySelectorAll('#dist-bars [data-w]').forEach(el=>el.style.width=el.dataset.w+'%'); },200); }
+function mr(k,v,c){return`<div class="mrow"><span class="mk">${k}</span><span class="mv ${c}">${v}</span></div>`}
+function getRecs(tipo,ind){ const R={ CRIA:[{ico:'',tag:'Reprodução',tc:'rgba(74,222,128,.15)',tcc:'var(--g)',t:'Taxa de Prenhez',d:'Implemente <strong>IATF</strong> para elevar a taxa acima de 80%. Monitore escore corporal das matrizes (mínimo 3,0).'},{ico:'',tag:'Genética',tc:'rgba(34,211,238,.15)',tcc:'var(--cy)',t:'Seleção de Matrizes',d:'Descarte matrizes falhadas (2+ ciclos). Use <strong>touros EPD</strong> para habilidade materna e produção de leite.'},{ico:'',tag:'Nutrição',tc:'rgba(251,191,36,.15)',tcc:'var(--am)',t:'Suplementação Estratégica',d:'Suplemento proteico-energético no período seco. Escore ≥3,0 = <strong>+30% taxa de prenhes</strong>.'},{ico:'',tag:'Gestão',tc:'rgba(167,139,250,.15)',tcc:'var(--pu)',t:'Estação de Monta',d:'Adote estação de monta de <strong>60–75 dias</strong> para concentrar partos e facilitar manejo de bezerros.'}], RECRIA:[{ico:'',tag:'Nutrição',tc:'rgba(34,211,238,.15)',tcc:'var(--cy)',t:'Ganho Médio Diário',d:'Meta <strong>≥0,7 kg/dia</strong> em pastagem, ≥1,2 kg/dia em confinamento. Monitore mensalmente.'},{ico:'',tag:'Manejo',tc:'rgba(74,222,128,.15)',tcc:'var(--g)',t:'Lotes Homogêneos',d:'Separe machos e fêmeas e estratifique por peso. Lotes uniformes têm <strong>+20% eficiência alimentar</strong>.'},{ico:'',tag:'Sanidade',tc:'rgba(251,191,36,.15)',tcc:'var(--am)',t:'Protocolo Sanitário',d:'Vacine contra clostridioses, IBR e BVD. Parasite estratégico no início e fim das águas.'},{ico:'',tag:'Planejamento',tc:'rgba(248,113,113,.15)',tcc:'var(--rd)',t:'Destino dos Animais',d:'Defina antecipadamente: reposição x venda de novilhas; machos para confinamento ou pastagem.'}], ENGORDA:[{ico:'',tag:'Terminação',tc:'rgba(248,113,113,.15)',tcc:'var(--rd)',t:'Peso de Abate',d:'Meta <strong>560–600 kg PV (16–18@)</strong>. Acompanhe conversão alimentar (CA ≤7,5).'},{ico:'',tag:'Nutrição',tc:'rgba(251,191,36,.15)',tcc:'var(--am)',t:'Dieta de Terminação',d:'70–80% concentrado na fase final. Use <strong>monensina/lasalocida</strong> para eficiência e saúde ruminal.'},{ico:'',tag:'Mercado',tc:'rgba(74,222,128,.15)',tcc:'var(--g)',t:'Timing de Venda',d:'Monitore mercado futuro. <strong>Venda antecipada</strong> garante preço mínimo. Compare frigoríficos.'},{ico:'',tag:'Giro',tc:'rgba(34,211,238,.15)',tcc:'var(--cy)',t:'Giro de Confinamento',d:'<strong>3 lotes/ano (120 dias)</strong> é o ideal para amortizar infraestrutura e maximizar retorno.'}], CICLO_COMPLETO:[{ico:'',tag:'Integração',tc:'rgba(251,191,36,.15)',tcc:'var(--am)',t:'Fluxo entre Fases',d:'Planeje a transferência entre cria → recria → terminação. <strong>Evite gargalos</strong> de capacidade.'},{ico:'',tag:'Gestão',tc:'rgba(74,222,128,.15)',tcc:'var(--g)',t:'Centro de Custo',d:'Separe custos por fase para identificar onde está o lucro. Use <strong>software de gestão pecuária</strong>.'},{ico:'',tag:'Genética',tc:'rgba(34,211,238,.15)',tcc:'var(--cy)',t:'Programa Genético',d:'DEPs balanceados: facilidade de parto + crescimento + acabamento. Considere <strong>cruzamentos F1</strong>.'},{ico:'',tag:'Financeiro',tc:'rgba(167,139,250,.15)',tcc:'var(--pu)',t:'Diversificação',d:'Regra <strong>80/20</strong>: 80% terminação própria, 20% venda precoce para liquidez e gestão de risco.'}] }; return(R[tipo]||[]).map(r=>`<div class="rec-item"><div class="rec-ico">${r.ico}</div><div class="rec-txt"><div class="rtag" style="background:${r.tc};color:${r.tcc}">${r.tag}</div><strong>${r.t}</strong><br>${r.d}</div></div>`).join(''); }
+let CUSTO_S={ baixo: {matrizes:800,bois:600,femeas:400,machos:380,bezerros:180}, medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220}, alto: {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280} };
+function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
+function renderCostTableS(){ const cats=[{key:'matrizes',label:'Matrizes (25m+)'},{key:'bois',label:'Bois Adultos'},{key:'femeas',label:'Fêmeas Jovens (0-24m)'},{key:'machos',label:'Machos Jovens (0-24m)'},{key:'bezerros',label:'Bezerros (nascimentos)'}]; const levels=['baixo','medio','alto']; const tbody=document.getElementById('s-cost-tbody'); if(!tbody)return; tbody.innerHTML=''; cats.forEach(cat=>{ const tr=document.createElement('tr'); const td0=document.createElement('td'); td0.textContent=cat.label;td0.style.fontWeight='500'; tr.appendChild(td0); levels.forEach(lv=>{ const td=document.createElement('td'); const inp=document.createElement('input'); inp.type='number';inp.value=CUSTO_S[lv][cat.key];inp.step=10; inp.addEventListener('change',e=>{CUSTO_S[lv][cat.key]=parseFloat(e.target.value)||0;recalcCiclo();}); td.appendChild(inp);tr.appendChild(td); }); tbody.appendChild(tr); }); hlCostLevel(); }
+function hlCostLevel(){ const lv=document.getElementById('s-nivel')?.value||'medio'; const idx={baixo:1,medio:2,alto:3}[lv]; document.querySelectorAll('#s-cost-tbody tr').forEach(tr=>{ for(let i=1;i<=3;i++) tr.cells[i].style.background=(i===idx)?'rgba(74,222,128,.08)':''; }); }
+function calcCiclo(){ const mat=gS('s-mat'),fem=gS('s-fem'),mac=gS('s-mac'),boi=gS('s-boi'); const nat=gS('s-nat')/100||0.75; const prop=gS('s-propboi')||30; const rb=gS('s-renovboi')/100||0.2; const des=gS('s-desc')/100||0.3; const vbp=gS('s-vendbez')/100||0.3; const niv=document.getElementById('s-nivel')?.value||'medio'; const pBoi=gS('s-preco-boi')||4500; const pMat=gS('s-preco-mat')||3200; const pBezArr=gS('s-bez-arr')||8; const pArr=gS('s-preco-arr')||350; const totBez=Math.floor(mat*nat); const bezF=Math.floor(totBez/2),bezM=totBez-bezF; const bNec=Math.max(1,Math.ceil(mat/prop)); const bExc=Math.max(0,boi-bNec); const bRen=Math.ceil(bNec*rb); const macRest=Math.max(0,mac-bRen); const bVend=bExc+bRen; const desQ=Math.floor(mat*des); const bezV=Math.floor(fem*vbp); const bezMV=Math.floor(bezM*vbp); const femR=fem-bezV; const cresc=femR-desQ; const totReb=mat+fem+mac+boi+totBez; const totVend=bVend+desQ+bezV+bezMV; const pBezCab=pBezArr*pArr; const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rBezM=bezMV*pBezCab,rTot=rBoi+rMat+rBez+rBezM; const cn=CUSTO_S[niv]; const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez; const res=rTot-cTot; return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res}; }
+function makeBarsS(items,maxV,colors){ return items.map((it,i)=>{ const pct=maxV>0?Math.max(Math.round(it.val/maxV*100),it.val>0?5:0):0; return`<div class="brow"><div class="brow-l">${it.lbl}</div><div class="brow-t"><div class="brow-f" style="width:${pct}%;background:${colors[i%colors.length]}"><span>${it.dis}</span></div></div></div>`; }).join(''); }
+function recalcCiclo(){ if(!document.getElementById('s-cost-tbody')?.children.length) renderCostTableS(); else hlCostLevel(); const d=calcCiclo(); const nb=d.niv; const nbLbl={baixo:'Baixo',medio:'Médio',alto:'Alto'}[nb]; const lvB=document.getElementById('s-lvl-badge'); if(lvB) lvB.innerHTML=`<span class="lvl-badge ${nb}">${nbLbl}</span>`; const ctEl=document.getElementById('s-custo-total'); if(ctEl) ctEl.textContent=fR(d.cTot); const pbi=document.getElementById('s-preco-bez-info'); if(pbi) pbi.textContent=`Preço bezerra = ${gS('s-bez-arr')}@ × R$${gS('s-preco-arr')} = ${fR(d.pBezCab)}/cab`; const ki=id=>document.getElementById(id); if(ki('s-kpi-reb')) ki('s-kpi-reb').textContent=fN(d.totReb); if(ki('s-kpi-bez')) ki('s-kpi-bez').textContent=fN(d.totBez); if(ki('s-kpi-vnd')) ki('s-kpi-vnd').textContent=fN(d.totVend)+' cab.'; const resEl=ki('s-kpi-res'); if(resEl){resEl.textContent=fR(d.res);resEl.className='pjc-v '+(d.res>=0?'cg':'cr');} const maxReb = Math.max(d.mat, d.fem, d.macRest, d.bNec, d.bezF, d.bezM, 1); const bRebEl = ki('s-bar-rebanho'); if(bRebEl) bRebEl.innerHTML = makeBarsS([{lbl:'Matrizes',val:d.mat,dis:fN(d.mat)},{lbl:'Fêmeas 0–24m',val:d.fem,dis:fN(d.fem)},{lbl:'Machos 0–24m',val:d.macRest,dis:fN(d.macRest)},{lbl:'Bois',val:d.bNec,dis:fN(d.bNec)},{lbl:'Bezerras',val:d.bezF,dis:fN(d.bezF)},{lbl:'Bezerros',val:d.bezM,dis:fN(d.bezM)}], maxReb, ['#22C55E','#16A34A','#15803D','#F59E0B','#FBBF24','#FCD34D']); const maxVnd=Math.max(d.bVend,d.desQ,d.bezV,d.bezMV,1); const bVndEl=ki('s-bar-vendas'); if(bVndEl) bVndEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.bVend,dis:fN(d.bVend)},{lbl:'Matrizes',val:d.desQ,dis:fN(d.desQ)},{lbl:'Bezerras',val:d.bezV,dis:fN(d.bezV)},{lbl:'Bezerros',val:d.bezMV,dis:fN(d.bezMV)}],maxVnd,['#F59E0B','#D97706','#FBBF24','#FCD34D']); const maxRec=Math.max(d.rBoi,d.rMat,d.rBez,1); const bRecEl=ki('s-bar-receita'); if(bRecEl) bRecEl.innerHTML=makeBarsS([{lbl:'Bois',val:d.rBoi,dis:fR(d.rBoi)},{lbl:'Matrizes',val:d.rMat,dis:fR(d.rMat)},{lbl:'Bezerras',val:d.rBez,dis:fR(d.rBez)}],maxRec,['#38BDF8','#0EA5E9','#7DD3FC']); const bFlEl=ki('s-flow-bois'); if(bFlEl) bFlEl.innerHTML=`<div class="flow-wrap"><div class="flow-step"><div class="flow-n">${fN(d.mac)}</div><div class="flow-l">Machos</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n ca">${fN(d.bRen)}</div><div class="flow-l">Renovados</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n">${fN(d.bNec)}</div><div class="flow-l">Bois Ativos</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n cr">${fN(d.bExc)}</div><div class="flow-l">Excedentes</div></div><span class="flow-arr">→</span><div class="flow-step"><div class="flow-n ca">${fN(d.bVend)}</div><div class="flow-l">Vendidos</div></div></div>`; const tReb=document.querySelector('#s-tbl-rebanho tbody'); if(tReb){const cats=[['Matrizes (25m+)',d.mat],['Fêmeas 0–24m',d.fem],['Machos 0–24m',d.mac],['Bois Adultos',d.boi],['Bezerras (nascimentos)',d.bezF],['Bezerros (nascimentos)',d.bezM]]; tReb.innerHTML=cats.map(([c,q])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totReb>0?fP(q/d.totReb):'0%'}</td></tr>`).join(''); const el=ki('s-tot-reb');if(el)el.textContent=fN(d.totReb);} const pBez=ki('s-prod-bez'); if(pBez) pBez.innerHTML=[['Matrizes',fN(d.mat)+' cab.',''],['Taxa Natalidade',fP(d.nat),'ca'],['Total Bezerros',fN(d.totBez),'cg'],['♀ Bezerras',fN(d.bezF),'cg'],['♂ Bezerros',fN(d.bezM),'ca']].map(([k,v,c])=>mr(k,v,c)).join(''); const rBoisEl=ki('s-rep-bois'); if(rBoisEl) rBoisEl.innerHTML=[['Matrizes',fN(d.mat),''],['Bois existentes',fN(d.boi),''],['Bois necessários',fN(d.bNec),'ca'],['Excedentes',fN(d.bExc),'ca'],['Renovação',fN(d.bRen),'ca'],['Machos promovidos','-'+fN(d.bRen),'cr'],['Machos restantes',fN(d.macRest),'cg'],['Total bois vendidos',fN(d.bVend),'cr']].map(([k,v,c])=>mr(k,v,c)).join(''); const rMatEl=ki('s-rep-mat'); if(rMatEl) rMatEl.innerHTML=[['Matrizes',fN(d.mat),''],['Descarte',fN(d.desQ),'cr'],['Fêmeas jovens',fN(d.fem),''],['Bezerras vendidas',fN(d.bezV),'ca'],['Fêmeas que ficam',fN(d.femR),'cg'],['Reposição necessária',fN(d.desQ),''],['Crescimento líquido',(d.cresc>=0?'+':'')+fN(d.cresc),d.cresc>=0?'cg':'cr']].map(([k,v,c])=>mr(k,v,c)).join(''); const tVnd=document.querySelector('#s-tbl-vendas tbody'); if(tVnd){const vItems=[['Bois',d.bVend,`${fN(d.boi)} → ${fN(d.bNec)}+${fN(d.bRen)}`],['Matrizes',d.desQ,`${fN(d.mat)} × ${fP(d.des)}`],['Bezerras',d.bezV,`${fN(d.fem)} × ${fP(d.vbp)}`],['Bezerros M.',d.bezMV,`${fN(d.bezM)} × ${fP(d.vbp)}`]];tVnd.innerHTML=vItems.map(([c,q,m])=>`<td><td>${c}</td><td class="r">${fN(q)}</td><td class="r g">${d.totVend>0?fP(q/d.totVend):'0%'}</td><td style="font-family:var(--fm);font-size:.72rem;color:var(--mu)">${m}</td></tr>`).join('');const el=ki('s-tot-vnd');if(el)el.textContent=fN(d.totVend);} const tRec=document.querySelector('#s-tbl-rec tbody'); if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez],['Bezerros M.',d.bezMV,fR(d.pBezCab),d.rBezM]].map(([c,q,p,t])=>`<td><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);} const tCus=document.querySelector('#s-tbl-cus tbody'); const cn=CUSTO_S[d.niv]; if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);} const resBox=ki('s-res-box'); if(resBox){const pos=d.res>=0;resBox.innerHTML=`<div class="res-box ${pos?'pos':'neg'}"><div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Líquido Anual</div><div style="font-family:var(--fn);font-weight:800;font-size:2.2rem;line-height:1;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res)}</div></div>${d.totVend>0?`<div style="text-align:right"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-bottom:4px">Por animal vendido</div><div style="font-family:var(--fn);font-weight:700;font-size:1.2rem;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res/d.totVend)}</div></div>`:''}</div>`;} }
+function showScSub(id,btn){ document.querySelectorAll('.sc-spanel').forEach(p=>p.classList.remove('act')); document.querySelectorAll('.sc-sn').forEach(b=>b.classList.remove('act')); const p=document.getElementById('scp-'+id);if(p)p.classList.add('act'); if(btn)btn.classList.add('act'); if(id==='5anos') runSc(); }
+function syncFromClass(){ if(!lastVals){toast('Classifique um rebanho primeiro.',true);return} document.getElementById('s-mat').value=lastVals[6]+lastVals[8]; document.getElementById('s-fem').value=lastVals[0]+lastVals[2]+lastVals[4]; document.getElementById('s-mac').value=lastVals[1]+lastVals[3]+lastVals[5]; document.getElementById('s-boi').value=lastVals[7]+lastVals[9]; recalcCiclo(); toast('Animais sincronizados da classificação.'); }
+let scDebounce=null;
+function selSc(sc,el){ curSc=sc; document.querySelectorAll('.sc-card').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); runSc(); }
+function runSc(){ if(!lastVals){document.getElementById('sc-result').innerHTML='<div style="text-align:center;color:var(--mu);padding:40px;font-family:var(--fm);font-size:.75rem">Classifique um rebanho primeiro para ver a projeção.</div>';return} clearTimeout(scDebounce); scDebounce=setTimeout(async()=>{ const body={ valores:lastVals, cenario:curSc, ciclo:document.getElementById('ciclo-alvo').value, nat:document.getElementById('s-nat').value, mort:document.getElementById('sc-mort').value, desc:document.getElementById('s-desc').value, preco:document.getElementById('s-preco-arr').value, custo:document.getElementById('sc-custo').value, peso:document.getElementById('sc-peso').value, propboi:document.getElementById('s-propboi').value, renovboi:document.getElementById('s-renovboi').value, vendbez:document.getElementById('s-vendbez').value }; const res=await fetch('/api/cenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const data=await res.json(); renderSc(data); },300); }
+function renderSc(d){ const anos=d.anos, acc=d.acumulado; const delta=d.delta_rebanho; const maxRec=Math.max(...anos.map(a=>a.receita),1); const chartBars=anos.map(a=>{ const h=Math.round(a.receita/maxRec*100); const pos=a.resultado>=0; return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:${Math.max(h,4)}%;background:${pos?'var(--g)':'var(--rd)'};border-radius:4px 4px 0 0;min-height:4px"></div><div style="font-family:var(--fm);font-size:.5rem;color:var(--mu)">Ano ${a.ano}</div></div>`; }).join(''); const ytable=anos.map(a=>{ const pos=a.resultado>=0; return`<tr><td style="font-family:var(--fm);font-size:.78rem">Ano ${a.ano}</td><td class="r">${fN(a.total)}</td><td class="r">${fN(a.matrizes)}</td><td class="g">${fN(a.bezerros)}</td><td class="a" style="font-size:.7rem">${fN(a.bois_vendidos||0)}</td><td class="a" style="font-size:.7rem">${fN(a.matrizes_descartadas||0)}</td><td class="a" style="font-size:.7rem">${fN(a.bezerras_vendidas||0)}</td><td class="a" style="font-size:.7rem">${fN(a.machos_vendidos||0)}</td><td class="a" style="font-weight:600">${fN(a.vendidos)}</td><td class="g">${fR(a.receita)}</td><td class="r2">${fR(a.custo)}</td><td class="${pos?'g':'r2'}" style="font-weight:600">${fR(a.resultado)}</td></tr>`; }).join(''); document.getElementById('sc-result').innerHTML=`<div class="proj-strip"><div class="pjc"><div class="pjc-l">Rebanho Ano 5</div><div class="pjc-v cg">${fN(anos[4].total)}</div><div class="pjc-d" style="color:${delta>=0?'var(--g)':'var(--rd)'}">${delta>=0?'▲':'▼'} ${fN(Math.abs(delta))} cab.</div></div><div class="pjc"><div class="pjc-l">Receita 5 Anos</div><div class="pjc-v cc">${fR(acc.receita)}</div><div class="pjc-d" style="color:var(--mu)">acumulado</div></div><div class="pjc"><div class="pjc-l">Custo 5 Anos</div><div class="pjc-v cr">${fR(acc.custo)}</div><div class="pjc-d" style="color:var(--mu)">acumulado</div></div><div class="pjc"><div class="pjc-l">Resultado Líquido</div><div class="pjc-v ${acc.resultado>=0?'cg':'cr'}">${fR(acc.resultado)}</div><div class="pjc-d" style="color:${acc.resultado>=0?'var(--g)':'var(--rd)'}">${d.emoji} ${d.nome.split('—')[0].trim()}</div></div></div><div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--cy)"></div>Receita Anual Projetada — ${d.emoji} ${d.nome}</div></div><div class="cb"><div style="height:120px;display:flex;align-items:flex-end;gap:6px">${chartBars}</div></div></div><div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Projeção Detalhada por Ano</div></div><div style="overflow-x:auto"><table class="ytbl"><thead><tr><th>Período</th><th class="r">Rebanho</th><th class="r">Matrizes</th><th class="r">Bezerros</th><th class="r" style="font-size:.55rem">Bois</th><th class="r" style="font-size:.55rem">Mat.Desc.</th><th class="r" style="font-size:.55rem">Bezerras</th><th class="r" style="font-size:.55rem">Machos</th><th class="r">Total Vend.</th><th class="r">Receita</th><th class="r">Custo</th><th class="r">Resultado</th></tr></thead><tbody>${ytable}</tbody></table></div></div>`; }
+function showTab(id,btn){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById('panel-'+id).classList.add('active'); if(btn)btn.classList.add('active'); else document.querySelectorAll('.tab-btn')[{entrada:0,pdf:1,resultado:2,cenarios:3}[id]]?.classList.add('active'); }
+function resetApp(){clearAll();document.getElementById('tab-res').style.display='none';document.getElementById('tab-cen').style.display='none';showTab('entrada',document.querySelectorAll('.tab-btn')[0]);lastVals=null;document.getElementById('result-wrap').innerHTML='';document.getElementById('sc-result').innerHTML=''}
+const dz2=document.getElementById('dz'); dz2.addEventListener('dragover',e=>{e.preventDefault();dz2.classList.add('drag')}); dz2.addEventListener('dragleave',()=>dz2.classList.remove('drag')); dz2.addEventListener('drop',e=>{e.preventDefault();dz2.classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.name.toLowerCase().endsWith('.pdf'))lerPDF(f)});
+function showLoading(t){document.getElementById('loading-ov').classList.add('show');document.getElementById('loading-txt').textContent=t}
+function hideLoading(){document.getElementById('loading-ov').classList.remove('show')}
+function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500)}
+async function confirmarClassificacao(){ if(!lastRegistroId){toast('Nenhum registro para confirmar.',true);return} const cls=document.getElementById('conf-tipo').value; try{ const res=await fetch('/api/confirmar',{method:'POST',headers:{'Content-Type':'application/json'}, body:JSON.stringify({registro_id:lastRegistroId,classificacao:cls})}); const data=await res.json(); if(data.erro){toast(data.erro,true);return} const sv=document.getElementById('conf-saved'); if(sv){sv.style.display='inline';setTimeout(()=>sv.style.display='none',3000)} toast('✓ Confirmado! Modelo atualizando em segundo plano...'); atualizarDbStats(data.stats); setTimeout(()=>atualizarDbStats(),35000); }catch(e){toast('Erro ao confirmar: '+e.message,true)} }
+async function retreinarModelo(){ const btn=document.getElementById('btn-retrain'); if(btn){btn.textContent='⏳ Treinando...';btn.disabled=true} showLoading('Retreinando modelo com dados confirmados...'); try{ const res=await fetch('/api/retrain',{method:'POST'}); const data=await res.json(); if(data.erro){toast(data.erro,true);return} toast(`Modelo atualizado! Acurácia: ${(data.accuracy_mean*100).toFixed(1)}% (${data.n_confirmados} confirmados)`); atualizarDbStats(); }catch(e){toast('Erro ao retreinar: '+e.message,true)} finally{ if(btn){btn.textContent='↺ Retreinar';btn.disabled=false} hideLoading() } }
+async function atualizarDbStats(s=null){ try{ if(!s){const r=await fetch('/api/db-stats');s=await r.json()} const elDb=document.getElementById('hdr-db'); if(elDb) elDb.textContent=(s.total||0)+' / '+(s.confirmados||0); const elAcc=document.getElementById('hdr-acc'); if(elAcc&&s.accuracy){ elAcc.textContent=(s.accuracy*100).toFixed(1)+'%'; elAcc.title='Acurácia ML: '+(s.accuracy*100).toFixed(1)+'%'+(s.retraining?' · atualizando...':''); elAcc.style.opacity=s.retraining?'0.6':'1'; } }catch{} }
+function logout() { window.location.href = '/logout'; }
+
+initParamsPorCiclo();
+carregarParametrosDoCiclo();
+atualizarTituloCiclo();
+buildTable();
+renderCostTableS();
+recalcCiclo();
+runSc();
+atualizarDbStats();
+</script>
+<footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);"><p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p></footer>
+</body>
+</html>
