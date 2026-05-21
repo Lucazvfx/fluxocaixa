@@ -533,6 +533,9 @@ def parsear_declaracao_idaron(text: str) -> dict:
 # ─────────────────────────────────────────────
 # FUNÇÕES AUXILIARES PARA PARSER GENÉRICO
 # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# FUNÇÕES AUXILIARES PARA PARSER GENÉRICO
+# ─────────────────────────────────────────────
 _FAIXA_PATS_GENERICO = [
     (re.compile(r'\b(?:0?0\s*[aà\-]\s*0?6|at[ée]\s*0?6)(?:\s*m[eê]s(?:es)?)?\b', re.I), 'f00'),
     (re.compile(r'\b0?7\s*[aà\-]\s*12(?:\s*m[eê]s(?:es)?)?\b', re.I),               'f05'),
@@ -578,7 +581,7 @@ def parsear_generico(text: str) -> dict:
     animais = _animais_vazios()
     fazenda = municipio = proprietario = cpf = data_saldo = ''
 
-    # Metadados (igual antes)
+    # Metadados
     for pat in [r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)']:
         m = re.search(pat, text, re.I)
         if m:
@@ -594,21 +597,19 @@ def parsear_generico(text: str) -> dict:
     if m:
         data_saldo = m.group(1)
 
-    # ----- PARSER PRINCIPAL: captura linhas de animais -----
+    # Parser principal: captura linhas com BOVINO, faixa, sexo e quantidade
     for line in text.split('\n'):
         up = line.upper()
         if 'BOVINO' not in up:
             continue
 
-        # Tenta capturar a estrutura: faixa, sexo, quantidade
-        # Exemplo: "BOVINO     00 A 04 MESES          FEMEA   16"
+        # Exemplo esperado: "BOVINO     00 A 04 MESES          FEMEA   16"
         match = re.search(r'BOVINO\s+(\d{2}\s*A\s*\d{2}\s*MESES|ACIMA\s*DE\s*\d{2}\s*MESES)\s+(FEMEA|MACHO)\s+(\d+)', up)
         if match:
             faixa_str = match.group(1).strip()
             sexo = match.group(2)
             qtd = int(match.group(3))
 
-            # Mapeia faixa para a chave interna
             if '00 A 04' in faixa_str:
                 faixa_key = 'f00'
             elif '05 A 12' in faixa_str:
@@ -624,9 +625,9 @@ def parsear_generico(text: str) -> dict:
 
             sexo_key = 'F' if sexo == 'FEMEA' else 'M'
             animais[f'{faixa_key}_{sexo_key}'] += qtd
-            continue  # achou, pula para próxima linha
+            continue
 
-    # Se não encontrou nenhum animal pelo padrão acima, tenta o fallback antigo
+    # Fallback: método mais flexível (caso o regex principal não capture)
     if sum(animais.values()) == 0:
         for line in text.split('\n'):
             up = line.upper()
@@ -652,8 +653,13 @@ def parsear_generico(text: str) -> dict:
 
     valores = _para_valores(animais)
     return {
-        'fazenda': fazenda, 'municipio': municipio,
-        'proprietario': proprietario, 'cpf': cpf, 'ie': '',
-        'data_saldo': data_saldo, 'total': sum(valores),
-        'animais': animais, 'valores': valores,
-    }"
+        'fazenda': fazenda,
+        'municipio': municipio,
+        'proprietario': proprietario,
+        'cpf': cpf,
+        'ie': '',
+        'data_saldo': data_saldo,
+        'total': sum(valores),
+        'animais': animais,
+        'valores': valores,
+    }
