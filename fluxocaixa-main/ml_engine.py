@@ -129,68 +129,17 @@ def extrair_features(
     ])
     return features
 
-<<<<<<< HEAD
-=======
-# Parâmetros padrão por ciclo de produção
-PARAMS_POR_CICLO = {
-    'CRIA': {
-        'prop_boi': 20.0,          # 1 touro para 20 matrizes
-        'renov_boi_pct': 15.0,     # renova 15% dos touros/ano
-        'desc_mat_pct': 20.0,      # descarta 20% das matrizes/ano
-        'venda_bez_pct': 10.0,     # vende 10% das bezerras
-        'nat_pct': 75.0,           # taxa de natalidade (%)
-    },
-    'RECRIA': {
-        'prop_boi': 0.0,
-        'renov_boi_pct': 0.0,
-        'desc_mat_pct': 0.0,
-        'venda_bez_pct': 80.0,
-        'nat_pct': 0.0,            # não aplicável
-    },
-    'ENGORDA': {
-        'prop_boi': 0.0,
-        'renov_boi_pct': 0.0,
-        'desc_mat_pct': 0.0,
-        'venda_bez_pct': 100.0,
-        'nat_pct': 0.0,
-    },
-    'CICLO_COMPLETO': {
-        'prop_boi': 30.0,
-        'renov_boi_pct': 20.0,
-        'desc_mat_pct': 30.0,
-        'venda_bez_pct': 30.0,
-        'nat_pct': 75.0,
-    }
-}
-
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
 # ==================================================================
 # 3. MODELO BASE (ensemble fixo e estável)
 # ==================================================================
 def _build_model():
-<<<<<<< HEAD
     """Cria pipeline com ensemble RandomForest + GradientBoosting."""
     # Em produção (sem GPU, RAM limitada) usa configuração mais leve
     prod = bool(os.environ.get('DATABASE_URL'))
-=======
-    """Cria pipeline com ensemble estendido (RF + GBoost + XGBoost + LightGBM)."""
-    from sklearn.ensemble import VotingClassifier
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.pipeline import Pipeline
-
-    # Configurações leves para produção (evita alto consumo de RAM/CPU)
-    prod = bool(os.environ.get('DATABASE_URL'))
-
-    # Modelos base
-    estimators = []
-
-    # Random Forest
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     rf = RandomForestClassifier(
         n_estimators=100 if prod else 300,
         max_depth=10 if prod else 12,
         min_samples_leaf=2,
-<<<<<<< HEAD
         random_state=42, n_jobs=1, class_weight='balanced'
     )
     gb = GradientBoostingClassifier(
@@ -201,63 +150,6 @@ def _build_model():
     ensemble = VotingClassifier(
         estimators=[('rf', rf), ('gb', gb)], voting='soft'
     )
-=======
-        random_state=42,
-        n_jobs=1,
-        class_weight='balanced'
-    )
-    estimators.append(('rf', rf))
-
-    # Gradient Boosting
-    gb = GradientBoostingClassifier(
-        n_estimators=80 if prod else 200,
-        learning_rate=0.05,
-        max_depth=4,
-        subsample=0.8,
-        random_state=42
-    )
-    estimators.append(('gb', gb))
-
-    # XGBoost (se disponível)
-    try:
-        from xgboost import XGBClassifier
-        xgb = XGBClassifier(
-            n_estimators=100 if prod else 250,
-            max_depth=5,
-            learning_rate=0.05,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            random_state=42,
-            use_label_encoder=False,
-            eval_metric='mlogloss'
-        )
-        estimators.append(('xgb', xgb))
-        print("[ML] XGBoost adicionado ao ensemble.")
-    except ImportError:
-        print("[ML] XGBoost não instalado – continuando sem ele.")
-
-    # LightGBM (se disponível)
-    try:
-        from lightgbm import LGBMClassifier
-        lgb = LGBMClassifier(
-            n_estimators=100 if prod else 250,
-            max_depth=5,
-            learning_rate=0.05,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            random_state=42,
-            verbose=-1
-        )
-        estimators.append(('lgb', lgb))
-        print("[ML] LightGBM adicionado ao ensemble.")
-    except ImportError:
-        print("[ML] LightGBM não instalado – continuando sem ele.")
-
-    # Cria o VotingClassifier (votação suave = baseada em probabilidades)
-    ensemble = VotingClassifier(estimators=estimators, voting='soft')
-
-    # Pipeline com escalonador padrão
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     return Pipeline([('scaler', StandardScaler()), ('model', ensemble)])
 
 # ==================================================================
@@ -343,24 +235,11 @@ def carregar_modelo() -> dict | None:
         return None
     try:
         data = joblib.load(_MODEL_PATH)
-<<<<<<< HEAD
         global _pipeline
         _pipeline = data['pipeline']
         return data['stats']
     except Exception as e:
         print(f'[ML] Modelo em disco incompatível, retreinando: {e}')
-=======
-        pipeline = data['pipeline']
-        # Verifica se o pipeline tem a estrutura esperada (com VotingClassifier)
-        if not hasattr(pipeline.named_steps['model'], 'estimators'):
-            print("[ML] Modelo antigo incompatível. Retreinando...")
-            return None
-        global _pipeline
-        _pipeline = pipeline
-        return data['stats']
-    except Exception as e:
-        print(f'[ML] Erro ao carregar modelo: {e}')
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
         return None
 
 # ==================================================================
@@ -608,25 +487,7 @@ def calcular_ano(
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
     venda_bez_pct, mort_pct, preco_arroba, custo_cab_ano,
     peso_boi: float = 20.0, peso_vaca: float = 17.0, peso_bezerra: float = 8.0,
-<<<<<<< HEAD
-    peso_garrote: float = None,
 ) -> dict:
-    """
-    IMPORTANTE — pesos diferenciados na faixa jovem (0-25 meses):
-    'femeas_024'/'machos_024' agrupam 3 sub-faixas etárias (0-5m, 5-13m,
-    13-25m). Bezerras vendidas (bez_vend) tendem a ser do desmame, mais
-    leves (peso_bezerra). Já os MACHOS jovens excedentes vendidos
-    (machos_024_vend) tendem a ser predominantemente garrotes mais
-    próximos dos 25 meses — mais pesados. Usar peso_bezerra para os dois
-    grupos subestima a receita desse lote. peso_garrote (padrão: 1.5x
-    peso_bezerra) corrige isso; pode ser ajustado pelo usuário.
-    """
-    if peso_garrote is None:
-        peso_garrote = peso_bezerra * 1.5
-
-=======
-) -> dict:
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     bezerros = matrizes * nat_pct
     bois_nec   = max(round(matrizes / max(prop_boi, 1)), 1)
     bois_exc   = max(bois - bois_nec, 0)
@@ -646,16 +507,9 @@ def calcular_ano(
     machos_024_prx = round(bezerros * 0.5)
     total_prox     = mat_prox + femeas_024_prx + machos_024_prx + bois_prox
     receita   = (
-<<<<<<< HEAD
-        bois_vendidos     * peso_boi      +
-        desc_mat          * peso_vaca     +
-        bez_vend          * peso_bezerra  +
-        machos_024_vend   * peso_garrote
-=======
         bois_vendidos                * peso_boi      +
         desc_mat                     * peso_vaca     +
         (bez_vend + machos_024_vend) * peso_bezerra
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     ) * preco_arroba
     custo_tot = total_prox * custo_cab_ano
     resultado = receita - custo_tot
@@ -798,32 +652,12 @@ def _simular_recria(
     v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
     meses_recria, custo_cab_mes, anos,
 ):
-<<<<<<< HEAD
-    """
-    IMPORTANTE — Custo de oportunidade do animal de entrada:
-    O animal que entra na recria já tem valor de mercado (peso_entrada_arr
-    arrobas, vendável a qualquer momento). A receita financeira do CICLO
-    DE RECRIA isolado é o GANHO DE PESO (arrobas agregadas), não o peso
-    total de saída — senão o "lucro" inclui o valor que o animal já tinha
-    antes de entrar no lote, inflando o resultado.
-
-    receita_liquida = animais_sai * (peso_saida_arr - peso_entrada_arr) * preco
-
-    'receita_bruta' (peso total de venda) é mantida no retorno apenas como
-    informação de faturamento, não como base do resultado/breakeven.
-    """
-=======
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
     m   = sc['mods']
 
     mort  = (mort_pct / 100) * m['mort']
     preco = preco_arroba * m['preco']
-<<<<<<< HEAD
-    ganho_arr = max(peso_saida_arr - peso_entrada_arr, 0.0)
-=======
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
 
     # Animais em recria = machos 5–25 meses (corrigido)
     animais   = float(va[3] + va[5])
@@ -833,19 +667,11 @@ def _simular_recria(
     for yr in range(1, anos + 1):
         mortes       = animais * mort
         animais_sai  = animais - mortes
-<<<<<<< HEAD
-
-        receita_bruta = animais_sai * peso_saida_arr * preco
-        receita       = animais_sai * ganho_arr * preco   # receita líquida (valor agregado)
-        custo         = animais * meses_recria * custo_cab_mes
-        resultado     = receita - custo
-=======
         ganho_arr    = peso_saida_arr - peso_entrada_arr
 
         receita   = animais_sai * peso_saida_arr * preco
         custo     = animais * meses_recria * custo_cab_mes
         resultado = receita - custo
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
 
         # Crescimento simplificado (limitado a 5% ao ano)
         animais_prox = animais * (1 + min(0.05, 0.04 * m['nat']))
@@ -862,10 +688,6 @@ def _simular_recria(
             'machos_vendidos': int(animais_sai),
             'aumento_matrizes': 0,
             'ganho_arrobas_por_animal': round(ganho_arr, 2),
-<<<<<<< HEAD
-            'receita_bruta': round(receita_bruta, 2),
-=======
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
             'receita': round(receita, 2),
             'custo': round(custo, 2),
             'resultado': round(resultado, 2),
@@ -874,19 +696,10 @@ def _simular_recria(
 
     result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'RECRIA')
     ano1 = anos_proj[0]
-<<<<<<< HEAD
-    # Breakeven em R$/arroba GANHA (não sobre o peso total) — preço mínimo
-    # que a arroba precisa valer para cobrir o custo do ciclo de recria.
-    units = float(max(ano1['vendidos'], 1)) * ganho_arr
-    result.update({
-        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
-        'preco_breakeven_unidade': 'R$/arroba (ganho)',
-=======
     units = float(max(ano1['vendidos'], 1)) * peso_saida_arr
     result.update({
         'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
         'preco_breakeven_unidade': 'R$/arroba',
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
         'preco_usado':             preco,
         'slider_units':            round(units, 2),
         'slider_custo_ano1':       ano1['custo'],
@@ -899,24 +712,6 @@ def _simular_engorda(
     v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
     rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
 ):
-<<<<<<< HEAD
-    """
-    IMPORTANTE — Custo de oportunidade do animal de entrada:
-    O boi que entra no confinamento/pasto de engorda já tem valor de
-    mercado no peso de entrada (peso_entrada_kg). A receita financeira
-    do CICLO DE ENGORDA isolado é o GANHO DE ARROBAS de carcaça entre
-    entrada e saída — não o peso total de saída. Caso contrário, o
-    "lucro" mostrado inclui o valor que o boi já tinha antes de entrar
-    no lote, inflando o resultado em várias vezes o custo real de
-    alimentação/manejo.
-
-    receita_liquida = bois_abatidos * (arrobas_saida - arrobas_entrada) * preco
-
-    'receita_bruta' (peso total de venda) é mantida no retorno apenas
-    como informação de faturamento, não como base do resultado/breakeven.
-    """
-=======
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
     m   = sc['mods']
@@ -925,13 +720,6 @@ def _simular_engorda(
     preco = preco_arroba * m['preco']
     rend  = rendimento_carcaca / 100
 
-<<<<<<< HEAD
-    arrobas_entrada = (peso_entrada_kg * rend) / 15.0
-    arrobas_saida   = (peso_saida_kg   * rend) / 15.0
-    ganho_arrobas   = max(arrobas_saida - arrobas_entrada, 0.0)
-
-=======
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     # Bois em engorda = machos adultos (25m+)
     bois      = float(va[7] + va[9])
     total_ini = float(va.sum())
@@ -943,17 +731,10 @@ def _simular_engorda(
         mortes        = bois_no_ano * mort
         bois_abatidos = bois_no_ano - mortes
 
-<<<<<<< HEAD
-        receita_bruta = bois_abatidos * arrobas_saida * preco
-        receita       = bois_abatidos * ganho_arrobas * preco   # receita líquida (valor agregado)
-        custo         = bois_no_ano * dias_engorda * custo_cab_dia
-        resultado     = receita - custo
-=======
         arrobas_por_boi = (peso_saida_kg * rend) / 15.0
         receita   = bois_abatidos * arrobas_por_boi * preco
         custo     = bois_no_ano * dias_engorda * custo_cab_dia
         resultado = receita - custo
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
 
         bois_prox = bois * (1 + min(0.05, 0.04 * m['nat']))
 
@@ -968,17 +749,9 @@ def _simular_engorda(
             'bezerras_vendidas': 0,
             'machos_vendidos': int(bois_abatidos),
             'aumento_matrizes': 0,
-<<<<<<< HEAD
-            'arrobas_por_boi': round(arrobas_saida, 2),
-            'arrobas_ganho_por_boi': round(ganho_arrobas, 2),
-            'lotes_por_ano': lotes_ano,
-            'ganho_peso_kg': round(peso_saida_kg - peso_entrada_kg, 1),
-            'receita_bruta': round(receita_bruta, 2),
-=======
             'arrobas_por_boi': round(arrobas_por_boi, 2),
             'lotes_por_ano': lotes_ano,
             'ganho_peso_kg': round(peso_saida_kg - peso_entrada_kg, 1),
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
             'receita': round(receita, 2),
             'custo': round(custo, 2),
             'resultado': round(resultado, 2),
@@ -987,20 +760,11 @@ def _simular_engorda(
 
     result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'ENGORDA')
     ano1 = anos_proj[0]
-<<<<<<< HEAD
-    # Breakeven em R$/arroba GANHA — preço mínimo que a arroba precisa
-    # valer para cobrir o custo de ração/manejo do período de engorda.
-    units = float(max(ano1['vendidos'], 1)) * ganho_arrobas
-    result.update({
-        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
-        'preco_breakeven_unidade': 'R$/arroba (ganho)',
-=======
     arrobas_por_boi_be = (peso_saida_kg * rend) / 15.0
     units = float(max(ano1['vendidos'], 1)) * arrobas_por_boi_be
     result.update({
         'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
         'preco_breakeven_unidade': 'R$/arroba',
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
         'preco_usado':             preco,
         'slider_units':            round(units, 2),
         'slider_custo_ano1':       ano1['custo'],
@@ -1011,7 +775,6 @@ def _simular_engorda(
 
 def simular_cenario(
     v: list,
-<<<<<<< HEAD
     cenario:        str   = 'crescimento',
     nat_pct:        float = 65.0,      # atualizado
     mort_pct:       float = 4.0,       # atualizado
@@ -1019,7 +782,6 @@ def simular_cenario(
     preco_arroba:   float = 340.0,     # atualizado
     custo_cab_ano:  float = 950.0,     # atualizado
     peso_arroba:    float = 16.0,
-    peso_garrote:   float = 13.0,      # @ — macho jovem excedente (13-25m), mais pesado que bezerra de desmame
     prop_boi:       float = 30.0,
     renov_boi_pct:  float = 20.0,
     venda_bez_pct:  float = 30.0,
@@ -1055,51 +817,6 @@ def simular_cenario(
             rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
         )
 
-=======
-    cenario: str = 'crescimento',
-    ciclo: str = 'CICLO_COMPLETO',
-    nat_pct: float = None,          # se None, usa do ciclo
-    mort_pct: float = 4.0,
-    desc_pct: float = None,         # desc_mat_pct
-    preco_arroba: float = 340.0,
-    custo_cab_ano: float = 950.0,
-    peso_arroba: float = 16.0,
-    prop_boi: float = None,
-    renov_boi_pct: float = None,
-    venda_bez_pct: float = None,
-    anos: int = 5,
-    preco_bezerro: float = 2960.0,
-    desmama_pct: float = 75.0,
-    peso_entrada_arr: float = 13.33,
-    peso_saida_arr: float = 20.0,
-    meses_recria: int = 12,
-    custo_cab_mes: float = 67.0,
-    peso_entrada_kg: float = 450.0,
-    peso_saida_kg: float = 540.0,
-    rendimento_carcaca: float = 52.0,
-    custo_cab_dia: float = 13.76,
-    dias_engorda: int = 90,
-    peso_boi: float = 20.0,
-    peso_vaca: float = 17.0,
-) -> dict:
-    # Obtém os parâmetros padrão do ciclo
-    ciclo_params = PARAMS_POR_CICLO.get(ciclo, PARAMS_POR_CICLO['CICLO_COMPLETO']).copy()
-
-    # Sobrescreve com os valores passados explicitamente (prioridade)
-    if prop_boi is None:
-        prop_boi = ciclo_params['prop_boi']
-    if renov_boi_pct is None:
-        renov_boi_pct = ciclo_params['renov_boi_pct']
-    if desc_pct is None:
-        desc_pct = ciclo_params['desc_mat_pct']
-    if venda_bez_pct is None:
-        venda_bez_pct = ciclo_params['venda_bez_pct']
-    if nat_pct is None:
-        nat_pct = ciclo_params.get('nat_pct', 75.0)
-
-    # Restante da função permanece igual, mas agora os valores de prop_boi, renov_boi_pct, etc.
-    # já estão definidos corretamente para o ciclo.
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     # CICLO_COMPLETO
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
@@ -1129,10 +846,6 @@ def simular_cenario(
             peso_boi=peso_boi,
             peso_vaca=peso_vaca,
             peso_bezerra=peso_arroba,
-<<<<<<< HEAD
-            peso_garrote=peso_garrote,
-=======
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
         )
         anos_proj.append({
             'ano':      yr,
@@ -1159,19 +872,8 @@ def simular_cenario(
     preco_adj = preco_arroba * m['preco']
     bv = float(ano1.get('bois_vendidos', 0))
     dv = float(ano1.get('matrizes_descartadas', 0))
-<<<<<<< HEAD
-    bezv = float(ano1.get('bezerras_vendidas', 0))
-    garv = float(ano1.get('machos_vendidos', 0))
-    peso_medio = (
-        bv   * peso_boi +
-        dv   * peso_vaca +
-        bezv * peso_arroba +
-        garv * peso_garrote
-    ) / max(ano1['vendidos'], 1)
-=======
     ov = float(max(ano1['vendidos'] - bv - dv, 0))
     peso_medio = (bv * peso_boi + dv * peso_vaca + ov * peso_arroba) / max(ano1['vendidos'], 1)
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
     units = float(max(ano1['vendidos'], 1)) * peso_medio
     result.update({
         'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),

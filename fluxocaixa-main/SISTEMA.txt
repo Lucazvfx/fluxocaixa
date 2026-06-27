@@ -1,0 +1,307 @@
+================================================================================
+                    FLUXO DE GESTÃO — DOCUMENTAÇÃO DO SISTEMA
+================================================================================
+
+VISÃO GERAL
+-----------
+Fluxo de Gestão é uma aplicação web para gestão e análise de rebanhos bovinos.
+O sistema combina Machine Learning para classificar o tipo de exploração da
+fazenda com ferramentas de simulação financeira (fluxo de caixa, breakeven e
+projeção de 5 anos). Roda localmente na porta 5050: http://localhost:5050
+
+Tecnologias: Python 3.10, Flask, scikit-learn, XGBoost, SQLite (local) /
+PostgreSQL (produção), HTML/CSS/JS puro (sem frameworks frontend).
+
+
+================================================================================
+ARQUIVOS DO PROJETO
+================================================================================
+
+app.py          — Servidor Flask. Define todas as rotas HTTP, autenticação de
+                  usuários (Flask-Login), agendamento automático de cotações
+                  (APScheduler) e parsers de PDF (IDARON/INDEA).
+
+ml_engine.py    — Motor de ML e simulações financeiras. Contém:
+                  • Ensemble de classificação (RandomForest + GradientBoosting
+                    + XGBoost + MLP)
+                  • calcular_ano()   → receita/custo anual por categoria
+                  • simular_cenario() → projeção de 5 anos
+                  • avaliar_benchmarks() → compara indicadores com padrões
+                  • calcular_breakeven_simples() → ponto de equilíbrio rápido
+
+database.py     — Camada de persistência. Abstrai SQLite (local) e PostgreSQL
+                  (produção via DATABASE_URL). Gerencia usuários, fazendas,
+                  registros de classificação, cotações e dados de retreino.
+
+scraper.py      — Busca cotações do dia da arroba no site scotconsultoria.com.br.
+                  Executa automaticamente ao ligar o servidor e todo dia às 08h.
+
+templates/      — HTMLs (index.html + login.html + cadastro.html).
+static/         — CSS, JS e imagens estáticas.
+tests/          — Testes automatizados com pytest (test_ml_engine.py).
+modelo.pkl      — Modelo ML salvo em disco (carregado no startup).
+banco.db        — Banco SQLite local.
+dataset_sintetico_bovino.csv — Dataset base para treino do modelo.
+
+
+================================================================================
+MACHINE LEARNING — CLASSIFICAÇÃO DE REBANHO
+================================================================================
+
+ENTRADA: vetor de 10 valores representando a composição do rebanho
+  [fêmeas 0-6m, machos 0-6m, fêmeas 7-12m, machos 7-12m,
+   fêmeas 13-24m, machos 13-24m, fêmeas 25-36m, machos 25-36m,
+   fêmeas adultas, machos adultos]
+
+SAÍDA: classificação em 4 tipos de exploração
+  0 = CRIA         → produção de bezerros (muitas matrizes adultas)
+  1 = RECRIA       → engorda de jovens (concentração 13-24m)
+  2 = ENGORDA      → terminação para abate (machos adultos dominam)
+  3 = CICLO_COMPLETO → todas as fases presentes
+
+MODELO: Ensemble VotingClassifier (soft voting)
+  - RandomForestClassifier
+  - GradientBoostingClassifier
+  - XGBClassifier
+  - MLPClassifier (rede neural)
+  - StandardScaler + Pipeline
+  Acurácia típica: ~99.8% (dataset sintético de 3963 amostras)
+
+RETREINO AUTOMÁTICO: cada vez que o usuário confirma ou corrige uma
+classificação, o sistema dispara retreino em background com os dados novos
+somados ao dataset base.
+
+LEITURA DE PDF: o sistema aceita upload de GTA/formulários dos órgãos IDARON
+(Rondônia) e INDEA (Mato Grosso). O parser extrai a composição do rebanho
+automaticamente usando pdfplumber.
+
+
+================================================================================
+ABAS DA INTERFACE
+================================================================================
+
+DASHBOARD
+  Calculadora em tempo real (sem precisar clicar em nada). Atualiza conforme
+  o usuário digita os dados do rebanho nos campos abaixo.
+
+  Campos do rebanho (aba Parâmetros → coluna esquerda):
+    • Matrizes, Fêmeas 0-24m, Machos 0-24m, Bois Adultos
+    • Taxa Natalidade, Proporção Boi/Matriz, Renovação Bois,
+      Descarte Matrizes, Venda Bezerras
+    • Nível de custo (Baixo / Médio / Alto)
+
+  Card "Preços de Venda" (aba Parâmetros → coluna direita):
+    • Peso Boi (@)          — peso médio de um boi adulto em arrobas
+    • Preço @ Boi (R$)     — cotação da arroba para boi adulto
+    • Peso Vaca (@)         — peso médio de uma vaca de descarte
+    • Preço @ Vaca (R$)    — cotação da arroba para vaca
+    • Peso Bezerra (@)     — peso médio de uma bezerra vendida
+    • Preço @ Bezerra (R$) — cotação da arroba para bezerra
+
+  Fórmula de receita do dashboard:
+    Receita = (Bois vendidos × Peso Boi × Preço@Boi)
+            + (Descartes × Peso Vaca × Preço@Vaca)
+            + (Bezerras vendidas × Peso Bezerra × Preço@Bezerra)
+
+  Gráficos exibidos:
+    • KPIs no topo: Total Rebanho, Bezerros/Ano, Total Vendido, Resultado
+    • Composição do Rebanho (barras por categoria)
+    • Animais Vendidos (barras por categoria)
+    • Receita por Categoria (barras com valores R$)
+    • Fluxo de Renovação de Bois
+
+PARÂMETROS
+  Configuração de todos os parâmetros do rebanho + preços de venda.
+  Também contém os campos específicos de cada ciclo (CRIA / RECRIA / ENGORDA)
+  que aparecem apenas quando aquele ciclo está ativo.
+
+REBANHO
+  Classificação ML. O usuário informa a composição do rebanho (ou importa
+  por PDF) e clica em "Classificar". O sistema retorna:
+    • Tipo de exploração + confiança do modelo
+    • Indicadores zootécnicos (relação F/M, % matrizes, etc.)
+    • Benchmarks de desempenho por ciclo
+    • Estimativa de breakeven
+
+REPRODUÇÃO / VENDAS / FINANCEIRO
+  Abas com análises específicas de cada aspecto da fazenda.
+
+PROJEÇÃO 5 ANOS
+  Simulação de cenários futuros. O usuário escolhe entre:
+    • Crescimento  — expansão do rebanho
+    • Estável      — manutenção do rebanho atual
+    • Conservador  — contração / redução de custos
+
+  Parâmetros configuráveis na aba:
+    • Preço Arroba (R$)   — preço usado na simulação (independente do dashboard)
+    • Mortalidade (%)
+    • Custo/Cab/Ano (R$)
+    • Peso Bezerra (@)
+
+  Resultado: tabela de 5 anos com receita, custo, resultado e rebanho,
+  além do Preço de Breakeven (ponto onde resultado = 0).
+
+
+================================================================================
+SIMULAÇÃO FINANCEIRA — calcular_ano()
+================================================================================
+
+Função principal do fluxo de caixa anual. Recebe a composição do rebanho e
+retorna receita, custo e movimentação de animais para um ano.
+
+Parâmetros principais:
+  matrizes, femeas_024, machos_024, bois   — cabeças por categoria
+  nat_pct         — taxa de natalidade (ex: 0.75 = 75%)
+  desc_mat_pct    — taxa de descarte de matrizes (ex: 0.30)
+  prop_boi        — proporção boi/matriz (ex: 30 = 1 boi para 30 matrizes)
+  renov_boi_pct   — renovação anual de bois (ex: 0.20)
+  venda_bez_pct   — % de bezerras vendidas (ex: 0.30)
+  mort_pct        — mortalidade geral (ex: 0.03)
+  preco_arroba    — cotação da arroba (R$)
+  custo_cab_ano   — custo médio por cabeça/ano (R$)
+  peso_boi        — arrobas de um boi adulto (padrão: 20)
+  peso_vaca       — arrobas de uma vaca de descarte (padrão: 17)
+  peso_bezerra    — arrobas de uma bezerra (padrão: 8)
+
+Receita calculada:
+  receita = (bois_vendidos   × peso_boi    +
+             matrizes_desc   × peso_vaca   +
+             bezerras_vend   × peso_bezerra) × preco_arroba
+
+
+================================================================================
+BREAKEVEN
+================================================================================
+
+Dois métodos:
+
+1. calcular_breakeven_simples(v, ciclo)
+   Estimativa rápida baseada apenas no vetor de composição.
+   Retorna o preço de arroba ou R$/cabeça mínimo para cobrir os custos.
+
+2. Breakeven dentro de simular_cenario()
+   Usa os dados do primeiro ano da projeção para calcular um breakeven
+   ponderado pelo mix de animais vendidos:
+     peso_medio = (bois_vendidos × peso_boi + desc × peso_vaca + outros × peso_bezerro)
+                  / total_vendidos
+     unidades = total_vendidos × peso_medio
+     preco_breakeven = custo_total / unidades
+
+   Unidade do resultado:
+     CICLO_COMPLETO / RECRIA / ENGORDA → R$/arroba
+     CRIA                              → R$/cabeça
+
+
+================================================================================
+BANCO DE DADOS
+================================================================================
+
+MODO LOCAL: SQLite (banco local)
+MODO PRODUÇÃO: PostgreSQL via variável de ambiente DATABASE_URL
+
+Tabelas principais:
+  usuarios        — id, email, nome, senha_hash, plano, criado_em
+  fazendas        — id, user_id, nome, proprietario, municipio, estado
+  registros       — composição do rebanho + classificação ML + confiança
+  confirmacoes    — correções do usuário para retreino do modelo
+  cotacoes_diarias — preços da arroba (boi, vaca, boi_china, indicador) por data
+
+A senha é armazenada como hash bcrypt (werkzeug.security). Nunca em texto puro.
+
+
+================================================================================
+COTAÇÕES AUTOMÁTICAS
+================================================================================
+
+O scraper.py busca os preços da arroba bovina em scotconsultoria.com.br.
+Executa em dois momentos:
+  1. Ao ligar o servidor (startup imediato)
+  2. Todo dia às 08:00 via APScheduler
+
+Os preços são salvos em cotacoes_diarias e enviados ao frontend no carregamento
+da página. O frontend usa os valores como padrão nos campos de preço.
+
+Campos retornados: boi, vaca, boi_china, indicador (todos em R$/arroba)
+
+
+================================================================================
+AUTENTICAÇÃO
+================================================================================
+
+Sistema de login com Flask-Login + sessões persistentes.
+  • /login    → formulário de e-mail e senha
+  • /cadastro → criação de conta (nome, e-mail, senha mínima 6 caracteres)
+  • /logout   → encerra a sessão
+
+Todas as rotas principais exigem login (@login_required).
+A rota /api/confirmar é pública para permitir feedback sem login.
+
+
+================================================================================
+VALIDAÇÃO DE CAMPOS (FRONTEND)
+================================================================================
+
+Função validarCampo(el, min, max): valida um input numericamente e exibe
+mensagem de erro inline em vermelho se o valor estiver fora do intervalo.
+
+Função validarTudo(): percorre 16 campos críticos e desabilita o botão
+"Classificar" se qualquer campo visível estiver inválido.
+
+Campos validados e seus limites:
+  Natalidade (%)        1–100     Desmama (%)          1–100
+  Rend. Carcaça (%)     1–100     Mortalidade (%)       0–15
+  Descarte (%)          0–100     Venda Bezerras (%)    0–100
+  Renovação Bois (%)    0–100     Proporção Boi        1–100
+  Preço Bezerro (R$)    1–99999   Custo/Dia (R$)        1–9999
+  Custo/Cab/Mês (R$)    1–9999    Custo/Cab/Ano (R$)    1–9999
+  Dias de Engorda      30–365     Meses de Recria       1–36
+  Peso Boi (@)          8–30      Peso Vaca (@)          6–25
+
+
+================================================================================
+TESTES
+================================================================================
+
+Localização: tests/test_ml_engine.py
+Executar: pytest tests/ -v
+
+Cobertura atual (18 testes):
+  • _classificar_faixa — normal e inverso (mortalidade)
+  • avaliar_benchmarks — CRIA, ENGORDA, estrutura do retorno
+  • simular_cenario    — CRIA, ENGORDA, RECRIA, CICLO_COMPLETO
+  • calcular_breakeven_simples — CRIA, ENGORDA
+  • calcular_ano       — pesos separados por categoria, assinatura correta
+  • simular_cenario    — impacto de peso_boi/peso_vaca na receita
+
+
+================================================================================
+COMO RODAR LOCALMENTE
+================================================================================
+
+1. Instalar dependências:
+   pip install flask apscheduler xgboost scikit-learn pandas numpy
+               requests beautifulsoup4 psycopg2-binary flask-login
+
+2. Iniciar o servidor:
+   cd fluxo-de-gestao
+   python app.py
+
+3. Acessar no browser: http://localhost:5050
+
+4. Criar uma conta em /cadastro e fazer login.
+
+Observação: na primeira execução, o modelo ML é treinado do zero (pode demorar
+alguns segundos). Nas execuções seguintes, é carregado do arquivo em disco.
+
+
+================================================================================
+VARIÁVEIS DE AMBIENTE (PRODUÇÃO)
+================================================================================
+
+DATABASE_URL   — string de conexão PostgreSQL (se ausente, usa SQLite)
+SECRET_KEY     — chave secreta Flask para sessões
+
+
+================================================================================
+FIM DA DOCUMENTAÇÃO
+================================================================================
