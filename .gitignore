@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.egg-info/
+dist/
+build/
+.DS_Store
+Thumbs.db
+instance/
+*.log
+gestao_model.pkl
+gestao.db
+*.db
+*.pkl
