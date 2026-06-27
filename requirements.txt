@@ -8,9 +8,5 @@ joblib>=1.3
 flask-login>=0.6
 xgboost>=1.7
 apscheduler>=3.10
-<<<<<<< HEAD
-requests>=2.31
-=======
 requests>=2.31
 lightgbm>=3.3.0
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
