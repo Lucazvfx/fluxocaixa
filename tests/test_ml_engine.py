@@ -117,21 +117,11 @@ def test_simular_engorda_retorna_breakeven():
                              mort_pct=2, peso_entrada_kg=300, peso_saida_kg=520,
                              rendimento_carcaca=52, custo_cab_dia=12, dias_engorda=90)
     assert 'preco_breakeven' in result
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157
-    assert result['preco_breakeven_unidade'] == 'R$/arroba (ganho)'
-    # Com peso_entrada=300kg -> peso_saida=520kg (ganho real de carcaça),
-    # o breakeven deve continuar comparável ao preço de mercado.
-    assert result['preco_breakeven'] > 0
-<<<<<<< HEAD
-=======
-=======
+    # memorial §7/§12: receita sobre peso TOTAL na saída (não ganho) —
+    # breakeven em R$/arroba comparável diretamente ao preço de mercado.
     assert result['preco_breakeven_unidade'] == 'R$/arroba'
     assert result['preco_breakeven'] < result['preco_usado']  # deve ser lucrativo
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157
+    assert result['preco_breakeven'] > 0
 
 
 def test_simular_recria_retorna_breakeven():
@@ -140,15 +130,8 @@ def test_simular_recria_retorna_breakeven():
                              mort_pct=2, peso_entrada_arr=8, peso_saida_arr=14,
                              meses_recria=12, custo_cab_mes=80)
     assert 'preco_breakeven' in result
-<<<<<<< HEAD
-    assert result['preco_breakeven_unidade'] == 'R$/arroba (ganho)'
-=======
-<<<<<<< HEAD
-    assert result['preco_breakeven_unidade'] == 'R$/arroba (ganho)'
-=======
+    # memorial §6/§12: receita sobre peso TOTAL na saída (não ganho)
     assert result['preco_breakeven_unidade'] == 'R$/arroba'
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157
 
 
 def test_simular_ciclo_completo_retorna_breakeven():
@@ -179,34 +162,16 @@ def test_calcular_ano_pesos_separados():
         nat_pct=0.75, desc_mat_pct=0.30, prop_boi=30, renov_boi_pct=0.20,
         venda_bez_pct=0.30, mort_pct=0.03,
         preco_arroba=350.0, custo_cab_ano=850.0,
-<<<<<<< HEAD
         peso_boi=20.0, peso_vaca=17.0, peso_bezerra=8.0, peso_garrote=13.0,
-=======
-<<<<<<< HEAD
-        peso_boi=20.0, peso_vaca=17.0, peso_bezerra=8.0, peso_garrote=13.0,
-=======
-        peso_boi=20.0, peso_vaca=17.0, peso_bezerra=8.0,
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157
     )
     assert r['receita'] > 0
     bois_vend = r['bois_vendidos']
     desc_mat  = r['descarte_matrizes']
     bez_vend  = r['bezerras_vendidas']
     mac_vend  = r['machos_024_vendidos']
-<<<<<<< HEAD
     # Machos jovens excedentes (garrotes, mais próximos de 25m) valem mais
     # por cabeça que bezerras recém-desmamadas — pesos diferenciados.
     esperado  = (bois_vend * 20 + desc_mat * 17 + bez_vend * 8 + mac_vend * 13) * 350
-=======
-<<<<<<< HEAD
-    # Machos jovens excedentes (garrotes, mais próximos de 25m) valem mais
-    # por cabeça que bezerras recém-desmamadas — pesos diferenciados.
-    esperado  = (bois_vend * 20 + desc_mat * 17 + bez_vend * 8 + mac_vend * 13) * 350
-=======
-    esperado  = (bois_vend * 20 + desc_mat * 17 + (bez_vend + mac_vend) * 8) * 350
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157
     assert abs(r['receita'] - esperado) < 1.0
 
 
