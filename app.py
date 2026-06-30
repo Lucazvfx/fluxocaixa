@@ -16,7 +16,15 @@ import database as db
 
 from pdf_parsers import (
     extrair_texto_pdf, detectar_origem,
+<<<<<<< HEAD
     parsear_idaron, parsear_indea, parsear_declaracao_idaron, parsear_generico
+=======
+<<<<<<< HEAD
+    parsear_idaron, parsear_indea, parsear_declaracao_idaron, parsear_generico
+=======
+    parsear_idaron, parsear_indea, parsear_declaracao_idaron
+>>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
+>>>>>>> c4af594019c9ef580ae7c415f45c042723666157
 )
 
 # IMPORT NOVO: O seu ficheiro scraper.py
@@ -362,8 +370,16 @@ def api_ler_pdf():
             dados = parsear_idaron(text, pdf_path=tmp_path)
             if dados['total'] == 0:
                 dados = parsear_indea(text)
+<<<<<<< HEAD
             if dados['total'] == 0:
                 dados = parsear_generico(text)
+=======
+<<<<<<< HEAD
+            if dados['total'] == 0:
+                dados = parsear_generico(text)
+=======
+>>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
+>>>>>>> c4af594019c9ef580ae7c415f45c042723666157
         dados['origem'] = orig
         return jsonify(dados)
     except Exception as e:
@@ -397,8 +413,16 @@ def api_parse_text():
             dados = parsear_idaron(text)
             if dados['total'] == 0:
                 dados = parsear_indea(text)
+<<<<<<< HEAD
             if dados['total'] == 0:
                 dados = parsear_generico(text)
+=======
+<<<<<<< HEAD
+            if dados['total'] == 0:
+                dados = parsear_generico(text)
+=======
+>>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
+>>>>>>> c4af594019c9ef580ae7c415f45c042723666157
         dados['origem'] = orig
         return jsonify(dados)
     except Exception as e:
@@ -505,7 +529,15 @@ def parsear_indea(text: str) -> dict:
         up = line.upper()
         if 'BOVINO' not in up:
             continue
+<<<<<<< HEAD
         m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+=======
+<<<<<<< HEAD
+        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+=======
+        m_qtd = re.search(r'(\d{2,6})\s*$', line.strip())
+>>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
+>>>>>>> c4af594019c9ef580ae7c415f45c042723666157
         if not m_qtd:
             continue
         qtd = int(m_qtd.group(1))
@@ -706,7 +738,15 @@ def _parse_idaron_linhas(text: str) -> dict:
         up = line.upper()
         if 'BOVINO' not in up:
             continue
+<<<<<<< HEAD
         m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+=======
+<<<<<<< HEAD
+        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+=======
+        m_qtd = re.search(r'(\d{2,6})\s*$', line.strip())
+>>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
+>>>>>>> c4af594019c9ef580ae7c415f45c042723666157
         if not m_qtd:
             continue
         qtd = int(m_qtd.group(1))
@@ -746,7 +786,15 @@ def _parse_idaron_linhas(text: str) -> dict:
         up = line.upper()
         if 'BOVINO' not in up:
             continue
+<<<<<<< HEAD
         m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+=======
+<<<<<<< HEAD
+        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+=======
+        m_qtd = re.search(r'(\d{2,6})\s*$', line.strip())
+>>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
+>>>>>>> c4af594019c9ef580ae7c415f45c042723666157
         if not m_qtd:
             continue
         qtd = int(m_qtd.group(1))
