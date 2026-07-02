@@ -1047,6 +1047,24 @@ BENCHMARKS_RO = {
         'inverso': False,
         'ciclos': ['ENGORDA', 'CICLO_COMPLETO'],
     },
+    'desfrute': {
+        'label': 'Desfrute do Rebanho',
+        'unidade': '%',
+        # Fonte: material GEP Araguaia — Parâmetros Técnicos por Modalidade
+        # Pecuária ("Desfrute Médio" por modalidade). Cada faixa usa o
+        # intervalo típico da modalidade como referência abaixo/médio/bom;
+        # valores acima do teto são tratados como excelente (giro muito
+        # acima da média, o que também pode sinalizar descapitalização
+        # se não for uma opção deliberada de giro rápido).
+        # Desfrute = Total vendido no ano / Rebanho total × 100
+        'faixas_por_ciclo': {
+            'CRIA':            {'abaixo': 18.0, 'medio': 24.0, 'bom': 30.0},
+            'RECRIA':          {'abaixo': 35.0, 'medio': 45.0, 'bom': 55.0},
+            'ENGORDA':         {'abaixo': 80.0, 'medio': 100.0, 'bom': 120.0},
+            'CICLO_COMPLETO':  {'abaixo': 20.0, 'medio': 30.0, 'bom': 40.0},
+        },
+        'inverso': False,
+    },
 }
 
 def _classificar_faixa(valor: float, faixas: dict, inverso: bool = False) -> tuple:
@@ -1073,13 +1091,17 @@ def _classificar_faixa(valor: float, faixas: dict, inverso: bool = False) -> tup
 def avaliar_benchmarks(ciclo: str, indicadores: dict) -> list:
     resultado = []
     for key, cfg in BENCHMARKS_RO.items():
-        if ciclo not in cfg['ciclos']:
+        ciclos_validos = cfg.get('ciclos') or list(cfg.get('faixas_por_ciclo', {}).keys())
+        if ciclo not in ciclos_validos:
             continue
         valor = indicadores.get(key)
         if valor is None:
             continue
+        faixas = cfg.get('faixas') or cfg.get('faixas_por_ciclo', {}).get(ciclo)
+        if not faixas:
+            continue
         faixa, proximo, falta = _classificar_faixa(
-            float(valor), cfg['faixas'], cfg.get('inverso', False)
+            float(valor), faixas, cfg.get('inverso', False)
         )
         resultado.append({
             'key': key,
@@ -1091,6 +1113,69 @@ def avaliar_benchmarks(ciclo: str, indicadores: dict) -> list:
             'falta': falta,
         })
     return resultado
+
+# Defaults regionais (Rondônia, médias) usados quando o usuário não informa
+# o indicador manualmente. Não incluem 'desfrute' de propósito: a faixa
+# típica varia demais entre modalidades (18% na CRIA a 120% na ENGORDA) e
+# um valor sintético aqui distorceria a leitura — só entra se o usuário
+# informar 'desfrute_pct' (memorial: mesma lógica do §14, evitar default
+# que mascare a ausência de dado real).
+_DEFAULTS_BENCHMARK = {
+    'mortalidade':    5.0,
+    'desmama':        72.0,
+    'rend_carcaca':   52.0,
+    'ganho_peso_arr': 0.55,
+    'natalidade':     75.0,
+}
+
+
+def _to_float_ou_default(valor, default: float) -> float:
+    if valor is None:
+        return default
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return default
+
+
+def extrair_indicadores_benchmark(v: list, data: dict) -> dict:
+    """
+    Monta o dicionário de indicadores usado por avaliar_benchmarks(),
+    combinando o que o usuário informou (campos opcionais no payload de
+    /api/classificar) com defaults regionais e com indicadores derivados
+    diretamente do rebanho (pct_matrizes, relacao_fm).
+
+    Campos aceitos no payload (todos opcionais, aceitam string numérica):
+      taxa_natalidade    -> natalidade (%)     [já usado em classificar()]
+      mortalidade_pct    -> mortalidade (%)
+      desmama_pct        -> desmama (%)
+      rend_carcaca_pct   -> rend_carcaca (%)
+      ganho_peso_kg_dia  -> ganho_peso_arr
+      desfrute_pct       -> desfrute (%) — sem default, ver nota acima
+    """
+    ind = calcular_indicadores(v)
+
+    taxa_natalidade = data.get('taxa_natalidade')
+    if taxa_natalidade is not None:
+        natalidade = _to_float_ou_default(taxa_natalidade, 0.75) * 100
+    else:
+        natalidade = _DEFAULTS_BENCHMARK['natalidade']
+
+    resultado = {
+        'natalidade':     round(natalidade, 2),
+        'mortalidade':    _to_float_ou_default(data.get('mortalidade_pct'),  _DEFAULTS_BENCHMARK['mortalidade']),
+        'desmama':        _to_float_ou_default(data.get('desmama_pct'),      _DEFAULTS_BENCHMARK['desmama']),
+        'rend_carcaca':   _to_float_ou_default(data.get('rend_carcaca_pct'), _DEFAULTS_BENCHMARK['rend_carcaca']),
+        'ganho_peso_arr': _to_float_ou_default(data.get('ganho_peso_kg_dia'), _DEFAULTS_BENCHMARK['ganho_peso_arr']),
+        'pct_matrizes':   ind['pct_matrizes'],
+        'relacao_fm':     ind['ratio_fm'],
+    }
+    if data.get('desfrute_pct') is not None:
+        desfrute = _to_float_ou_default(data.get('desfrute_pct'), None)
+        if desfrute is not None:
+            resultado['desfrute'] = desfrute
+    return resultado
+
 
 def calcular_breakeven_simples(v: list, ciclo: str) -> dict:
     """

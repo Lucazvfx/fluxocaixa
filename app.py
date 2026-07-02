@@ -15,7 +15,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from ml_engine import (
     treinar_modelo, classificar, calcular_indicadores,
-    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS
+    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS,
+    avaliar_benchmarks, extrair_indicadores_benchmark, calcular_breakeven_simples,
 )
 import database as db
 
@@ -233,6 +234,14 @@ def api_classificar():
     result = classificar(v, **kwargs)
     ind    = calcular_indicadores(v)
 
+    # Indicadores comparáveis a benchmarks regionais (GEP Araguaia / Rondônia):
+    # usa o que o usuário informou (mortalidade_pct, desmama_pct,
+    # rend_carcaca_pct, ganho_peso_kg_dia, desfrute_pct) e completa o
+    # resto com defaults regionais ou com o que já foi calculado do rebanho.
+    ind_bench  = extrair_indicadores_benchmark(v, data)
+    benchmarks = avaliar_benchmarks(result['tipo'], ind_bench)
+    breakeven  = calcular_breakeven_simples(v, result['tipo'])
+
     # Salvar automaticamente no BD para futuros retreinamentos
     fazenda   = data.get('fazenda', '')
     municipio = data.get('municipio', '')
@@ -246,7 +255,15 @@ def api_classificar():
         nat_pct=nat_pct,
     )
 
-    return jsonify({**result, 'indicadores': ind, 'valores': v, 'registro_id': registro_id})
+    return jsonify({
+        **result,
+        'indicadores': ind,
+        'indicadores_benchmark': ind_bench,
+        'benchmarks': benchmarks,
+        'breakeven_simples': breakeven,
+        'valores': v,
+        'registro_id': registro_id,
+    })
 
 @app.route('/api/confirmar', methods=['POST'])
 @login_required

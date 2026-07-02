@@ -306,6 +306,16 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
               <div class="field"><label>Bois Vendidos (cab.)</label><input type="number" id="c-boisv" placeholder="Automático" min="0" oninput="upd()"></div>
               <div class="field"><label>Bezerros Vendidos (cab.)</label><input type="number" id="c-bezv" placeholder="Automático" min="0" oninput="upd()"></div>
             </div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--b)">
+              <div style="font-size:.65rem;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Indicadores para Benchmark Regional (RO) <span style="opacity:.6">— opcional, sem dado usa média regional</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:14px">
+                <div class="field"><label>Mortalidade (%)</label><input type="number" id="c-mort" placeholder="5" min="0" max="100" step="0.1"></div>
+                <div class="field"><label>Desmama (%)</label><input type="number" id="c-desm" placeholder="72" min="0" max="100" step="0.1"></div>
+                <div class="field"><label>Rend. Carcaça (%)</label><input type="number" id="c-rc" placeholder="52" min="0" max="100" step="0.1"></div>
+                <div class="field"><label>Ganho Peso (@/mês)</label><input type="number" id="c-gp" placeholder="0.55" min="0" step="0.01"></div>
+                <div class="field"><label>Desfrute (%)</label><input type="number" id="c-desf" placeholder="Sem default" min="0" step="0.1"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -626,6 +636,16 @@ async function classificar(){
     if(natV!=='') body.taxa_natalidade=parseFloat(natV)/100;
     if(boisvV!=='') body.bois_vendidos=parseFloat(boisvV);
     if(bezvV!=='') body.bezerros_vendidos=parseFloat(bezvV);
+    const mortV=document.getElementById('c-mort').value;
+    const desmV=document.getElementById('c-desm').value;
+    const rcV=document.getElementById('c-rc').value;
+    const gpV=document.getElementById('c-gp').value;
+    const desfV=document.getElementById('c-desf').value;
+    if(mortV!=='') body.mortalidade_pct=parseFloat(mortV);
+    if(desmV!=='') body.desmama_pct=parseFloat(desmV);
+    if(rcV!=='') body.rend_carcaca_pct=parseFloat(rcV);
+    if(gpV!=='') body.ganho_peso_kg_dia=parseFloat(gpV);
+    if(desfV!=='') body.desfrute_pct=parseFloat(desfV);
     const res=await fetch('/api/classificar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     if(data.erro){showToast(data.erro,true);return}
@@ -866,6 +886,14 @@ function renderResult(data){
       <div class="sc2"><div class="sc2-l">Adultos 25m+</div><div class="sc2-v cp">${fN(ind.adultos)}</div></div>
     </div>
 
+    <div class="card" style="margin-bottom:24px">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Benchmarks Regionais (Rondônia)</div></div>
+      <div class="cb">
+        ${data.breakeven_simples&&data.breakeven_simples.preco_breakeven?mr('Preço Mínimo (Breakeven)',`${fR(data.breakeven_simples.preco_breakeven)} <span style="opacity:.6;font-size:.62rem">${data.breakeven_simples.unidade}</span>`,'a'):''}
+        ${benchRows(data.benchmarks)}
+      </div>
+    </div>
+
     <div class="g2">
       <div class="card">
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Pirâmide Etária</div></div>
@@ -934,6 +962,15 @@ function renderResult(data){
 }
 
 function mr(k,v,c){return`<div class="mrow"><span class="mk">${k}</span><span class="mv ${c}">${v}</span></div>`}
+const BENCH_COR={excelente:'g',bom:'g',medio:'a',abaixo:'r'};
+function benchRows(list){
+  if(!list||!list.length) return '<div class="mrow"><span class="mk" style="opacity:.55">Nenhum indicador informado — preencha em "⚙ Condições de Classificação" pra comparar com a média de Rondônia.</span></div>';
+  return list.map(b=>{
+    const c=BENCH_COR[b.faixa]||'c';
+    const prox=b.proximo_nivel?` <span style="opacity:.5;font-size:.62rem">(faltam ${b.falta}${b.unidade} p/ ${b.proximo_nivel.toUpperCase()})</span>`:'';
+    return mr(b.label, `${b.valor}${b.unidade} · ${b.faixa.toUpperCase()}${prox}`, c);
+  }).join('');
+}
 
 // ================== RECOMENDAÇÕES ==================
 function getRecs(tipo,ind){

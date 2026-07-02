@@ -92,6 +92,23 @@ Cada indicador é classificado em: ABAIXO / MÉDIO / BOM / EXCELENTE
     Excelente >= 54%
 
 
+  DESFRUTE DO REBANHO (todos os ciclos — faixa varia por modalidade)
+    Fonte: material GEP Araguaia, tabela "Parâmetros Técnicos por
+    Modalidade Pecuária" (Desfrute Médio).
+    Desfrute (%) = Total vendido no ano / Rebanho total × 100
+    As faixas abaixo/médio/bom usam o intervalo típico da própria
+    modalidade como referência; acima do teto é tratado como excelente.
+
+    CRIA             Abaixo <18%   Médio 18–24%   Bom 24–30%   Excelente >=30%
+    RECRIA           Abaixo <35%   Médio 35–45%   Bom 45–55%   Excelente >=55%
+    ENGORDA          Abaixo <80%   Médio 80–100%  Bom 100–120% Excelente >=120%
+    CICLO_COMPLETO   Abaixo <20%   Médio 20–30%   Bom 30–40%   Excelente >=40%
+
+    Sem valor padrão: só é avaliado se o usuário informar 'desfrute_pct'
+    no payload (a faixa muda demais entre modalidades pra ter um default
+    regional único sem distorcer a leitura).
+
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 4. MODIFICADORES DE CENÁRIO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -469,5 +486,29 @@ EXEMPLO 3 — BENCHMARK (classificação de indicador)
   Rendimento de carcaça      52%
   Dias de confinamento        90 dias
   Horizonte de simulação      5 anos
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+17. /api/classificar — CAMPOS OPCIONAIS DE BENCHMARK (novo)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Além de 'valores' e 'taxa_natalidade', o payload aceita (todos
+opcionais, aceitam string numérica):
+
+  mortalidade_pct     (default 5.0)
+  desmama_pct         (default 72.0)
+  rend_carcaca_pct    (default 52.0)
+  ganho_peso_kg_dia   (default 0.55)
+  desfrute_pct        (sem default — só entra se informado)
+
+String inválida cai no default do respectivo campo.
+
+RESPOSTA agora inclui:
+  indicadores_benchmark  → valores usados (informados + defaults +
+                            pct_matrizes/relacao_fm calculados do rebanho)
+  benchmarks              → avaliar_benchmarks(tipo_classificado, ...)
+  breakeven_simples       → calcular_breakeven_simples(v, tipo_classificado)
+
+Função responsável: extrair_indicadores_benchmark() em ml_engine.py.
 
 ================================================================
