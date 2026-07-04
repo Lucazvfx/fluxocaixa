@@ -52,3 +52,31 @@ def avaliar_capacidade_pagamento(
             'servico_divida_anual': round(servico_anual, 2),
             'geracao_caixa_anual': round(geracao_caixa_anual, 2),
             'recomendacao': rec, 'faixa': rec, 'justificativa': just}
+
+
+def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
+                   consistencia, financeiro, geracao_caixa_anual, credito) -> dict:
+    conclusao = avaliar_capacidade_pagamento(
+        geracao_caixa_anual=geracao_caixa_anual,
+        credito_valor=float(credito.get('credito_valor') or 0),
+        prazo_meses=int(credito.get('prazo_meses') or 0),
+        juros_aa=float(credito.get('juros_aa') or 0),
+        carencia_meses=int(credito.get('carencia_meses') or 0),
+        dividas_mensais=float(credito.get('dividas_mensais') or 0))
+
+    erros = (consistencia or {}).get('resumo', {}).get('erros', 0)
+    if erros and conclusao['recomendacao'] == 'aprovar':
+        conclusao = dict(conclusao, recomendacao='ressalva',
+                         justificativa=conclusao['justificativa']
+                         + f' Rebaixado: {erros} erro(s) de consistência no rebanho declarado invalidam a projeção.')
+
+    return {
+        'secoes': ['identificacao', 'composicao', 'indicadores',
+                   'consistencia', 'financeiro', 'conclusao'],
+        'identificacao': identificacao,
+        'composicao': composicao,
+        'indicadores': {'valores': indicadores, 'benchmarks': benchmarks},
+        'consistencia': consistencia,
+        'financeiro': financeiro,
+        'conclusao': conclusao,
+    }

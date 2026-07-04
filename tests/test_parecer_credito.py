@@ -38,3 +38,30 @@ def test_geracao_negativa_nega():
 def test_sem_credito_sem_conclusao():
     r = avaliar_capacidade_pagamento(120000, 0, 12, 0.10)
     assert r['dscr'] is None and r['recomendacao'] is None
+
+
+def test_montar_parecer_ordena_e_conclui():
+    from services.parecer_credito import montar_parecer
+    p = montar_parecer(
+        identificacao={'fazenda': 'X', 'proprietario': 'Y'},
+        composicao={'total': 200}, indicadores={}, benchmarks=[],
+        consistencia={'score_consistencia': 90, 'flags': [], 'resumo': {'erros': 0}},
+        financeiro={'preco_breakeven': 50},
+        geracao_caixa_anual=200000,
+        credito={'credito_valor': 100000, 'prazo_meses': 24,
+                 'juros_aa': 0.10, 'carencia_meses': 0, 'dividas_mensais': 0})
+    assert p['conclusao']['recomendacao'] == 'aprovar'
+    assert list(p['secoes']) == ['identificacao', 'composicao', 'indicadores',
+                                 'consistencia', 'financeiro', 'conclusao']
+
+
+def test_erro_consistencia_rebaixa_para_ressalva():
+    from services.parecer_credito import montar_parecer
+    p = montar_parecer(
+        identificacao={}, composicao={}, indicadores={}, benchmarks=[],
+        consistencia={'score_consistencia': 40, 'flags': [], 'resumo': {'erros': 2}},
+        financeiro={}, geracao_caixa_anual=500000,
+        credito={'credito_valor': 100000, 'prazo_meses': 24,
+                 'juros_aa': 0.10, 'carencia_meses': 0, 'dividas_mensais': 0})
+    assert p['conclusao']['recomendacao'] == 'ressalva'
+    assert 'consistência' in p['conclusao']['justificativa'].lower()
