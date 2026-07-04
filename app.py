@@ -520,7 +520,7 @@ def api_cenario():
         'mort_pct':      float(data.get('mort', 3)),
         'desc_pct':      float(data.get('desc', 30)),
         'preco_arroba':  float(data.get('preco', 320)),
-        'custo_cab_ano': float(data.get('custo', 850)),
+        'custo_arroba':  float(data.get('custo', 57)),
         'peso_arroba':   float(data.get('peso', 16)),
         'prop_boi':      float(data.get('propboi', 30)),
         'renov_boi_pct': float(data.get('renovboi', 20)),

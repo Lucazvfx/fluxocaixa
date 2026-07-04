@@ -51,3 +51,16 @@ def test_simular_engorda_custo_arroba_prorata():
         rendimento_carcaca=54, custo_arroba=57, dias_engorda=120, anos=1)
     ano1 = r['anos'][0]
     assert ano1['custo'] > 0  # sanidade: custo em @ pró-rata calculado
+
+
+def test_simular_cenario_aceita_custo_arroba():
+    from ml_engine import simular_cenario
+    r = simular_cenario([10,10, 8,8, 6,6, 30,2, 40,3], 'conservador',
+                        preco_arroba=320, custo_arroba=57)
+    assert 'anos' in r and r['anos'][0]['custo'] > 0
+
+
+def test_breakeven_simples_em_arroba():
+    from ml_engine import calcular_breakeven_simples
+    r = calcular_breakeven_simples([10,10, 8,8, 6,6, 30,2, 40,3], 'CRIA')
+    assert r['preco_breakeven'] > 0
