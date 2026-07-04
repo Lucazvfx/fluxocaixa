@@ -2,9 +2,10 @@
 
 **Data:** 2026-07-04
 **Bloco:** 1 de N (rumo "usável em consultoria")
-**Escopo deste spec:** consolidar a análise numa entrega de parecer e adicionar a
-conclusão de crédito (capacidade de pagamento). **Fora de escopo:** PDF exportável
-e multiempresa (blocos seguintes).
+**Escopo deste spec:** (a) padronizar todos os preços/custos em R$/@; (b)
+consolidar a análise numa entrega de parecer; (c) adicionar a conclusão de crédito
+(capacidade de pagamento). **Fora de escopo:** PDF exportável e multiempresa
+(blocos seguintes).
 
 ## Contexto e motivação
 
@@ -33,6 +34,41 @@ tomador. Hoje:
   devolve `score_consistencia` (0–100), `resumo` e `flags` com severidade.
 
 ## Componentes
+
+### 0. Padronização de preços em R$/@ (pré-requisito)
+
+Hoje a **receita** já é 100% em arroba (`calcular_ano`, `ml_engine.py:571`):
+`receita = (Σ cabeças_vendidas × peso_@) × preco_arroba`. O **único ponto em
+R$/cabeça é o custo** (`custo_tot = total_prox × custo_cab_ano`), replicado nas
+simulações de cria/recria/engorda.
+
+**Mudança (Opção A — custo simétrico à receita):** o custo passa a ser
+`custo_arroba` (R$/@) e o total vira o peso do rebanho em @ vezes esse custo:
+
+```
+custo_tot = (Σ cabeças_da_categoria × peso_@_categoria) × custo_arroba
+```
+
+- Reusa os pesos por categoria já existentes para valorar também o **plantel
+  parado**: matrizes → `peso_vaca`, bois → `peso_boi`, jovens fêmeas/machos →
+  `peso_bezerra`/`peso_garrote`. Onde a simulação usa faixas próprias (recria/
+  engorda com `peso_entrada_arr`/`peso_saida_arr`), usar o peso médio da fase.
+- **Semântica preservada:** continua sendo "custo de carregar o rebanho", só a
+  base muda de cabeça para arroba.
+
+**Alcance da mudança:**
+- `ml_engine.py`: `calcular_ano`, `_simular_cria`, `_simular_recria`,
+  `_simular_engorda` e `calcular_breakeven_simples` trocam `custo_cab_ano`/
+  `custo_cab_mes` por `custo_arroba`; o custo passa a multiplicar arrobas, não
+  cabeças. `preco_bezerro` (R$/cabeça) também passa a R$/@ × peso do bezerro.
+- `app.py`: defaults e leitura dos params (`/api/classificar` linha ~522,
+  `/api/cenario`) passam a `custo_arroba`.
+- `templates/index.html`: rótulos e campos de custo/preço passam a "R$/@".
+
+**Sem back-compat:** trocamos o campo direto (o app não tem consumidores externos
+versionados). O default de `custo_arroba` é um **valor de formulário** (não é
+benchmark) escolhido para aproximar o comportamento anterior; documentado como
+default ajustável, não como número com fonte.
 
 ### 1. Novas entradas — grupo "Solicitação de Crédito" (UI)
 
@@ -177,6 +213,13 @@ resposta JSON { ..., consistencia, parecer }
 
 ## Testes
 
+`tests/test_custo_arroba.py` (padronização em @):
+- `calcular_ano` com `custo_arroba`: custo total = peso do rebanho em @ × custo/@;
+  bater o número num caso montado à mão.
+- Regressão: com custo/@ equivalente ao antigo custo/cabeça, o `resultado` fica na
+  mesma ordem de grandeza (sanidade da migração).
+- Breakeven continua em R$/@ e coerente com a nova base de custo.
+
 `tests/test_parecer_credito.py`:
 - Price: parcela correta para juros > 0 e para juros = 0.
 - DSCR e faixa: um caso **aprovar** (DSCR ≥ 1,3), um **ressalva** (1,0–1,3), um
@@ -187,6 +230,8 @@ resposta JSON { ..., consistencia, parecer }
 
 ## Critérios de sucesso
 
+- Todos os preços/custos da UI e do motor estão em **R$/@**; não sobra nenhum
+  campo em R$/cabeça.
 - A partir de uma composição + solicitação de crédito, o app produz um **parecer
   consolidado** com recomendação justificada de crédito.
 - A consistência do rebanho passa a aparecer no fluxo principal, não só no PDF.
