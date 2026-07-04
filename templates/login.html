@@ -28,6 +28,9 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
+        {% if erro %}
+          <div class="flash">{{ erro }}</div>
+        {% endif %}
                 <form method="POST">
                     <!-- CSRF token not injected: app does not require Flask-WTF by default -->
             <div class="form-group">
