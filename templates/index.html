@@ -282,6 +282,9 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <button class="btn-sm" onclick="fillEx('engorda')">Engorda</button>
         <button class="btn-sm" onclick="document.getElementById('insr-pdf-inp').click()">📂 Ler PDF(s)</button>
         <input type="file" id="insr-pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDFsInserir(this.files);this.value=''">
+        <button class="btn-sm" onclick="window.location='/api/template/download'">⬇ Template</button>
+        <button class="btn-sm" onclick="document.getElementById('insr-xlsx-inp').click()">📊 Ler Planilha</button>
+        <input type="file" id="insr-xlsx-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerPlanilha(this.files[0]);this.value=''">
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
       </div>
     </div>
@@ -298,6 +301,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="tsc"><div class="tsc-l">Cria 0–12m</div><div class="tsc-v cc" id="t-c">0</div></div>
           <div class="tsc"><div class="tsc-l">Recria 13–24m</div><div class="tsc-v ca" id="t-r">0</div></div>
         </div>
+        <div id="consist-panel" style="display:none;margin-top:16px"></div>
         <div style="margin-top:14px">
           <button class="btn-sm" onclick="toggleConds()" id="btn-conds" style="width:100%;justify-content:center">⚙ Condições de Classificação <span style="font-size:.65rem;opacity:.6">(opcional)</span></button>
           <div id="conds-wrap" style="display:none;margin-top:12px">
@@ -314,6 +318,13 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
                 <div class="field"><label>Rend. Carcaça (%)</label><input type="number" id="c-rc" placeholder="52" min="0" max="100" step="0.1"></div>
                 <div class="field"><label>Ganho Peso (@/mês)</label><input type="number" id="c-gp" placeholder="0.55" min="0" step="0.01"></div>
                 <div class="field"><label>Desfrute (%)</label><input type="number" id="c-desf" placeholder="Sem default" min="0" step="0.1"></div>
+              </div>
+            </div>
+            <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--b)">
+              <div style="font-size:.65rem;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Benchmark Nacional Multi-Fonte <span style="opacity:.6">— opcional, compara com Embrapa/Scot/CEPEA/ABCZ/ASBIA e Inttegra</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+                <div class="field"><label>Prenhez (%)</label><input type="number" id="c-prenh" placeholder="Ex: 72" min="0" max="100" step="0.1"></div>
+                <div class="field"><label>Desembolso (R$/cab·mês)</label><input type="number" id="c-desemb" placeholder="Ex: 95" min="0" step="0.01"></div>
               </div>
             </div>
           </div>
@@ -620,7 +631,7 @@ const EX={
   indea: {v:[300,280,563,187,1105,1344,298,80,593,39],faz:'FAZENDA N KARA I/II',mun:'JUARA - MT',prop:'NEWTON KARA JOSE'},
 };
 function fillEx(t){const e=EX[t];FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=e.v[i*2];document.getElementById(f.key+'_M').value=e.v[i*2+1]});document.getElementById('f_faz').value=e.faz;document.getElementById('f_mun').value=e.mun;document.getElementById('f_prop').value=e.prop;upd()}
-function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value=0;document.getElementById(f.key+'_M').value=0});upd()}
+function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value=0;document.getElementById(f.key+'_M').value=0});upd();renderConsistencia(null)}
 
 // ================== CLASSIFICAR ==================
 let lastRegistroId=null;
@@ -646,6 +657,10 @@ async function classificar(){
     if(rcV!=='') body.rend_carcaca_pct=parseFloat(rcV);
     if(gpV!=='') body.ganho_peso_kg_dia=parseFloat(gpV);
     if(desfV!=='') body.desfrute_pct=parseFloat(desfV);
+    const prenhV=document.getElementById('c-prenh').value;
+    const desembV=document.getElementById('c-desemb').value;
+    if(prenhV!=='') body.taxa_prenhez_pct=parseFloat(prenhV);
+    if(desembV!=='') body.desembolso_cab_mes=parseFloat(desembV);
     const res=await fetch('/api/classificar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     if(data.erro){showToast(data.erro,true);return}
@@ -709,6 +724,50 @@ async function lerPDFsInserir(fileList){
     const okMsg=fazendas.length>1 ? `${fazendas.length} PDFs combinados (${fN(totalGeral)} animais no total)` : `PDF carregado: ${fazendas[0]} (${fN(totalGeral)} animais)`;
     showToast(falhas?`${okMsg} · ${falhas} arquivo(s) falharam`:okMsg);
   }finally{hideLoading()}
+}
+
+// ================== PLANILHA (TEMPLATE PADRÃO) ==================
+async function lerPlanilha(file){
+  if(!file) return;
+  showLoading('Lendo planilha...');
+  try{
+    const fd=new FormData(); fd.append('planilha',file);
+    const res=await fetch('/api/ler-planilha',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler planilha',true); return; }
+    const v=data.valores||[];
+    FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=v[i*2]||0;document.getElementById(f.key+'_M').value=v[i*2+1]||0});
+    if(data.fazenda) document.getElementById('f_faz').value=data.fazenda;
+    if(data.uf) document.getElementById('f_mun').value=data.uf;
+    upd();
+    renderConsistencia(data.consistencia);
+    showToast(`Planilha lida: ${fN(data.total)} animais`);
+  }catch(e){ showToast('Erro ao processar planilha: '+e.message,true); }
+  finally{ hideLoading(); }
+}
+
+function renderConsistencia(c){
+  const el=document.getElementById('consist-panel');
+  if(!el) return;
+  if(!c){ el.style.display='none'; el.innerHTML=''; return; }
+  const cor = c.score_consistencia>=85?'#4ADE80':(c.score_consistencia>=60?'#FBBF24':'#F87171');
+  const SEV={erro:{c:'#F87171',i:'✕'},alerta:{c:'#FBBF24',i:'!'},ok:{c:'#4ADE80',i:'✓'}};
+  const flags=(c.flags||[]).map(f=>{
+    const s=SEV[f.severidade]||SEV.ok;
+    return `<div style="display:flex;gap:10px;padding:10px 12px;border-left:3px solid ${s.c};background:var(--c2);border-radius:8px;margin-bottom:6px">
+      <div style="color:${s.c};font-weight:800;flex-shrink:0">${s.i}</div>
+      <div><div style="font-weight:700;font-size:.8rem">${f.titulo}</div>
+      <div style="font-size:.72rem;color:var(--mu);margin-top:2px">${f.mensagem||''}</div></div></div>`;
+  }).join('');
+  el.innerHTML=`<div class="card" style="padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-family:var(--fn);font-weight:800;letter-spacing:1px;text-transform:uppercase;font-size:.78rem">Consistência do Rebanho</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:.7rem;color:var(--mu)">${c.resumo.erros} erro(s) · ${c.resumo.alertas} alerta(s)</span>
+        <span style="font-family:var(--fn);font-weight:800;font-size:1.4rem;color:${cor}">${c.score_consistencia}</span>
+      </div>
+    </div>${flags}</div>`;
+  el.style.display='block';
 }
 
 // ================== PDF (ÁREA DE UPLOAD) ==================
@@ -894,6 +953,11 @@ function renderResult(data){
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:24px">
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Benchmarks Nacionais · Multi-Fonte</div></div>
+      <div class="cb">${benchNacional(data.benchmarks_nacionais)}</div>
+    </div>
+
     <div class="g2">
       <div class="card">
         <div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Pirâmide Etária</div></div>
@@ -970,6 +1034,44 @@ function benchRows(list){
     const prox=b.proximo_nivel?` <span style="opacity:.5;font-size:.62rem">(faltam ${b.falta}${b.unidade} p/ ${b.proximo_nivel.toUpperCase()})</span>`:'';
     return mr(b.label, `${b.valor}${b.unidade} · ${b.faixa.toUpperCase()}${prox}`, c);
   }).join('');
+}
+
+// Painel de benchmarks NACIONAIS (multi-fonte + financeiro) — dados reais
+// (Embrapa/Scot/CEPEA/ABCZ/ASBIA e Inttegra 2025).
+const POS_COR={dentro:'#4ADE80',acima:'#22D3EE',abaixo:'#FBBF24'};
+const NIVEL_COR={excelente:'#4ADE80',bom:'#FBBF24',atencao:'#F87171'};
+const IND_NOME={prenhez:'Taxa de Prenhez',natalidade:'Taxa de Natalidade'};
+function benchNacional(bn){
+  if(!bn) return '';
+  let html='';
+  (bn.multifonte||[]).forEach(m=>{
+    const chips=m.fontes.map(f=>{
+      const cor=POS_COR[f.posicao]||'#8891A5';
+      return `<span style="display:inline-flex;gap:5px;align-items:center;font-family:var(--fm);font-size:.6rem;padding:3px 9px;border-radius:20px;border:1px solid ${cor}55;color:${cor};background:${cor}12">${f.fonte} ${f.faixa[0]}–${f.faixa[1]}% · ${f.posicao}</span>`;
+    }).join(' ');
+    const dentro=m.fontes.filter(f=>f.posicao==='dentro').length;
+    html+=`<div style="padding:12px 0;border-bottom:1px solid var(--b)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <span style="font-weight:700;font-size:.82rem">${IND_NOME[m.indicador]||m.indicador}: <span style="color:var(--g)">${m.valor}%</span></span>
+        <span style="font-family:var(--fm);font-size:.62rem;color:var(--mu)">dentro de ${dentro}/${m.fontes.length} fontes</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div></div>`;
+  });
+  if(bn.desfrute){
+    const d=bn.desfrute,cor=POS_COR[d.posicao]||'#8891A5';
+    html+=mr('Desfrute · '+d.modalidade, `${d.valor}% · esperado ${d.faixa[0]}–${d.faixa[1]}% · <span style="color:${cor}">${d.posicao}</span>`,'c');
+  }
+  if(bn.desembolso){
+    const d=bn.desembolso,cor=NIVEL_COR[d.nivel]||'#8891A5';
+    html+=`<div style="margin-top:12px;padding:12px;border-radius:8px;border:1px solid ${cor}44;background:${cor}0e">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span style="font-weight:700;font-size:.82rem">Desembolso ${fR(d.valor)}/cab·mês</span>
+        <span style="font-family:var(--fn);font-weight:800;text-transform:uppercase;font-size:.74rem;color:${cor}">${d.nivel}</span>
+      </div>
+      <div style="font-family:var(--fm);font-size:.64rem;color:var(--mu);margin-top:6px">Média nacional ${fR(d.media)} · Top Rentáveis ${fR(d.top)} · ${d.fonte}</div></div>`;
+  }
+  if(!html) html='<div class="mrow"><span class="mk" style="opacity:.55">Informe prenhez, natalidade, desfrute ou desembolso em "⚙ Condições de Classificação" para o comparativo nacional.</span></div>';
+  return html;
 }
 
 // ================== RECOMENDAÇÕES ==================

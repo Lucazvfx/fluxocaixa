@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157
 venv/
 __pycache__/
 *.pyc
@@ -19,15 +15,3 @@ gestao_model.pkl
 gestao.db
 *.db
 *.pkl
-<<<<<<< HEAD
-=======
-=======
-
-git add .echo __pycache__/ > .gitignore
-echo *.pyc >> .gitignore
-echo gestao_model.pkl >> .gitignore
-echo dataset_sintetico_bovino.csv >> .gitignore
-echo gestao.db >> .gitignore
-echo .env >> .gitignore
->>>>>>> 9318087e3b7d51b4e5932d3828f104eac2b4f9f5
->>>>>>> c4af594019c9ef580ae7c415f45c042723666157

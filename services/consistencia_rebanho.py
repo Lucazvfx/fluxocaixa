@@ -1,0 +1,221 @@
+"""Detecção de inconsistências no rebanho declarado (análise de crédito).
+
+Recebe o vetor de composição do rebanho por faixa etária/sexo (o mesmo padrão
+da Ficha de Rebanho estadual e do template `modelo_composicao_rebanho.xlsx`) e
+verifica se a composição é biologicamente/tecnicamente plausível, sinalizando
+as divergências que um analista de crédito procura antes de aprovar o crédito.
+
+Ordem do vetor (10 posições), idêntica a `ml_engine.classificar`:
+    0 f00_F  1 f00_M   (0–4 meses)
+    2 f05_F  3 f05_M   (5–12 meses)
+    4 f13_F  5 f13_M   (13–24 meses)
+    6 f25_F  7 f25_M   (25–36 meses)
+    8 fac_F  9 fac_M   (acima de 36 meses)
+
+Convenções: matrizes = f25_F + fac_F; touros = fac_M; bezerros = f00_F + f00_M.
+"""
+from __future__ import annotations
+
+ERRO = "erro"
+ALERTA = "alerta"
+OK = "ok"
+
+_PESO = {ERRO: 25, ALERTA: 8, OK: 0}
+
+
+def _flag(codigo, severidade, titulo, mensagem, declarado=None, esperado=None):
+    div = None
+    if declarado is not None and esperado not in (None, 0):
+        div = round((declarado - esperado) / esperado * 100, 1)
+    return {
+        "codigo": codigo,
+        "severidade": severidade,
+        "titulo": titulo,
+        "mensagem": mensagem,
+        "declarado": None if declarado is None else round(declarado, 1),
+        "esperado": None if esperado is None else round(esperado, 1),
+        "divergencia_pct": div,
+    }
+
+
+def analisar_consistencia(
+    v: list,
+    *,
+    natalidade_min: float = 0.55,
+    natalidade_max: float = 0.85,
+    matriz_touro_max: float = 40.0,
+    matriz_touro_min: float = 15.0,
+    prop_sexual_bezerro: tuple = (0.8, 1.25),
+    reposicao_min: float = 0.10,
+    piramide_fator: float = 1.5,
+) -> dict:
+    """Analisa a consistência de um rebanho declarado.
+
+    Args:
+        v: Lista de 10 quantidades por faixa etária/sexo (ver ordem no módulo).
+        natalidade_min: Piso da taxa de natalidade plausível (bezerros/matriz).
+        natalidade_max: Teto da taxa de natalidade plausível.
+        matriz_touro_max: Máx. de matrizes por touro antes de sinalizar (monta natural).
+        matriz_touro_min: Mín. de matrizes por touro antes de sinalizar excesso.
+        prop_sexual_bezerro: Faixa (min, max) plausível da razão F/M ao nascer.
+        reposicao_min: Razão mínima novilhas/matrizes para o rebanho se sustentar.
+        piramide_fator: Fator acima do qual uma faixa mais velha excede a mais nova.
+
+    Returns:
+        Dict com `total_animais`, `matrizes`, `score_consistencia` (0–100),
+        `resumo` (contagem por severidade) e `flags` (lista de checagens).
+
+    Raises:
+        ValueError: Se `v` não tiver exatamente 10 posições.
+    """
+    if len(v) != 10:
+        raise ValueError(f"Esperado vetor de 10 posições, recebido {len(v)}.")
+    v = [max(float(x), 0.0) for x in v]
+    total = sum(v)
+
+    bezerros = v[0] + v[1]
+    matrizes = v[6] + v[8]
+    touros = v[9]
+    novilhas_repo = v[4] + v[6]
+
+    flags = []
+
+    # 1. Bezerros vs esperado biológico (matrizes × natalidade)
+    if matrizes == 0:
+        if bezerros > 0:
+            flags.append(_flag(
+                "bezerros_vs_esperado", ERRO,
+                "Bezerros sem matrizes",
+                f"{bezerros:.0f} bezerros declarados sem nenhuma matriz — impossível.",
+                declarado=bezerros, esperado=0.001))
+        else:
+            flags.append(_flag("bezerros_vs_esperado", OK,
+                               "Bezerros vs esperado", "Sem matrizes e sem bezerros."))
+    else:
+        esp_min = matrizes * natalidade_min
+        esp_max = matrizes * natalidade_max
+        centro = matrizes * (natalidade_min + natalidade_max) / 2
+        if bezerros > esp_max * 1.15:
+            flags.append(_flag(
+                "bezerros_vs_esperado", ERRO,
+                "Bezerros acima do plausível",
+                f"{bezerros:.0f} bezerros para {matrizes:.0f} matrizes excede o teto "
+                f"biológico (~{esp_max:.0f}). Possível rebanho inflado.",
+                declarado=bezerros, esperado=centro))
+        elif bezerros < esp_min * 0.6:
+            flags.append(_flag(
+                "bezerros_vs_esperado", ALERTA,
+                "Bezerros abaixo do esperado",
+                f"{bezerros:.0f} bezerros para {matrizes:.0f} matrizes está abaixo do "
+                f"piso esperado (~{esp_min:.0f}). Baixa eficiência ou subdeclaração.",
+                declarado=bezerros, esperado=centro))
+        else:
+            flags.append(_flag(
+                "bezerros_vs_esperado", OK, "Bezerros vs esperado",
+                f"{bezerros:.0f} bezerros compatível com {matrizes:.0f} matrizes.",
+                declarado=bezerros, esperado=centro))
+
+    # 2. Proporção sexual dos bezerros (~50/50 ao nascer)
+    if bezerros >= 20:
+        razao = v[0] / max(v[1], 1)
+        lo, hi = prop_sexual_bezerro
+        if razao < lo or razao > hi:
+            flags.append(_flag(
+                "prop_sexual_bezerros", ALERTA,
+                "Proporção sexual de bezerros atípica",
+                f"Razão fêmea/macho dos bezerros = {razao:.2f}, fora da faixa natural "
+                f"({lo}–{hi}).", declarado=v[0], esperado=v[1]))
+        else:
+            flags.append(_flag("prop_sexual_bezerros", OK,
+                               "Proporção sexual de bezerros", "Dentro do esperado (~50/50)."))
+    else:
+        flags.append(_flag("prop_sexual_bezerros", OK,
+                           "Proporção sexual de bezerros", "Amostra pequena — não avaliado."))
+
+    # 3. Relação touro:matriz
+    if matrizes > 0:
+        if touros == 0:
+            flags.append(_flag(
+                "touro_matriz", ALERTA,
+                "Matrizes sem touro declarado",
+                f"{matrizes:.0f} matrizes e nenhum touro. Plausível apenas com IATF/inseminação.",
+                declarado=0, esperado=matrizes / matriz_touro_max))
+        else:
+            razao = matrizes / touros
+            if razao > matriz_touro_max:
+                flags.append(_flag(
+                    "touro_matriz", ALERTA,
+                    "Poucos touros para tantas matrizes",
+                    f"{razao:.0f} matrizes por touro (> {matriz_touro_max:.0f}). "
+                    f"Prenhez declarada implausível sem IATF.",
+                    declarado=touros, esperado=matrizes / matriz_touro_max))
+            elif razao < matriz_touro_min:
+                flags.append(_flag(
+                    "touro_matriz", ALERTA,
+                    "Excesso de touros",
+                    f"{razao:.0f} matrizes por touro (< {matriz_touro_min:.0f}).",
+                    declarado=touros, esperado=matrizes / matriz_touro_min))
+            else:
+                flags.append(_flag("touro_matriz", OK, "Relação touro:matriz",
+                                   f"{razao:.0f} matrizes por touro — adequado."))
+    else:
+        flags.append(_flag("touro_matriz", OK, "Relação touro:matriz", "Sem matrizes."))
+
+    # 4. Continuidade da pirâmide etária (sem compra, faixa velha <= faixa nova)
+    #    Não se aplica às faixas +36m (fêmeas adultas acumulam vários ciclos).
+    transicoes = [
+        ("machos 5–12 vs 0–4", v[3], v[1]),
+        ("machos 13–24 vs 5–12", v[5], v[3]),
+        ("machos 25–36 vs 13–24", v[7], v[5]),
+        ("fêmeas 5–12 vs 0–4", v[2], v[0]),
+        ("fêmeas 13–24 vs 5–12", v[4], v[2]),
+        ("fêmeas 25–36 vs 13–24", v[6], v[4]),
+    ]
+    piramide_flags = [
+        (nome, velha, nova) for nome, velha, nova in transicoes
+        if velha > 20 and velha > nova * piramide_fator
+    ]
+    if piramide_flags:
+        nome, velha, nova = piramide_flags[0]
+        flags.append(_flag(
+            "piramide_etaria", ALERTA,
+            "Descontinuidade na pirâmide etária",
+            f"{len(piramide_flags)} faixa(s) mais velha(s) maior(es) que a mais nova sem "
+            f"compra declarada (ex: {nome}: {velha:.0f} vs {nova:.0f}). Animais 'aparecendo'.",
+            declarado=velha, esperado=nova))
+    else:
+        flags.append(_flag("piramide_etaria", OK, "Pirâmide etária",
+                           "Faixas etárias coerentes."))
+
+    # 5. Reposição de fêmeas
+    if matrizes > 50:
+        taxa_repo = novilhas_repo / matrizes
+        if taxa_repo < reposicao_min:
+            flags.append(_flag(
+                "reposicao_femeas", ALERTA,
+                "Reposição de fêmeas insuficiente",
+                f"Apenas {novilhas_repo:.0f} novilhas de reposição para {matrizes:.0f} "
+                f"matrizes ({taxa_repo:.0%}). Rebanho não se sustenta.",
+                declarado=novilhas_repo, esperado=matrizes * reposicao_min))
+        else:
+            flags.append(_flag("reposicao_femeas", OK, "Reposição de fêmeas",
+                               f"Reposição de {taxa_repo:.0%} das matrizes — adequada."))
+    else:
+        flags.append(_flag("reposicao_femeas", OK, "Reposição de fêmeas",
+                           "Rebanho pequeno — não avaliado."))
+
+    resumo = {
+        "erros": sum(1 for f in flags if f["severidade"] == ERRO),
+        "alertas": sum(1 for f in flags if f["severidade"] == ALERTA),
+        "ok": sum(1 for f in flags if f["severidade"] == OK),
+    }
+    penalidade = sum(_PESO[f["severidade"]] for f in flags)
+    score = max(0, 100 - penalidade)
+
+    return {
+        "total_animais": int(total),
+        "matrizes": int(matrizes),
+        "score_consistencia": score,
+        "resumo": resumo,
+        "flags": flags,
+    }

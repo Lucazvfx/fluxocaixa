@@ -9,7 +9,7 @@ import subprocess
 import threading
 from functools import wraps
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -33,6 +33,10 @@ except ImportError:
     parsear_generico = None
 
 from scraper import obter_precos_arroba, obter_precos_agrobr_strict
+
+from parsers.composicao_rebanho import ler_template
+from services.consistencia_rebanho import analisar_consistencia
+from services.benchmarks_nacionais import avaliar_nacional
 
 # Configuração de logging
 logging.basicConfig(
@@ -242,6 +246,21 @@ def api_classificar():
     benchmarks = avaliar_benchmarks(result['tipo'], ind_bench)
     breakeven  = calcular_breakeven_simples(v, result['tipo'])
 
+    # Painel de benchmarks NACIONAIS (multi-fonte + financeiro): confronta os
+    # indicadores contra cada fonte institucional (Embrapa, Scot, CEPEA-USP,
+    # ABCZ, ASBIA) e contra o desembolso de referência (Inttegra 2025).
+    def _opt_float(x):
+        try:
+            return float(x) if x not in (None, '') else None
+        except (TypeError, ValueError):
+            return None
+    painel_nacional = avaliar_nacional(result['tipo'], {
+        'prenhez':    _opt_float(data.get('taxa_prenhez_pct')),
+        'natalidade': ind_bench.get('natalidade'),
+        'desfrute':   ind_bench.get('desfrute'),
+        'desembolso': _opt_float(data.get('desembolso_cab_mes')),
+    })
+
     # Salvar automaticamente no BD para futuros retreinamentos
     fazenda   = data.get('fazenda', '')
     municipio = data.get('municipio', '')
@@ -260,6 +279,7 @@ def api_classificar():
         'indicadores': ind,
         'indicadores_benchmark': ind_bench,
         'benchmarks': benchmarks,
+        'benchmarks_nacionais': painel_nacional,
         'breakeven_simples': breakeven,
         'valores': v,
         'registro_id': registro_id,
@@ -529,6 +549,40 @@ def api_ler_pdf():
         except Exception as e:
             logger.error(f"Erro ao processar PDF: {e}", exc_info=True)
             return jsonify({'erro': str(e)}), 500
+
+@app.route('/api/template/download', methods=['GET'])
+@login_required
+def api_template_download():
+    """Baixa o template oficial de composição de rebanho para o produtor preencher."""
+    return send_from_directory(
+        os.path.join(app.static_folder, 'templates'),
+        'modelo_composicao_rebanho.xlsx',
+        as_attachment=True,
+    )
+
+
+@app.route('/api/ler-planilha', methods=['POST'])
+@login_required
+def api_ler_planilha():
+    """Lê o template preenchido e já retorna a análise de consistência do rebanho."""
+    if 'planilha' not in request.files:
+        return jsonify({'erro': 'Nenhum arquivo enviado'}), 400
+    f = request.files['planilha']
+    if not f.filename.lower().endswith(('.xlsx', '.xlsm')):
+        return jsonify({'erro': 'Apenas planilhas .xlsx são aceitas'}), 400
+
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=True) as tmp:
+        f.save(tmp.name)
+        try:
+            dados = ler_template(tmp.name)
+            dados['consistencia'] = analisar_consistencia(dados['valores'])
+            return jsonify(dados)
+        except ValueError as e:
+            return jsonify({'erro': str(e)}), 400
+        except Exception as e:
+            logger.error(f"Erro ao processar planilha: {e}", exc_info=True)
+            return jsonify({'erro': str(e)}), 500
+
 
 @app.route('/api/parse-text', methods=['POST'])
 @login_required
