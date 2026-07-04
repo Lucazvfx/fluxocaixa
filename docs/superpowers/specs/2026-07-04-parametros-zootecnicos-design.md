@@ -42,21 +42,24 @@ default é a banda **"médio"** desse benchmark, com a origem anotada.
 | Relação fêmeas/macho | 2,2:1 | regional `BENCHMARKS_RO.pct` médio |
 | % matrizes | 35% | regional `BENCHMARKS_RO.pct_matrizes` médio |
 
-### Pesos por categoria — GEP (kg vivo → @ carcaça)
-Não há benchmark nacional de peso por categoria; a única fonte concreta é o GEP.
-Conversão explícita e documentada: `@ carcaça = kg_vivo × rendimento ÷ 15`
-(rendimento = 52% do item acima; bezerros usam 50%, típico de animal jovem).
+### Pesos por categoria — referência de mercado (kg vivo → @ carcaça)
+Mesma lógica "representativo nacional" das taxas: pesos de **referência de
+mercado**, não de uma fazenda. Base: boi gordo terminado 500–600 kg vivo com
+rendimento de carcaça ~50%; o padrão **CEPEA/B3 do boi gordo é 16–21@** de
+carcaça (meio ≈ 18@). Conversão documentada: `@ carcaça = kg_vivo × 0,50 ÷ 15`.
 
-| Categoria | GEP (kg vivo) | Rend. | @ carcaça | Uso no motor |
+| Categoria | Referência (kg vivo) | @ carcaça | Uso no motor | Fonte |
 |---|---|---|---|---|
-| Vaca (descarte) | 433 | 52% | 15,0@ | `peso_vaca` |
-| Boi terminado | 435 | 52% | 15,1@ | `peso_boi` |
-| Bezerra desmame | 173 | 50% | 5,8@ | `peso_bezerra` |
-| Bezerro/garrote desmame | 187 | 50% | 6,2@ | `peso_garrote` |
+| Boi terminado | ~540 | **18@** | `peso_boi` | CEPEA boi gordo padrão 16–21@, meio |
+| Vaca gorda (descarte) | ~420 | **14@** | `peso_vaca` | vaca gorda ~420kg × 50% ÷ 15 |
+| Garrote/novilho (jovem macho vendido) | ~330 | **11@** | `peso_garrote` | novilho recria ~330kg × 50% ÷ 15 |
+| Bezerra (jovem fêmea vendida) | ~210 | **7@** | `peso_bezerra` | bezerra desmamada ~210kg × 50% ÷ 15 |
 
-> Os pesos do GEP são de **uma operação real** (não benchmark nacional) e mais
-> leves que os defaults antigos (17/20/8/13). São editáveis na UI; o módulo os
-> traz como ponto de partida realista e documentado, não como número fabricado.
+> Rendimento de carcaça de referência = **50%** (CEPEA/mercado; média de abate),
+> distinto do rendimento de *engorda* (52% do bloco de taxas, usado no cálculo de
+> carcaça da fase de terminação). Todos editáveis na UI; o módulo os traz como
+> ponto de partida sourced, não fabricado. São mais leves que os defaults antigos
+> (17/20/8/13) para o boi/vaca — o antigo 20@ de boi estava acima do padrão.
 
 ## Componentes
 
@@ -67,11 +70,13 @@ Conversão explícita e documentada: `@ carcaça = kg_vivo × rendimento ÷ 15`
   `DESMAME_PCT=82.0`, `RENDIMENTO_CARCACA_PCT=52.0`, `GANHO_ARROBA_MES=0.7`,
   `RELACAO_FM=2.2`, `PCT_MATRIZES=35.0`.
 - `DESFRUTE_PCT = {'CRIA':24.0,'RECRIA':45.0,'ENGORDA':100.0,'CICLO_COMPLETO':30.0}`.
-- Pesos vivos (kg) e derivados em @:
-  `PESO_VIVO_KG = {'vaca':433,'boi':435,'bezerra':173,'garrote':187}` e
-  `peso_arroba_carcaca(kg, rendimento) -> float` (= kg×rend/15). Constantes
-  derivadas: `PESO_VACA_ARR`, `PESO_BOI_ARR`, `PESO_BEZERRA_ARR`,
-  `PESO_GARROTE_ARR`.
+- Pesos vivos de referência de mercado (kg) e derivados em @:
+  `RENDIMENTO_ABATE = 0.50` (rendimento de carcaça de referência de mercado);
+  `PESO_VIVO_KG = {'boi':540,'vaca':420,'garrote':330,'bezerra':210}` e
+  `peso_arroba_carcaca(kg, rendimento=RENDIMENTO_ABATE) -> float` (= kg×rend/15).
+  Constantes derivadas (arredondadas para o inteiro de referência):
+  `PESO_BOI_ARR=18`, `PESO_VACA_ARR=14`, `PESO_GARROTE_ARR=11`,
+  `PESO_BEZERRA_ARR=7`.
 - `midpoint(lo, hi) -> float` helper para documentar como as faixas viram o meio.
 
 ### 2. Fiação no `ml_engine.py`
@@ -118,8 +123,9 @@ services/parametros_zootecnicos.py  (fonte única, sourced)
 `tests/test_parametros_zootecnicos.py`:
 - Cada constante de taxa bate com o ponto médio documentado (ex.: `NATALIDADE_PCT
   == midpoint(55,75) == 65`).
-- `peso_arroba_carcaca(433, 0.52)` ≈ 15,0; `(173, 0.50)` ≈ 5,77.
-- Os `PESO_*_ARR` derivam de `PESO_VIVO_KG` pela conversão (sem número mágico).
+- `peso_arroba_carcaca(540, 0.50) == 18.0`; `(210, 0.50) == 7.0`.
+- Os `PESO_*_ARR` derivam de `PESO_VIVO_KG × RENDIMENTO_ABATE ÷ 15` (sem número
+  mágico solto).
 
 `tests/test_ml_engine.py` (ajuste): se algum teste fixa `peso_*` antigo ou
 `nat_pct=75`, alinhar ao novo default sourced.
