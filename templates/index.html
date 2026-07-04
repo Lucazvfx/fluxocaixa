@@ -322,7 +322,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <button class="btn-sm" onclick="toggleConds()" id="btn-conds" style="width:100%;justify-content:center">⚙ Condições de Classificação <span style="font-size:.65rem;opacity:.6">(opcional)</span></button>
           <div id="conds-wrap" style="display:none;margin-top:12px">
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
-              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="c-nat" placeholder="75" min="1" max="100" step="1" oninput="upd()"></div>
+              <div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="c-nat" placeholder="65" min="1" max="100" step="1" oninput="upd()"></div>
               <div class="field"><label>Bois Vendidos (cab.)</label><input type="number" id="c-boisv" placeholder="Automático" min="0" oninput="upd()"></div>
               <div class="field"><label>Bezerros Vendidos (cab.)</label><input type="number" id="c-bezv" placeholder="Automático" min="0" oninput="upd()"></div>
             </div>
@@ -330,7 +330,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
               <div style="font-size:.65rem;color:var(--mu);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Indicadores para Benchmark Regional (RO) <span style="opacity:.6">— opcional, sem dado usa média regional</span></div>
               <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:14px">
                 <div class="field"><label>Mortalidade (%)</label><input type="number" id="c-mort" placeholder="5" min="0" max="100" step="0.1"></div>
-                <div class="field"><label>Desmama (%)</label><input type="number" id="c-desm" placeholder="72" min="0" max="100" step="0.1"></div>
+                <div class="field"><label>Desmama (%)</label><input type="number" id="c-desm" placeholder="82" min="0" max="100" step="0.1"></div>
                 <div class="field"><label>Rend. Carcaça (%)</label><input type="number" id="c-rc" placeholder="52" min="0" max="100" step="0.1"></div>
                 <div class="field"><label>Ganho Peso (@/mês)</label><input type="number" id="c-gp" placeholder="0.55" min="0" step="0.01"></div>
                 <div class="field"><label>Desfrute (%)</label><input type="number" id="c-desf" placeholder="Sem default" min="0" step="0.1"></div>
@@ -423,12 +423,12 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo()"></div></div></div>
         </div>
         <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
-          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div></div></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="65" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div></div></div>
         </div>
       </div>
       <div>
         <div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
-          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Peso Boi (@)</label><input type="number" id="s-boi-arr" value="20" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Matriz (@)</label><input type="number" id="s-mat-arr" value="17" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div></div><div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Peso Boi (@)</label><input type="number" id="s-boi-arr" value="18" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Matriz (@)</label><input type="number" id="s-mat-arr" value="14" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="7" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div></div><div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div></div>
         </div>
         <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Estrutura de Custo (Desembolso · R$/cab/mês)</div>
           <div style="display:flex;gap:6px"><button class="btn-sm" onclick="aplicarPresetDesembolso('media')">Média</button><button class="btn-sm" onclick="aplicarPresetDesembolso('top')">Top Rentáveis</button></div></div>
@@ -459,7 +459,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="field"><label>Renovação de Bois (%)</label><input type="number" id="param-renovboi" step="1" value="20" onchange="marcarParametroAlterado()"></div>
           <div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="param-desc" step="1" value="30" onchange="marcarParametroAlterado()"></div>
           <div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="param-vendbez" step="1" value="30" onchange="marcarParametroAlterado()"></div>
-          <div class="field"><label>Taxa de Natalidade (%)</label><input type="number" id="param-nat" step="1" value="75" onchange="marcarParametroAlterado()"></div>
+          <div class="field"><label>Taxa de Natalidade (%)</label><input type="number" id="param-nat" step="1" value="65" onchange="marcarParametroAlterado()"></div>
         </div>
         <div style="display:flex;gap:12px;margin-top:16px"><button class="btn-sm" onclick="salvarParametrosDoCiclo()">💾 Salvar para este ciclo</button><button class="btn-sm" onclick="resetarParametrosDoCiclo()">↺ Restaurar padrões</button></div>
         <div id="param-status" style="font-family:var(--fm);font-size:.6rem;color:var(--g);margin-top:8px"></div>
@@ -504,7 +504,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="sc-card sc-cons" onclick="selSc('conservador',this)"><div class="sc-name">Conservador — Manutenção</div><div class="sc-desc">Estabilidade mínima em cenário de baixa de preços.</div></div>
         </div>
       </div>
-      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="18" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
     </div>
     <div id="sc-result"></div>
   </div>
@@ -557,10 +557,10 @@ let _last_pdf_raw = null; // para reprocessamento
 
 // ================== PARÂMETROS POR CICLO ==================
 const DEFAULT_PARAMS_CICLO = {
-  CRIA: { prop_boi:20, renov_boi_pct:15, desc_mat_pct:20, venda_bez_pct:10, nat_pct:75 },
-  RECRIA: { prop_boi:0, renov_boi_pct:0, desc_mat_pct:0, venda_bez_pct:80, nat_pct:75 },
-  ENGORDA: { prop_boi:0, renov_boi_pct:0, desc_mat_pct:0, venda_bez_pct:100, nat_pct:75 },
-  CICLO_COMPLETO: { prop_boi:30, renov_boi_pct:20, desc_mat_pct:30, venda_bez_pct:30, nat_pct:75 }
+  CRIA: { prop_boi:20, renov_boi_pct:15, desc_mat_pct:20, venda_bez_pct:10, nat_pct:65 },
+  RECRIA: { prop_boi:0, renov_boi_pct:0, desc_mat_pct:0, venda_bez_pct:80, nat_pct:65 },
+  ENGORDA: { prop_boi:0, renov_boi_pct:0, desc_mat_pct:0, venda_bez_pct:100, nat_pct:65 },
+  CICLO_COMPLETO: { prop_boi:30, renov_boi_pct:20, desc_mat_pct:30, venda_bez_pct:30, nat_pct:65 }
 };
 let paramsPorCiclo = {};
 
