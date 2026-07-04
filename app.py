@@ -37,6 +37,7 @@ from scraper import obter_precos_arroba, obter_precos_agrobr_strict
 from parsers.composicao_rebanho import ler_template
 from services.consistencia_rebanho import analisar_consistencia
 from services.benchmarks_nacionais import avaliar_nacional
+from services.parecer_credito import montar_parecer
 from services.reconciliacao import reconciliar
 
 # Configuração de logging
@@ -367,6 +368,36 @@ def api_classificar():
         nat_pct=nat_pct,
     )
 
+    # Consistência do rebanho declarado (diferencial de análise de crédito):
+    # roda também no fluxo principal, não só na importação de PDF.
+    consistencia = analisar_consistencia(v)
+
+    # Geração de caixa recorrente: resultado do ano 1 no cenário conservador,
+    # dentro do ciclo detectado (número mais conservador e recorrente).
+    _cx = simular_cenario(
+        v, 'conservador', ciclo=result['tipo'],
+        preco_arroba=float(data.get('preco', 320)),
+        custo_arroba=float(data.get('custo_arroba', 57)))
+    geracao_caixa_anual = _cx['anos'][0]['resultado']
+
+    credito_inputs = {k: data.get(k) for k in
+                      ('credito_valor', 'prazo_meses', 'juros_aa',
+                       'carencia_meses', 'dividas_mensais')}
+    parecer = montar_parecer(
+        identificacao={'fazenda': fazenda, 'municipio': municipio,
+                       'proprietario': data.get('proprietario', '')},
+        composicao={'total': int(sum(v)), 'valores': v},
+        indicadores=ind, benchmarks=benchmarks,
+        consistencia=consistencia, financeiro=breakeven,
+        geracao_caixa_anual=geracao_caixa_anual,
+        credito=credito_inputs)
+
+    # Persiste no histórico da fazenda apenas quando há fazenda e solicitação.
+    fazenda_id = data.get('fazenda_id')
+    if fazenda_id and data.get('credito_valor'):
+        db.salvar_parecer(current_user.id, int(fazenda_id),
+                          solicitacao=credito_inputs, parecer=parecer)
+
     return jsonify({
         **result,
         'indicadores': ind,
@@ -374,6 +405,8 @@ def api_classificar():
         'benchmarks': benchmarks,
         'benchmarks_nacionais': painel_nacional,
         'breakeven_simples': breakeven,
+        'consistencia': consistencia,
+        'parecer': parecer,
         'valores': v,
         'registro_id': registro_id,
     })
