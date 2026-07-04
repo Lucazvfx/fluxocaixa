@@ -84,6 +84,29 @@ def admin_required(f):
         return f(*args, **kwargs)
     return wrapper
 
+
+def garantir_admins():
+    """Provisiona as contas admin no start (resolve o ovo-e-galinha do acesso).
+
+    Para cada e-mail em ADMIN_EMAILS: se não existir conta, cria uma com a
+    senha de ADMIN_SENHA_INICIAL (ou uma gerada, logada uma vez). Se a conta já
+    existir e ADMIN_RESET_SENHA estiver ligado, redefine a senha para
+    ADMIN_SENHA_INICIAL — lever de recuperação quando você esquece a senha.
+    """
+    senha_inicial = os.environ.get('ADMIN_SENHA_INICIAL', '').strip()
+    resetar = os.environ.get('ADMIN_RESET_SENHA', '').strip().lower() in (
+        '1', 'true', 'yes', 'sim')
+    for email in _ADMIN_EMAILS:
+        existente = db.buscar_usuario_email(email)
+        if existente is None:
+            senha = senha_inicial or gerar_senha()
+            db.criar_usuario(email, email.split('@')[0], senha)
+            origem = 'ADMIN_SENHA_INICIAL' if senha_inicial else senha
+            logger.warning(f"[ADMIN] Conta criada para {email} | senha: {origem}")
+        elif resetar and senha_inicial:
+            db.resetar_senha(email, senha_inicial)
+            logger.warning(f"[ADMIN] Senha redefinida para {email} (ADMIN_RESET_SENHA).")
+
 # ── Flask-Login ──────────────────────────────────────────────────────────────
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -113,6 +136,7 @@ else:
 
 db.init_db()
 logger.info("🗃️  Banco SQLite inicializado.")
+garantir_admins()
 
 # ── Estado de re-treino com proteção de concorrência ──────────────────────
 _retraining = False
