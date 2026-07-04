@@ -979,16 +979,8 @@ function renderResult(data){
     </div>
 
     <div class="card" style="margin-bottom:24px">
-      <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Benchmarks Regionais (Rondônia)</div></div>
-      <div class="cb">
-        ${data.breakeven_simples&&data.breakeven_simples.preco_breakeven?mr('Preço Mínimo (Breakeven)',`${fR(data.breakeven_simples.preco_breakeven)} <span style="opacity:.6;font-size:.62rem">${data.breakeven_simples.unidade}</span>`,'a'):''}
-        ${benchRows(data.benchmarks)}
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:24px">
-      <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Benchmarks Nacionais · Multi-Fonte</div></div>
-      <div class="cb">${benchNacional(data.benchmarks_nacionais)}</div>
+      <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Benchmarks · Nacional</div></div>
+      <div class="cb">${benchUnificado(data)}</div>
     </div>
 
     <div class="g2">
@@ -1060,50 +1052,82 @@ function renderResult(data){
 
 function mr(k,v,c){return`<div class="mrow"><span class="mk">${k}</span><span class="mv ${c}">${v}</span></div>`}
 const BENCH_COR={excelente:'g',bom:'g',medio:'a',abaixo:'r'};
-function benchRows(list){
-  if(!list||!list.length) return '<div class="mrow"><span class="mk" style="opacity:.55">Nenhum indicador informado — preencha em "⚙ Condições de Classificação" pra comparar com a média de Rondônia.</span></div>';
-  return list.map(b=>{
-    const c=BENCH_COR[b.faixa]||'c';
-    const prox=b.proximo_nivel?` <span style="opacity:.5;font-size:.62rem">(faltam ${b.falta}${b.unidade} p/ ${b.proximo_nivel.toUpperCase()})</span>`:'';
-    return mr(b.label, `${b.valor}${b.unidade} · ${b.faixa.toUpperCase()}${prox}`, c);
-  }).join('');
-}
-
-// Painel de benchmarks NACIONAIS (multi-fonte + financeiro) — dados reais
-// (Embrapa/Scot/CEPEA/ABCZ/ASBIA e Inttegra 2025).
+// ===== Benchmarks unificado (regional RO + nacional multi-fonte) =====
+// Sem repetir indicadores: natalidade e desfrute aparecem uma vez,
+// mesclando a faixa nacional (multi-fonte) com o corte regional de Rondônia.
 const POS_COR={dentro:'#4ADE80',acima:'#22D3EE',abaixo:'#FBBF24'};
 const NIVEL_COR={excelente:'#4ADE80',bom:'#FBBF24',atencao:'#F87171'};
 const IND_NOME={prenhez:'Taxa de Prenhez',natalidade:'Taxa de Natalidade'};
-function benchNacional(bn){
-  if(!bn) return '';
+const FAIXA_COR={g:'#4ADE80',a:'#FBBF24',r:'#F87171',c:'#8891A5'};
+
+function faixaBadge(b){
+  if(!b) return '';
+  const cor=FAIXA_COR[BENCH_COR[b.faixa]||'c'];
+  return `<span style="font-family:var(--fm);font-size:.58rem;padding:2px 8px;border-radius:20px;border:1px solid ${cor}55;color:${cor};background:${cor}12">RO: ${b.valor}${b.unidade} · ${b.faixa.toUpperCase()}</span>`;
+}
+function fonteChips(fontes){
+  return fontes.map(f=>{
+    const cor=POS_COR[f.posicao]||'#8891A5';
+    return `<span style="display:inline-flex;gap:5px;align-items:center;font-family:var(--fm);font-size:.6rem;padding:3px 9px;border-radius:20px;border:1px solid ${cor}55;color:${cor};background:${cor}12">${f.fonte} ${f.faixa[0]}–${f.faixa[1]}% · ${f.posicao}</span>`;
+  }).join(' ');
+}
+function mfBloco(m,reg){
+  const dentro=m.fontes.filter(f=>f.posicao==='dentro').length;
+  const badge=reg?` ${faixaBadge(reg)}`:'';
+  return `<div style="padding:12px 0;border-bottom:1px solid var(--b)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+      <span style="font-weight:700;font-size:.82rem">${IND_NOME[m.indicador]||m.indicador}: <span style="color:var(--g)">${m.valor}%</span>${badge}</span>
+      <span style="font-family:var(--fm);font-size:.62rem;color:var(--mu)">dentro de ${dentro}/${m.fontes.length} fontes</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${fonteChips(m.fontes)}</div></div>`;
+}
+function regRow(b){
+  const c=BENCH_COR[b.faixa]||'c';
+  const prox=b.proximo_nivel?` <span style="opacity:.5;font-size:.62rem">(faltam ${b.falta}${b.unidade} p/ ${b.proximo_nivel.toUpperCase()})</span>`:'';
+  return mr(b.label, `${b.valor}${b.unidade} · ${b.faixa.toUpperCase()}${prox}`, c);
+}
+function desfruteRow(nac,reg){
+  const badge=reg?` ${faixaBadge(reg)}`:'';
+  if(nac){
+    const cor=POS_COR[nac.posicao]||'#8891A5';
+    return mr('Desfrute · '+nac.modalidade, `${nac.valor}% · esperado ${nac.faixa[0]}–${nac.faixa[1]}% · <span style="color:${cor}">${nac.posicao}</span>${badge}`,'c');
+  }
+  if(reg) return regRow(reg);
+  return '';
+}
+function benchUnificado(data){
+  const list=data.benchmarks||[];
+  const bn=data.benchmarks_nacionais;
+  const MESCLADOS={natalidade:1,desfrute:1};
+  const regByKey={}; list.forEach(b=>regByKey[b.key]=b);
   let html='';
-  (bn.multifonte||[]).forEach(m=>{
-    const chips=m.fontes.map(f=>{
-      const cor=POS_COR[f.posicao]||'#8891A5';
-      return `<span style="display:inline-flex;gap:5px;align-items:center;font-family:var(--fm);font-size:.6rem;padding:3px 9px;border-radius:20px;border:1px solid ${cor}55;color:${cor};background:${cor}12">${f.fonte} ${f.faixa[0]}–${f.faixa[1]}% · ${f.posicao}</span>`;
-    }).join(' ');
-    const dentro=m.fontes.filter(f=>f.posicao==='dentro').length;
-    html+=`<div style="padding:12px 0;border-bottom:1px solid var(--b)">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-        <span style="font-weight:700;font-size:.82rem">${IND_NOME[m.indicador]||m.indicador}: <span style="color:var(--g)">${m.valor}%</span></span>
-        <span style="font-family:var(--fm);font-size:.62rem;color:var(--mu)">dentro de ${dentro}/${m.fontes.length} fontes</span>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div></div>`;
-  });
-  if(bn.desfrute){
-    const d=bn.desfrute,cor=POS_COR[d.posicao]||'#8891A5';
-    html+=mr('Desfrute · '+d.modalidade, `${d.valor}% · esperado ${d.faixa[0]}–${d.faixa[1]}% · <span style="color:${cor}">${d.posicao}</span>`,'c');
+  // Indicadores zootécnicos regionais (exceto os mesclados com o nacional)
+  html+=list.filter(b=>!MESCLADOS[b.key]).map(regRow).join('');
+  if(bn){
+    // Multi-fonte, exceto natalidade (tratada no bloco mesclado abaixo)
+    (bn.multifonte||[]).forEach(m=>{ if(m.indicador!=='natalidade') html+=mfBloco(m,null); });
+    // Natalidade: faixa nacional multi-fonte + corte regional RO
+    const nat=(bn.multifonte||[]).find(m=>m.indicador==='natalidade');
+    if(nat) html+=mfBloco(nat, regByKey['natalidade']);
+    else if(regByKey['natalidade']) html+=regRow(regByKey['natalidade']);
+    // Desfrute: faixa esperada nacional + corte regional RO
+    if(bn.desfrute||regByKey['desfrute']) html+=desfruteRow(bn.desfrute, regByKey['desfrute']);
+    // Desembolso (financeiro nacional)
+    if(bn.desembolso){
+      const d=bn.desembolso,cor=NIVEL_COR[d.nivel]||'#8891A5';
+      html+=`<div style="margin-top:12px;padding:12px;border-radius:8px;border:1px solid ${cor}44;background:${cor}0e">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <span style="font-weight:700;font-size:.82rem">Desembolso ${fR(d.valor)}/cab·mês</span>
+          <span style="font-family:var(--fn);font-weight:800;text-transform:uppercase;font-size:.74rem;color:${cor}">${d.nivel}</span>
+        </div>
+        <div style="font-family:var(--fm);font-size:.64rem;color:var(--mu);margin-top:6px">Média nacional ${fR(d.media)} · Top Rentáveis ${fR(d.top)} · ${d.fonte}</div></div>`;
+    }
+  } else {
+    // Sem painel nacional: mostra natalidade/desfrute regionais direto
+    if(regByKey['natalidade']) html+=regRow(regByKey['natalidade']);
+    if(regByKey['desfrute']) html+=regRow(regByKey['desfrute']);
   }
-  if(bn.desembolso){
-    const d=bn.desembolso,cor=NIVEL_COR[d.nivel]||'#8891A5';
-    html+=`<div style="margin-top:12px;padding:12px;border-radius:8px;border:1px solid ${cor}44;background:${cor}0e">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <span style="font-weight:700;font-size:.82rem">Desembolso ${fR(d.valor)}/cab·mês</span>
-        <span style="font-family:var(--fn);font-weight:800;text-transform:uppercase;font-size:.74rem;color:${cor}">${d.nivel}</span>
-      </div>
-      <div style="font-family:var(--fm);font-size:.64rem;color:var(--mu);margin-top:6px">Média nacional ${fR(d.media)} · Top Rentáveis ${fR(d.top)} · ${d.fonte}</div></div>`;
-  }
-  if(!html) html='<div class="mrow"><span class="mk" style="opacity:.55">Informe prenhez, natalidade, desfrute ou desembolso em "⚙ Condições de Classificação" para o comparativo nacional.</span></div>';
+  if(!html) html='<div class="mrow"><span class="mk" style="opacity:.55">Preencha os indicadores em "⚙ Condições de Classificação" para comparar com os benchmarks nacionais.</span></div>';
   return html;
 }
 
