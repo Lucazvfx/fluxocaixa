@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluxo de Caixa - Administração</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 2rem; color: #2c3e50; }
+        .wrap { max-width: 760px; margin: 0 auto; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+        h2 { margin: 0 0 1rem; }
+        h3 { margin: 0 0 1rem; font-size: 1.05rem; }
+        .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { flex: 1; min-width: 200px; margin-bottom: 0.5rem; }
+        label { display: block; margin-bottom: 0.4rem; color: #666; font-size: 0.85rem; }
+        input { width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 0.6rem 1.2rem; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95rem; }
+        button:hover { background: #219150; }
+        .btn-del { background: #e74c3c; padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+        .btn-del:hover { background: #c0392b; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.6rem 0.5rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        th { color: #888; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+        .erro { padding: 0.75rem; margin-bottom: 1rem; border-radius: 4px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .cred { background: #eafaf1; border: 1px solid #27ae60; border-radius: 6px; padding: 1rem 1.2rem; margin-bottom: 1rem; }
+        .cred code { background: #fff; padding: 2px 8px; border-radius: 4px; border: 1px solid #cde; font-size: 1rem; }
+        .cred p { margin: 0.35rem 0; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .topbar a { color: #2980b9; text-decoration: none; font-size: 0.9rem; }
+        .badge { background: #f1c40f22; color: #b7950b; border: 1px solid #f1c40f66; border-radius: 4px; padding: 2px 8px; font-size: 0.72rem; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="topbar">
+            <h2>Administração de Acesso</h2>
+            <div>
+                <a href="{{ url_for('index') }}">← Voltar ao app</a>
+                &nbsp;|&nbsp;
+                <a href="{{ url_for('logout') }}">Sair</a>
+            </div>
+        </div>
+
+        {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+
+        {% if nova_conta %}
+        <div class="cred">
+            <p><strong>Conta criada!</strong> Envie estas credenciais para a pessoa:</p>
+            <p>Nome: <strong>{{ nova_conta.nome }}</strong></p>
+            <p>E-mail: <code>{{ nova_conta.email }}</code></p>
+            <p>Senha: <code>{{ nova_conta.senha }}</code></p>
+            <p style="color:#888;font-size:0.82rem">Esta senha só aparece agora. Copie antes de sair desta página.</p>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h3>Criar nova conta</h3>
+            <form method="POST" action="{{ url_for('admin_criar') }}">
+                <div class="row">
+                    <div class="form-group">
+                        <label>Nome</label>
+                        <input type="text" name="nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group" style="flex:0">
+                        <button type="submit">Criar e gerar senha</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Usuários com acesso ({{ usuarios|length }})</h3>
+            <table>
+                <thead><tr><th>ID</th><th>Nome</th><th>E-mail</th><th></th></tr></thead>
+                <tbody>
+                {% for u in usuarios %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td>{{ u.nome }}</td>
+                        <td>{{ u.email }}
+                            {% if u.email == usuario.email %}<span class="badge">você</span>{% endif %}
+                        </td>
+                        <td style="text-align:right">
+                            {% if u.email != usuario.email %}
+                            <form method="POST" action="{{ url_for('admin_remover', uid=u.id) }}"
+                                  onsubmit="return confirm('Remover o acesso de {{ u.email }}?')" style="margin:0">
+                                <button type="submit" class="btn-del">Remover</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

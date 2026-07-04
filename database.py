@@ -207,6 +207,16 @@ def verificar_senha(email: str, senha: str) -> dict | None:
         return u
     return None
 
+def listar_usuarios() -> list:
+    return _exec(
+        'SELECT id, email, nome, created_at FROM usuarios ORDER BY id',
+        fetch='all'
+    ) or []
+
+def remover_usuario(user_id: int):
+    ph = _PH
+    _exec(f'DELETE FROM usuarios WHERE id={ph}', (user_id,), commit=True)
+
 # ─────────────────────────────────────────────
 # FAZENDAS
 # ─────────────────────────────────────────────

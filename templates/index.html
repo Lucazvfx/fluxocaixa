@@ -245,6 +245,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi (R$/arroba)">Boi: --</span>
     <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca (R$/arroba)">Vaca: --</span>
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
+    {% if eh_admin %}<a class="ml-acc" href="{{ url_for('admin') }}" style="cursor:pointer;text-decoration:none;background:rgba(96,165,250,.1);color:var(--cy);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(96,165,250,.3)" title="Gerenciar acessos">⚙ Acessos</a>{% endif %}
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
   </div>
 </header>

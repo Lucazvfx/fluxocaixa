@@ -50,21 +50,39 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')  # Em produção, sempre defina via env
 
-# ── Controle de acesso: whitelist de e-mails ──────────────────────────────────
-# Defina EMAILS_PERMITIDOS no Railway (ex.: "a@x.com, b@y.com"). Vazio = acesso
-# aberto (nenhuma restrição), então NÃO deixe em branco em produção.
-_EMAILS_PERMITIDOS = {
+# ── Controle de acesso: administradores ───────────────────────────────────────
+# Defina ADMIN_EMAILS no Railway (ex.: "voce@email.com"). Só admins acessam
+# /admin, onde criam as contas dos usuários. O cadastro público fica desativado.
+import secrets as _secrets
+from functools import wraps
+
+_ADMIN_EMAILS = {
     e.strip().lower()
-    for e in os.environ.get('EMAILS_PERMITIDOS', '').split(',')
+    for e in os.environ.get('ADMIN_EMAILS', '').split(',')
     if e.strip()
 }
 
 
-def email_permitido(email: str) -> bool:
-    """True se o e-mail pode acessar. Whitelist vazia = acesso aberto."""
-    if not _EMAILS_PERMITIDOS:
-        return True
-    return (email or '').strip().lower() in _EMAILS_PERMITIDOS
+def is_admin(email: str) -> bool:
+    """True se o e-mail é de um administrador."""
+    return (email or '').strip().lower() in _ADMIN_EMAILS
+
+
+def gerar_senha(n: int = 10) -> str:
+    """Gera uma senha aleatória legível (sem caracteres ambíguos)."""
+    alfabeto = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return ''.join(_secrets.choice(alfabeto) for _ in range(n))
+
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('login'))
+        if not is_admin(getattr(current_user, 'email', '')):
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return wrapper
 
 # ── Flask-Login ──────────────────────────────────────────────────────────────
 login_manager = LoginManager(app)
@@ -159,14 +177,11 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
         senha = request.form.get('senha', '')
-        if not email_permitido(email):
-            erro = 'Este e-mail não está autorizado a acessar o sistema.'
-        else:
-            u = db.verificar_senha(email, senha)
-            if u:
-                login_user(User(u), remember=True)
-                return redirect(url_for('index'))
-            erro = 'E-mail ou senha incorretos.'
+        u = db.verificar_senha(email, senha)
+        if u:
+            login_user(User(u), remember=True)
+            return redirect(url_for('index'))
+        erro = 'E-mail ou senha incorretos.'
     return render_template('login.html', erro=erro)
 
 @app.route('/esqueci-senha')
@@ -175,25 +190,56 @@ def esqueci_senha():
 
 @app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
+    # Cadastro público desativado: apenas administradores criam contas em /admin.
+    return render_template(
+        'login.html',
+        erro='O cadastro é feito pelo administrador. Solicite seu acesso.'
+    ), 403
+
+
+# ── Administração de usuários ─────────────────────────────────────────────────
+@app.route('/admin')
+@admin_required
+def admin():
+    return render_template(
+        'admin.html',
+        usuarios=db.listar_usuarios(),
+        usuario=current_user,
+        nova_conta=None,
+    )
+
+
+@app.route('/admin/criar', methods=['POST'])
+@admin_required
+def admin_criar():
+    nome  = request.form.get('nome', '').strip()
+    email = request.form.get('email', '').strip().lower()
     erro = None
-    if request.method == 'POST':
-        nome  = request.form.get('nome', '').strip()
-        email = request.form.get('email', '').strip()
-        senha = request.form.get('senha', '')
-        if not nome or not email or len(senha) < 6:
-            erro = 'Preencha todos os campos. Senha mínima: 6 caracteres.'
-        elif not email_permitido(email):
-            erro = 'Este e-mail não está autorizado. Solicite acesso ao administrador.'
-        elif db.buscar_usuario_email(email):
-            erro = 'E-mail já cadastrado.'
-        else:
-            uid = db.criar_usuario(email, nome, senha)
-            u   = db.buscar_usuario_id(uid)
-            login_user(User(u), remember=True)
-            return redirect(url_for('index'))
-    return render_template('cadastro.html', erro=erro)
+    nova_conta = None
+    if not nome or not email:
+        erro = 'Preencha nome e e-mail.'
+    elif db.buscar_usuario_email(email):
+        erro = 'E-mail já cadastrado.'
+    else:
+        senha = gerar_senha()
+        db.criar_usuario(email, nome, senha)
+        nova_conta = {'nome': nome, 'email': email, 'senha': senha}
+    return render_template(
+        'admin.html',
+        usuarios=db.listar_usuarios(),
+        usuario=current_user,
+        nova_conta=nova_conta,
+        erro=erro,
+    )
+
+
+@app.route('/admin/remover/<int:uid>', methods=['POST'])
+@admin_required
+def admin_remover(uid):
+    alvo = db.buscar_usuario_id(uid)
+    if alvo and not is_admin(alvo['email']):
+        db.remover_usuario(uid)
+    return redirect(url_for('admin'))
 
 @app.route('/logout')
 @login_required
@@ -239,7 +285,8 @@ def index():
     fazendas = db.listar_fazendas(current_user.id)
     cotacoes_dia = db.obter_cotacoes_atuais()
     return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
-                           usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia)
+                           usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia,
+                           eh_admin=is_admin(current_user.email))
 
 @app.route('/api/classificar', methods=['POST'])
 @login_required
