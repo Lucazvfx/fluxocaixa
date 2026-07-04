@@ -29,3 +29,25 @@ def test_simular_cria_custo_arroba():
     matrizes = 30 + 40; fem_recria = 10 + 8 + 6
     assert abs(ano1['custo'] - (matrizes*17 + fem_recria*8) * 57) < 1.0
     assert r['preco_breakeven_unidade'] == 'R$/arroba'
+
+
+def test_simular_recria_custo_arroba_prorata():
+    from ml_engine import _simular_recria
+    r = _simular_recria(
+        [0,0, 0,50, 0,30, 0,0, 0,0], 'conservador', mort_pct=3,
+        preco_arroba=320, peso_entrada_arr=8, peso_saida_arr=14,
+        meses_recria=12, custo_arroba=57, anos=1)
+    ano1 = r['anos'][0]
+    animais = 50 + 30; peso_medio = (8 + 14) / 2
+    esperado = animais * peso_medio * 57 * (12/12)
+    assert abs(ano1['custo'] - esperado) < 1.0
+
+
+def test_simular_engorda_custo_arroba_prorata():
+    from ml_engine import _simular_engorda
+    r = _simular_engorda(
+        [0,0, 0,0, 0,0, 0,20, 0,10], 'conservador', mort_pct=3,
+        preco_arroba=320, peso_entrada_kg=350, peso_saida_kg=500,
+        rendimento_carcaca=54, custo_arroba=57, dias_engorda=120, anos=1)
+    ano1 = r['anos'][0]
+    assert ano1['custo'] > 0  # sanidade: custo em @ pró-rata calculado

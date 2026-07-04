@@ -720,7 +720,7 @@ def _simular_cria(
 
 def _simular_recria(
     v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
-    meses_recria, custo_cab_mes, anos,
+    meses_recria, custo_arroba, anos,
 ):
     """
     Receita calculada sobre o PESO TOTAL NA SAÍDA (memorial §6 e §12):
@@ -749,7 +749,8 @@ def _simular_recria(
 
         # Receita = peso total na saída (memorial §6)
         receita   = animais_sai * peso_saida_arr * preco
-        custo     = animais * meses_recria * custo_cab_mes
+        peso_medio = (peso_entrada_arr + peso_saida_arr) / 2.0
+        custo      = animais * peso_medio * custo_arroba * (meses_recria / 12.0)
         resultado = receita - custo
 
         animais_prox = animais * (1 + min(0.05, 0.04 * m['nat']))
@@ -789,7 +790,7 @@ def _simular_recria(
 
 def _simular_engorda(
     v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
-    rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
+    rendimento_carcaca, custo_arroba, dias_engorda, anos,
 ):
     """
     Receita calculada sobre o PESO TOTAL NA SAÍDA — arrobas de carcaça
@@ -824,7 +825,8 @@ def _simular_engorda(
 
         # Receita = arrobas totais de carcaça na saída (memorial §7)
         receita   = bois_abatidos * arrobas_saida * preco
-        custo     = bois_no_ano   * dias_engorda  * custo_cab_dia
+        arrobas_media = (arrobas_saida + (peso_entrada_kg * rend) / 15.0) / 2.0
+        custo         = bois_no_ano * arrobas_media * custo_arroba * (dias_engorda / 365.0)
         resultado = receita - custo
 
         bois_prox = bois * (1 + min(0.05, 0.04 * m['nat']))
