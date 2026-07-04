@@ -14,6 +14,10 @@ import joblib
 import warnings
 warnings.filterwarnings('ignore')
 from services.pesos_rebanho import arrobas_categorias
+from services.parametros_zootecnicos import (
+    NATALIDADE_PCT, DESMAME_PCT,
+    PESO_BOI_ARR, PESO_VACA_ARR, PESO_BEZERRA_ARR, PESO_GARROTE_ARR,
+)
 
 # ==================================================================
 # CONSTANTES GLOBAIS
@@ -30,7 +34,7 @@ PARAMS_POR_CICLO = {
         'renov_boi_pct': 20.0,
         'desc_mat_pct': 30.0,   # 30% descarte (memorial §16)
         'venda_bez_pct': 60.0,  # 60% da produção (memorial §16)
-        'nat_pct': 75.0,
+        'nat_pct': NATALIDADE_PCT,
     },
     'RECRIA': {
         'prop_boi': 0.0,
@@ -51,7 +55,7 @@ PARAMS_POR_CICLO = {
         'renov_boi_pct': 20.0,
         'desc_mat_pct': 30.0,
         'venda_bez_pct': 60.0,
-        'nat_pct': 75.0,
+        'nat_pct': NATALIDADE_PCT,
     }
 }
 
@@ -537,8 +541,8 @@ def calcular_ano(
     matrizes, femeas_024, machos_024, bois,
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
     venda_bez_pct, mort_pct, preco_arroba, custo_arroba,
-    peso_boi: float = 20.0, peso_vaca: float = 17.0, peso_bezerra: float = 8.0,
-    peso_garrote: float = None,
+    peso_boi: float = PESO_BOI_ARR, peso_vaca: float = PESO_VACA_ARR,
+    peso_bezerra: float = PESO_BEZERRA_ARR, peso_garrote: float = None,
 ) -> dict:
     """
     Pesos diferenciados na faixa jovem (0-25 meses):
@@ -875,8 +879,8 @@ def simular_cenario(
     desc_pct:       float = None,
     preco_arroba:   float = 320.0,      # memorial §16: R$320
     custo_arroba:   float = 57.0,       # R$/@ ano (default de formulário)
-    peso_arroba:    float = 8.0,        # memorial §16: bezerra = 8@
-    peso_garrote:   float = 13.0,       # garrote macho jovem (~195kg)
+    peso_arroba:    float = PESO_BEZERRA_ARR,  # bezerra (ref. mercado, 7@)
+    peso_garrote:   float = PESO_GARROTE_ARR,  # garrote macho jovem (ref. 11@)
     prop_boi:       float = None,
     renov_boi_pct:  float = None,
     venda_bez_pct:  float = None,
@@ -884,7 +888,7 @@ def simular_cenario(
     ciclo:              str   = 'CICLO_COMPLETO',
     preco_bezerro:      float = 1800.0, # memorial §16: R$1.800
     preco_arroba_bezerro: float = None, # R$/@ do bezerro; default = preco_arroba
-    desmama_pct:        float = 80.0,   # memorial §5:  80%
+    desmama_pct:        float = DESMAME_PCT,  # benchmark desmame (82%)
     peso_entrada_arr:   float = 10.0,   # memorial §16: 10@
     peso_saida_arr:     float = 18.0,   # memorial §16: 18@
     meses_recria:       int   = 12,
@@ -892,8 +896,8 @@ def simular_cenario(
     peso_saida_kg:      float = 520.0,  # memorial §16: 520kg
     rendimento_carcaca: float = 52.0,
     dias_engorda:       int   = 90,
-    peso_boi:           float = 20.0,   # memorial §16: 20@
-    peso_vaca:          float = 17.0,   # memorial §16: 17@
+    peso_boi:           float = PESO_BOI_ARR,   # ref. mercado (18@)
+    peso_vaca:          float = PESO_VACA_ARR,  # ref. mercado (14@)
 ) -> dict:
     # Preenche defaults a partir de PARAMS_POR_CICLO quando não passados explicitamente
     ciclo_params = PARAMS_POR_CICLO.get(ciclo, PARAMS_POR_CICLO['CICLO_COMPLETO'])
