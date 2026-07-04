@@ -427,6 +427,16 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         </div>
       </div>
       <div>
+        <div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Cotação do dia</div><span id="cot-fonte" style="font-family:var(--fm);font-size:.55rem;color:var(--mu)"></span></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="field"><label>Boi (R$/@) · CEPEA/ESALQ</label><input type="number" id="cot-boi" step="0.5" readonly></div>
+            <div class="field"><label>Vaca (R$/@) · Scot</label><input type="number" id="cot-vaca" step="0.5" readonly></div>
+            <div class="field"><label>Bezerro (R$/cab) · referência, editável</label><input type="number" id="cot-bezerro" step="10" oninput="onBezerroChange()"></div>
+            <div class="field"><label>Bezerra (R$/cab) · bezerro × 0,90</label><input type="number" id="cot-bezerra" step="10"></div>
+          </div>
+          <div style="margin-top:10px"><button class="btn-sm" onclick="usarCotacaoDia()" style="width:100%;justify-content:center">↻ Usar boi do dia como preço da arroba</button></div>
+          </div>
+        </div>
         <div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
           <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Peso Boi (@)</label><input type="number" id="s-boi-arr" value="18" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Matriz (@)</label><input type="number" id="s-mat-arr" value="14" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="7" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div></div><div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div></div>
         </div>
@@ -1591,6 +1601,33 @@ function logout() {
   window.location.href = '/logout';
 }
 
+// ================== COTAÇÃO DO DIA ==================
+let cotacaoDia = null;
+async function carregarCotacaoDia(){
+  try{
+    const r = await fetch('/api/precos/live');
+    const d = await r.json();
+    if(!d || !d.ok) return;
+    cotacaoDia = d.precos;
+    const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value = (+v>0)? Math.round(+v*100)/100 : '';};
+    set('cot-boi', d.precos.boi);
+    set('cot-vaca', d.precos.vaca);
+    set('cot-bezerro', d.precos.bezerro);
+    set('cot-bezerra', d.precos.bezerra);
+    const f=document.getElementById('cot-fonte');
+    if(f) f.textContent = d.origem==='banco' ? 'CEPEA/ESALQ (boi) · Scot (vaca)' : 'referência (sem cotação salva ainda)';
+    usarCotacaoDia();
+  }catch(e){}
+}
+function onBezerroChange(){
+  const b = +document.getElementById('cot-bezerro').value||0;
+  const el=document.getElementById('cot-bezerra'); if(el) el.value = Math.round(b*0.90*100)/100;
+}
+function usarCotacaoDia(){
+  const boi = +document.getElementById('cot-boi').value||0;
+  if(boi>0){ const el=document.getElementById('s-preco-arr'); if(el){ el.value=boi; if(typeof recalcCiclo==='function') recalcCiclo(); if(typeof runSc==='function') runSc(); } }
+}
+
 // ================== INIT ==================
 initParamsPorCiclo();
 carregarParametrosDoCiclo();
@@ -1599,6 +1636,7 @@ buildTable();
 recalcCiclo();
 runSc();
 atualizarDbStats();
+carregarCotacaoDia();
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
   <p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p>
