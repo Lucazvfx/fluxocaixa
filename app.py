@@ -546,20 +546,27 @@ def api_db_stats():
 
 @app.route('/api/precos/live', methods=['GET'])
 def api_precos_live():
-    """Retorna as cotações mais recentes armazenadas no banco de dados."""
+    """Cotação mais recente por categoria (boi/vaca R$/@, bezerro/bezerra R$/cab).
+
+    Quando o banco ainda não tem cotação, devolve as referências editáveis
+    (bezerro de referência + bezerra derivada) para a UI sempre ter algo.
+    """
+    from services.precos_diarios import BEZERRO_REF, bezerra_de
     try:
-        cotacoes = db.obter_cotacoes_atuais()
-        if cotacoes and (cotacoes.get('boi', 0) > 0 or cotacoes.get('vaca', 0) > 0):
-            return jsonify({
-                'ok': True,
-                'precos': {
-                    'boi': cotacoes.get('boi', 0),
-                    'vaca': cotacoes.get('vaca', 0),
-                    'boi_china': cotacoes.get('boi_china', 0)
-                }
-            })
-        else:
-            return jsonify({'ok': False, 'erro': 'Nenhuma cotação disponível no banco.'}), 404
+        c = db.obter_cotacoes_atuais() or {}
+        tem = c.get('boi', 0) > 0 or c.get('vaca', 0) > 0
+        bezerro = c.get('bezerro') or BEZERRO_REF
+        return jsonify({
+            'ok': True,
+            'origem': 'banco' if tem else 'referência',
+            'precos': {
+                'boi': c.get('boi', 0),
+                'vaca': c.get('vaca', 0),
+                'boi_china': c.get('boi_china', 0),
+                'bezerro': bezerro,
+                'bezerra': c.get('bezerra') or bezerra_de(bezerro),
+            }
+        })
     except Exception as e:
         logger.error(f"Erro ao buscar cotações: {e}", exc_info=True)
         return jsonify({'erro': str(e)}), 500

@@ -197,6 +197,8 @@ def init_db():
     _add_column_safe('registros', 'user_id',    'INTEGER')
     _add_column_safe('registros', 'fazenda_id', 'INTEGER')
     _add_column_safe('cotacao_arroba', 'preco_boi_china', 'REAL')
+    _add_column_safe('cotacao_arroba', 'preco_bezerro', 'REAL')
+    _add_column_safe('cotacao_arroba', 'preco_bezerra', 'REAL')
     _add_column_safe('usuarios', 'security_question', 'TEXT DEFAULT \'\'')
     _add_column_safe('usuarios', 'security_answer_hash', 'TEXT DEFAULT \'\'')
 
@@ -460,21 +462,25 @@ def guardar_cotacao_diaria(precos: dict):
     boi = float(precos.get('boi', 0.0))
     vaca = float(precos.get('vaca', 0.0))
     china = float(precos.get('boi_china', 0.0))
+    bezerro = float(precos.get('bezerro', 0.0))
+    bezerra = float(precos.get('bezerra', 0.0))
 
     # Verifica se já existe um registro para o dia de hoje
     existente = _exec(f'SELECT id FROM cotacao_arroba WHERE data_cotacao={ph}', (hoje,), fetch='one')
 
     if existente:
         # Se existir, atualiza (Evita erros de constraint UNIQUE na data)
-        _exec(f'''UPDATE cotacao_arroba 
-                  SET preco_boi={ph}, preco_vaca={ph}, preco_boi_china={ph}
-                  WHERE id={ph}''', 
-              (boi, vaca, china, existente['id']), commit=True)
+        _exec(f'''UPDATE cotacao_arroba
+                  SET preco_boi={ph}, preco_vaca={ph}, preco_boi_china={ph},
+                      preco_bezerro={ph}, preco_bezerra={ph}
+                  WHERE id={ph}''',
+              (boi, vaca, china, bezerro, bezerra, existente['id']), commit=True)
     else:
         # Se não existir, insere um novo registro histórico
-        _exec(f'''INSERT INTO cotacao_arroba (data_cotacao, preco_boi, preco_vaca, preco_boi_china) 
-                  VALUES ({ph}, {ph}, {ph}, {ph})''', 
-              (hoje, boi, vaca, china), commit=True)
+        _exec(f'''INSERT INTO cotacao_arroba (data_cotacao, preco_boi, preco_vaca,
+                      preco_boi_china, preco_bezerro, preco_bezerra)
+                  VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})''',
+              (hoje, boi, vaca, china, bezerro, bezerra), commit=True)
 
 def obter_cotacoes_atuais() -> dict:
     """
@@ -482,12 +488,14 @@ def obter_cotacoes_atuais() -> dict:
     Retorna dicionário {'boi': valor, 'vaca': valor, 'boi_china': valor}
     """
     try:
-        resultado = _exec('SELECT preco_boi, preco_vaca, preco_boi_china FROM cotacao_arroba ORDER BY data_cotacao DESC LIMIT 1', fetch='one')
+        resultado = _exec('SELECT preco_boi, preco_vaca, preco_boi_china, preco_bezerro, preco_bezerra FROM cotacao_arroba ORDER BY data_cotacao DESC LIMIT 1', fetch='one')
         if resultado:
             return {
-                'boi': float(resultado['preco_boi'] or 0.0), 
+                'boi': float(resultado['preco_boi'] or 0.0),
                 'vaca': float(resultado['preco_vaca'] or 0.0),
-                'boi_china': float(resultado.get('preco_boi_china') or 0.0)
+                'boi_china': float(resultado.get('preco_boi_china') or 0.0),
+                'bezerro': float(resultado.get('preco_bezerro') or 0.0),
+                'bezerra': float(resultado.get('preco_bezerra') or 0.0),
             }
     except Exception as e:
         print(f"[Erro DB Cotação]: {e}")
