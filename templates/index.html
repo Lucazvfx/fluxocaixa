@@ -423,15 +423,27 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Matrizes (cab.)</label><input type="number" id="s-mat" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Fêmeas 0–24m (cab.)</label><input type="number" id="s-fem" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Machos 0–24m (cab.)</label><input type="number" id="s-mac" value="0" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Bois Adultos (cab.)</label><input type="number" id="s-boi" value="0" min="0" oninput="recalcCiclo()"></div></div></div>
         </div>
         <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Parâmetros Zootécnicos</div></div>
-          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Nível Tecnológico</label><select id="s-nivel" onchange="recalcCiclo()"><option value="baixo">Baixo</option><option value="medio" selected>Médio</option><option value="alto">Alto</option></select></div></div></div>
+          <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Taxa Natalidade (%)</label><input type="number" id="s-nat" value="75" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Proporção Boi/Matriz (:1)</label><input type="number" id="s-propboi" value="30" min="1" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Renovação de Bois (%)</label><input type="number" id="s-renovboi" value="20" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Descarte de Matrizes (%)</label><input type="number" id="s-desc" value="30" min="0" max="100" oninput="recalcCiclo()"></div><div class="field"><label>Venda de Bezerras (%)</label><input type="number" id="s-vendbez" value="30" min="0" max="100" oninput="recalcCiclo()"></div></div></div>
         </div>
       </div>
       <div>
         <div class="card" style="margin-bottom:16px"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Preços de Venda</div></div>
           <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Peso Boi (@)</label><input type="number" id="s-boi-arr" value="20" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Matriz (@)</label><input type="number" id="s-mat-arr" value="17" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="8" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div></div><div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div></div>
         </div>
-        <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Custos por Nível (R$/cab/ano)</div><div id="s-lvl-badge"></div></div>
-          <div class="cb" style="overflow-x:auto"><table class="cetbl"><thead><tr><th>Categoria</th><th>Baixo</th><th>Médio</th><th>Alto</th></tr></thead><tbody id="s-cost-tbody"></tbody></table>
+        <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Estrutura de Custo (Desembolso · R$/cab/mês)</div>
+          <div style="display:flex;gap:6px"><button class="btn-sm" onclick="aplicarPresetDesembolso('media')">Média</button><button class="btn-sm" onclick="aplicarPresetDesembolso('top')">Top Rentáveis</button></div></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="field"><label>Insumos do rebanho</label><input type="number" id="cd-insumos" min="0" step="0.5" value="44.92" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Mão de obra</label><input type="number" id="cd-mao_obra" min="0" step="0.5" value="18.10" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Administração</label><input type="number" id="cd-administracao" min="0" step="0.5" value="8.49" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Máquinas (custeio+inv.)</label><input type="number" id="cd-maquinas" min="0" step="0.5" value="15.23" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Pastagem (custeio+inv.)</label><input type="number" id="cd-pastagem" min="0" step="0.5" value="14.29" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Infraestrutura (custeio+inv.)</label><input type="number" id="cd-infraestrutura" min="0" step="0.5" value="13.69" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Taxas e impostos</label><input type="number" id="cd-taxas_impostos" min="0" step="0.5" value="3.66" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Outros</label><input type="number" id="cd-outros" min="0" step="0.5" value="0.76" oninput="recalcCiclo()"></div>
+            </div>
+            <div id="s-desemb-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)"><span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Custo Total do Rebanho</span><span id="s-custo-total" style="font-family:var(--fn);font-weight:800;font-size:1.6rem;color:var(--rd)">—</span></div>
           </div>
         </div>
@@ -492,7 +504,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="sc-card sc-cons" onclick="selSc('conservador',this)"><div class="sc-name">Conservador — Manutenção</div><div class="sc-desc">Estabilidade mínima em cenário de baixa de preços.</div></div>
         </div>
       </div>
-      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Custo (R$/@·ano)</label><input type="number" id="sc-custo" value="57" min="10" max="300" step="0.5" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
     </div>
     <div id="sc-result"></div>
   </div>
@@ -689,7 +701,8 @@ async function classificar(){
   try{
     const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
     // Custo em R$/@ (mesmo input da projeção) e solicitação de crédito
-    body.custo_arroba=+document.getElementById('sc-custo').value||57;
+    body.custo_componentes={};
+    COMP_DESEMB.forEach(k=>{body.custo_componentes[k]=parseFloat(document.getElementById('cd-'+k)?.value)||0;});
     body.credito_valor=+document.getElementById('credito_valor').value||0;
     body.prazo_meses=+document.getElementById('credito_prazo').value||0;
     body.carencia_meses=+document.getElementById('credito_carencia').value||0;
@@ -720,6 +733,7 @@ async function classificar(){
     const data=await res.json();
     if(data.erro){showToast(data.erro,true);return}
     lastVals=v;
+    window.lastTipo=data.tipo||data.classificacao||'CICLO_COMPLETO';
     lastRegistroId=data.registro_id||null;
     renderResult(data);
     renderConsistencia(data.consistencia);
@@ -1213,48 +1227,36 @@ function getRecs(tipo,ind){
 }
 
 // ================== CICLO COMPLETO ENGINE ==================
-let CUSTO_S={
-  baixo: {matrizes:800,bois:600,femeas:400,machos:380,bezerros:180},
-  medio: {matrizes:850,bois:650,femeas:450,machos:420,bezerros:220},
-  alto:  {matrizes:950,bois:750,femeas:500,machos:480,bezerros:280}
-};
 function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
 
-function renderCostTableS(){
-  const cats=[
-    {key:'matrizes',label:'Matrizes (25m+)'},
-    {key:'bois',    label:'Bois Adultos'},
-    {key:'femeas',  label:'Fêmeas Jovens (0-24m)'},
-    {key:'machos',  label:'Machos Jovens (0-24m)'},
-    {key:'bezerros',label:'Bezerros (nascimentos)'}
-  ];
-  const levels=['baixo','medio','alto'];
-  const tbody=document.getElementById('s-cost-tbody');
-  if(!tbody)return;
-  tbody.innerHTML='';
-  cats.forEach(cat=>{
-    const tr=document.createElement('tr');
-    const td0=document.createElement('td');
-    td0.textContent=cat.label;td0.style.fontWeight='500';
-    tr.appendChild(td0);
-    levels.forEach(lv=>{
-      const td=document.createElement('td');
-      const inp=document.createElement('input');
-      inp.type='number';inp.value=CUSTO_S[lv][cat.key];inp.step=10;
-      inp.addEventListener('change',e=>{CUSTO_S[lv][cat.key]=parseFloat(e.target.value)||0;recalcCiclo();});
-      td.appendChild(inp);tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  hlCostLevel();
+// Presets de desembolso (R$/cab/mês) — fonte GEP Araguaia / Inttegra, safra 24/25.
+// [media, top_rentaveis] por componente e modalidade.
+const PERFIL_DESEMBOLSO={
+  CRIA:{insumos:[25.53,22.17],mao_obra:[18.20,14.66],administracao:[7.97,5.30],maquinas:[11.79,7.63],pastagem:[11.97,9.09],infraestrutura:[11.59,7.30],taxas_impostos:[2.66,2.26],outros:[1.17,1.22]},
+  RECRIA_ENGORDA:{insumos:[77.46,96.53],mao_obra:[19.62,17.04],administracao:[14.04,7.92],maquinas:[19.37,15.49],pastagem:[15.38,11.44],infraestrutura:[18.79,12.35],taxas_impostos:[5.05,5.77],outros:[1.03,0.74]},
+  CICLO_COMPLETO:{insumos:[44.92,42.18],mao_obra:[18.10,14.39],administracao:[8.49,5.89],maquinas:[15.23,10.71],pastagem:[14.29,10.79],infraestrutura:[13.69,8.40],taxas_impostos:[3.66,3.10],outros:[0.76,0.62]},
+};
+const COMP_DESEMB=['insumos','mao_obra','administracao','maquinas','pastagem','infraestrutura','taxas_impostos','outros'];
+const COMP_LABEL={insumos:'Insumos',mao_obra:'Mão de obra',administracao:'Administração',maquinas:'Máquinas',pastagem:'Pastagem',infraestrutura:'Infraestrutura',taxas_impostos:'Taxas e impostos',outros:'Outros'};
+function desembolsoTotalMensal(){return COMP_DESEMB.reduce((s,k)=>s+(parseFloat(document.getElementById('cd-'+k)?.value)||0),0);}
+function pesoMedioArrobaRebanho(){
+  const v=getVals(); const tot=v.reduce((a,b)=>a+b,0); if(tot<=0) return 0;
+  const fj=v[0]+v[2]+v[4], mj=v[1]+v[3]+v[5], mat=v[6]+v[8], boi=v[7]+v[9];
+  const arrobas=mat*17+boi*20+fj*8+mj*12;  // pesos do motor
+  return arrobas/tot;
 }
-
-function hlCostLevel(){
-  const lv=document.getElementById('s-nivel')?.value||'medio';
-  const idx={baixo:1,medio:2,alto:3}[lv];
-  document.querySelectorAll('#s-cost-tbody tr').forEach(tr=>{
-    for(let i=1;i<=3;i++) tr.cells[i].style.background=(i===idx)?'rgba(74,222,128,.08)':'';
-  });
+function custoArrobaDerivado(){const pm=pesoMedioArrobaRebanho(); if(pm<=0) return 0; return desembolsoTotalMensal()*12/pm;}
+function aplicarPresetDesembolso(perfil){
+  let tipo=window.lastTipo||'CICLO_COMPLETO';
+  let mod=(tipo==='RECRIA'||tipo==='ENGORDA')?'RECRIA_ENGORDA':tipo;
+  if(!PERFIL_DESEMBOLSO[mod]) mod='CICLO_COMPLETO';
+  const idx=perfil==='media'?0:1; const p=PERFIL_DESEMBOLSO[mod];
+  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+k); if(el) el.value=p[k][idx];});
+  recalcCiclo();
+}
+function updateDesembolsoInfo(){
+  const el=document.getElementById('s-desemb-info'); if(!el) return;
+  el.textContent=`Total ${fR(desembolsoTotalMensal())}/cab·mês  ≈  ${fR(custoArrobaDerivado())}/@·ano (usa o rebanho declarado na aba de entrada)`;
 }
 
 function calcCiclo(){
@@ -1264,7 +1266,6 @@ function calcCiclo(){
   const rb=gS('s-renovboi')/100||0.2;
   const des=gS('s-desc')/100||0.3;
   const vbp=gS('s-vendbez')/100||0.3;
-  const niv=document.getElementById('s-nivel')?.value||'medio';
   const pArr=gS('s-preco-arr')||350;
   const pBoi=(gS('s-boi-arr')||20)*pArr;
   const pMat=(gS('s-mat-arr')||17)*pArr;
@@ -1286,10 +1287,10 @@ function calcCiclo(){
   const totVend=bVend+desQ+bezV+bezMV;
   const pBezCab=pBezArr*pArr;
   const rBoi=bVend*pBoi,rMat=desQ*pMat,rBez=bezV*pBezCab,rBezM=bezMV*pBezCab,rTot=rBoi+rMat+rBez+rBezM;
-  const cn=CUSTO_S[niv];
-  const cMat=mat*cn.matrizes,cBoi=boi*cn.bois,cFem=fem*cn.femeas,cMac=mac*cn.machos,cBez=totBez*cn.bezerros,cTot=cMat+cBoi+cFem+cMac+cBez;
+  const desembMensal=desembolsoTotalMensal();
+  const cTot=totReb*desembMensal*12;  // custo anual do rebanho = cabeças × desembolso/mês × 12
   const res=rTot-cTot;
-  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,niv,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,cMat,cBoi,cFem,cMac,cBez,cTot,res};
+  return{mat,fem,mac,boi,nat,prop,rb,des,vbp,totBez,bezF,bezM,bNec,bExc,bRen,bVend,macRest,desQ,bezV,bezMV,femR,cresc,totReb,totVend,pBoi,pMat,pBezCab,rBoi,rMat,rBez,rBezM,rTot,desembMensal,cTot,res};
 }
 
 function makeBarsS(items,maxV,colors){
@@ -1300,15 +1301,8 @@ function makeBarsS(items,maxV,colors){
 }
 
 function recalcCiclo(){
-  if(!document.getElementById('s-cost-tbody')?.children.length) renderCostTableS();
-  else hlCostLevel();
+  updateDesembolsoInfo();
   const d=calcCiclo();
-  const nb=d.niv;
-  const nbLbl={baixo:'Baixo',medio:'Médio',alto:'Alto'}[nb];
-
-  // Level badge
-  const lvB=document.getElementById('s-lvl-badge');
-  if(lvB) lvB.innerHTML=`<span class="lvl-badge ${nb}">${nbLbl}</span>`;
 
   // Custo total
   const ctEl=document.getElementById('s-custo-total');
@@ -1359,8 +1353,7 @@ function recalcCiclo(){
   const tRec=document.querySelector('#s-tbl-rec tbody');
   if(tRec){tRec.innerHTML=[['Bois',d.bVend,fR(d.pBoi),d.rBoi],['Matrizes',d.desQ,fR(d.pMat),d.rMat],['Bezerras',d.bezV,fR(d.pBezCab),d.rBez],['Bezerros M.',d.bezMV,fR(d.pBezCab),d.rBezM]].map(([c,q,p,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${p}</td><td class="g">${fR(t)}</td></tr>`).join('');const el=ki('s-rec-tot');if(el)el.textContent=fR(d.rTot);}
   const tCus=document.querySelector('#s-tbl-cus tbody');
-  const cn=CUSTO_S[d.niv];
-  if(tCus){tCus.innerHTML=[['Matrizes',d.mat,cn.matrizes,d.cMat],['Bois',d.boi,cn.bois,d.cBoi],['Fêmeas Jovens',d.fem,cn.femeas,d.cFem],['Machos Jovens',d.mac,cn.machos,d.cMac],['Bezerros',d.totBez,cn.bezerros,d.cBez]].map(([c,q,cu,t])=>`<tr><td>${c}</td><td class="r">${fN(q)}</td><td class="r">${fR(cu)}</td><td class="cr">${fR(t)}</td></tr>`).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
+  if(tCus){tCus.innerHTML=COMP_DESEMB.map(k=>{const m=parseFloat(document.getElementById('cd-'+k)?.value)||0;const tot=d.totReb*m*12;return `<tr><td>${COMP_LABEL[k]}</td><td class="r">${fR(m)}</td><td class="r">/cab·mês</td><td class="cr">${fR(tot)}</td></tr>`;}).join('');const el=ki('s-cus-tot');if(el)el.textContent=fR(d.cTot);}
   const resBox=ki('s-res-box');
   if(resBox){const pos=d.res>=0;resBox.innerHTML=`<div class="res-box ${pos?'pos':'neg'}"><div><div style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:6px">Resultado Líquido Anual</div><div style="font-family:var(--fn);font-weight:800;font-size:2.2rem;line-height:1;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res)}</div></div>${d.totVend>0?`<div style="text-align:right"><div style="font-family:var(--fm);font-size:.6rem;color:var(--mu);margin-bottom:4px">Por animal vendido</div><div style="font-family:var(--fn);font-weight:700;font-size:1.2rem;color:${pos?'var(--g)':'var(--rd)'}">${fR(d.res/d.totVend)}</div></div>`:''}</div>`;}
 }
@@ -1404,7 +1397,7 @@ function runSc(){
       mort:document.getElementById('sc-mort').value,
       desc:document.getElementById('s-desc').value,
       preco:document.getElementById('s-preco-arr').value,
-      custo:document.getElementById('sc-custo').value,
+      custo:custoArrobaDerivado(),
       peso:document.getElementById('sc-peso').value,
       propboi:document.getElementById('s-propboi').value,
       renovboi:document.getElementById('s-renovboi').value,
@@ -1603,7 +1596,6 @@ initParamsPorCiclo();
 carregarParametrosDoCiclo();
 atualizarTituloCiclo();
 buildTable();
-renderCostTableS();
 recalcCiclo();
 runSc();
 atualizarDbStats();
