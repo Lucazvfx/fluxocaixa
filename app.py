@@ -50,6 +50,22 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')  # Em produção, sempre defina via env
 
+# ── Controle de acesso: whitelist de e-mails ──────────────────────────────────
+# Defina EMAILS_PERMITIDOS no Railway (ex.: "a@x.com, b@y.com"). Vazio = acesso
+# aberto (nenhuma restrição), então NÃO deixe em branco em produção.
+_EMAILS_PERMITIDOS = {
+    e.strip().lower()
+    for e in os.environ.get('EMAILS_PERMITIDOS', '').split(',')
+    if e.strip()
+}
+
+
+def email_permitido(email: str) -> bool:
+    """True se o e-mail pode acessar. Whitelist vazia = acesso aberto."""
+    if not _EMAILS_PERMITIDOS:
+        return True
+    return (email or '').strip().lower() in _EMAILS_PERMITIDOS
+
 # ── Flask-Login ──────────────────────────────────────────────────────────────
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -143,11 +159,14 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
         senha = request.form.get('senha', '')
-        u = db.verificar_senha(email, senha)
-        if u:
-            login_user(User(u), remember=True)
-            return redirect(url_for('index'))
-        erro = 'E-mail ou senha incorretos.'
+        if not email_permitido(email):
+            erro = 'Este e-mail não está autorizado a acessar o sistema.'
+        else:
+            u = db.verificar_senha(email, senha)
+            if u:
+                login_user(User(u), remember=True)
+                return redirect(url_for('index'))
+            erro = 'E-mail ou senha incorretos.'
     return render_template('login.html', erro=erro)
 
 @app.route('/esqueci-senha')
@@ -165,6 +184,8 @@ def cadastro():
         senha = request.form.get('senha', '')
         if not nome or not email or len(senha) < 6:
             erro = 'Preencha todos os campos. Senha mínima: 6 caracteres.'
+        elif not email_permitido(email):
+            erro = 'Este e-mail não está autorizado. Solicite acesso ao administrador.'
         elif db.buscar_usuario_email(email):
             erro = 'E-mail já cadastrado.'
         else:
