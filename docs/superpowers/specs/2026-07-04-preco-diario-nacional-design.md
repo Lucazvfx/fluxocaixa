@@ -19,43 +19,53 @@ boi_china em `cotacao_arroba` via `db.guardar_cotacao_diaria`, com scheduler
 `apscheduler` às 08h. **Limitações:** calibrado para **Rondônia** (força valores
 RO) e **sem bezerro/bezerra**.
 
-## Viabilidade (verificada)
+## Viabilidade (verificada ao vivo)
 
-- **CEPEA direto bloqueia scraping** (`requests` → HTTP 403). Não dá para bater
-  na fonte primária.
-- **Notícias Agrícolas** (`noticiasagricolas.com.br/cotacoes/boi-gordo`) responde
-  200, **republica o indicador CEPEA/ESALQ** do boi e traz vaca e bezerro na
-  página → é a fonte scrapeável que preserva a credibilidade CEPEA.
-- **Bezerra** não tem índice diário próprio; deriva do bezerro por fator
-  documentado (fêmea ~5–7% abaixo do macho por @/kg; usamos **0,90**,
-  conservador e editável).
+- **CEPEA direto bloqueia scraping** (`requests` → HTTP 403) e o **Índice do
+  Bezerro do CEPEA é semanal**, não diário.
+- **Boi:** ✅ **Notícias Agrícolas** (`/cotacoes/boi-gordo`, 200) republica o
+  **indicador CEPEA/ESALQ** do boi de forma limpa e diária (ex.: 329,85).
+- **Vaca:** ✅ **Scot** (`/cotacoes/vaca-gorda`, 200) — já usada no scraper;
+  passa a ler praça nacional/média em vez de RO.
+- **Bezerro:** ❌ **sem fonte diária gratuita scrapeável** — CEPEA bloqueado e
+  semanal; Scot bezerro 404; Agrolink carrega via JavaScript (o `requests` não
+  pega, e o deploy não roda navegador headless).
+- **Bezerra:** deriva do bezerro por fator (fêmea ~5–7% abaixo por @/kg; usamos
+  **0,90**, editável).
 
 ## Decisões de design
 
-- **Fonte:** Notícias Agrícolas (indicador CEPEA/ESALQ) como **principal**;
-  cascata de fallback: Scot (já no código) → **último valor salvo** no banco →
-  default de segurança. Nunca quebra; sempre devolve algo com proveniência.
-- **Categorias e unidades:** boi e vaca em **R$/@**; bezerro em **R$/cabeça**
-  (convenção de mercado do índice); **bezerra = bezerro × 0,90** (R$/cabeça).
-- **Nacional, não RO:** remove o forçamento de Rondônia; usa o indicador
-  nacional CEPEA/ESALQ do boi. Vaca nacional idem; sem "calibração RO".
+- **Boi e vaca — automáticos diários** (boi: Notícias Agrícolas/CEPEA-ESALQ;
+  vaca: Scot), com cascata de fallback: fonte principal → **último valor salvo**
+  → default de segurança. Nunca quebra; cada valor carrega sua `fonte`.
+- **Bezerro — campo editável com default de referência sourced** (não há diário
+  confiável). Default ancorado no mercado/CEPEA (~R$ 3.000/cab desmama), rótulo
+  deixa claro que é referência editável, não cotação do dia.
+- **Bezerra = bezerro × 0,90** (R$/cabeça).
+- **Unidades:** boi e vaca em **R$/@**; bezerro e bezerra em **R$/cabeça**.
+- **Nacional, não RO:** remove o forçamento de Rondônia do scraper.
 
 ## Componentes
 
 ### 1. Coletor `scraper.py` (estendido) + módulo puro de parsing
 
-- Novo `services/precos_diarios.py` (puro, testável): recebe o **HTML** e
-  extrai `{boi, vaca, bezerro}` com regex/seletor da Notícias Agrícolas, e
-  aplica `bezerra = round(bezerro * FATOR_BEZERRA, 2)` (`FATOR_BEZERRA = 0.90`).
-  Função `parse_precos_na(html) -> dict`. Sem I/O (recebe o HTML já baixado) —
-  assim testamos o parsing com um HTML fixo sem depender da rede.
-- `scraper.py`: `obter_precos_arroba()` passa a tentar, em ordem:
-  1. Notícias Agrícolas (baixa HTML → `parse_precos_na`).
-  2. Scot (comportamento atual, mas **sem forçar RO** — praça nacional/média).
-  3. Último salvo no banco (`db.buscar_cotacao_recente`).
-  4. Defaults de segurança (constantes documentadas).
-  Retorna `{boi, vaca, boi_china, bezerro, bezerra, fonte}` (novo campo `fonte`
-  para rastreabilidade). Cada valor obtido loga a origem.
+- Novo `services/precos_diarios.py` (puro, testável — recebe HTML, sem rede):
+  - `parse_boi_na(html) -> float`: extrai o indicador **CEPEA/ESALQ** do boi da
+    página da Notícias Agrícolas (âncora no texto "Indicador do Boi Gordo Esalq"
+    → primeiro valor `\d{3},\d{2}` seguinte).
+  - `parse_vaca_scot(html) -> float`: extrai a vaca da Scot (praça de referência
+    nacional; primeiro valor válido).
+  - `FATOR_BEZERRA = 0.90`; `BEZERRO_REF = 3000.0` (default de referência
+    R$/cabeça, editável); `bezerra_de(bezerro) -> round(bezerro*0.90, 2)`.
+  - `valido(v, lo, hi)`: sanidade por faixa (boi/vaca 100–600; bezerro 800–6000).
+- `scraper.py`: `obter_precos_arroba()` passa a montar, com fallback por
+  categoria:
+  1. **Boi**: Notícias Agrícolas → (falha) último salvo → default.
+  2. **Vaca**: Scot (sem forçar RO) → último salvo → default.
+  3. **Bezerro**: último salvo (se o analista já ajustou) → `BEZERRO_REF`.
+  4. **Bezerra**: `bezerra_de(bezerro)`.
+  Retorna `{boi, vaca, boi_china, bezerro, bezerra, fonte}` (`fonte` = de onde
+  veio boi/vaca, p/ rastreabilidade). Cada valor loga a origem.
 
 ### 2. Persistência (`database.py`)
 
@@ -73,14 +83,13 @@ RO) e **sem bezerro/bezerra**.
 
 ### 4. UI (`templates/index.html`)
 
-- Novo painel/rótulo **"Cotação do dia (CEPEA/nacional)"** mostrando os 4 preços
-  e a data/fonte.
+- Novo painel **"Cotação do dia"** mostrando **boi** e **vaca** (com data e
+  `fonte` — CEPEA/ESALQ e Scot) e os campos editáveis **bezerro** e **bezerra**
+  (rotulados "referência, editável"). Bezerra recalcula ao editar bezerro
+  (× 0,90), mas o analista pode sobrescrever.
 - **Auto-preenchimento** (editável): ao carregar, busca `/api/cotacao-dia` e
-  preenche:
-  - `Preço Arroba` (projeção e sale-price panel) ← **boi** do dia.
-  - No calculador local (Preços de Venda), os valores por categoria passam a
-    poder usar boi/vaca do dia (R$/@) e bezerro/bezerra do dia (R$/cabeça).
-  - Um botão "usar cotação do dia" reaplica os valores se o analista editou.
+  preenche `Preço Arroba` (projeção e sale-price panel) ← **boi** do dia; um
+  botão "usar cotação do dia" reaplica se o analista editou.
 - Se a cotação falhar, os campos mantêm os defaults sourced da feature (B).
 
 ## Fluxo de dados
@@ -112,10 +121,11 @@ UI  ──GET /api/cotacao-dia──►  preenche Preço Arroba (boi) + preços 
 ## Testes
 
 `tests/test_precos_diarios.py` (parsing puro, sem rede):
-- `parse_precos_na(html_fixo)` extrai boi/vaca/bezerro corretos de um HTML de
-  exemplo salvo em `tests/fixtures/`.
-- `bezerra == round(bezerro * 0.90, 2)`.
-- Sanidade de faixa: valor fora da faixa é rejeitado.
+- `parse_boi_na(html_fixo)` extrai o indicador CEPEA/ESALQ de um HTML de exemplo
+  em `tests/fixtures/` (ex.: 329,85).
+- `parse_vaca_scot(html_fixo)` extrai a vaca de um HTML de exemplo.
+- `bezerra_de(3000) == 2700.0`.
+- `valido(v, lo, hi)`: valor fora da faixa é rejeitado.
 
 `tests/test_cotacao_db.py`:
 - `guardar_cotacao_diaria` + `buscar_cotacao_recente` fazem round-trip de
