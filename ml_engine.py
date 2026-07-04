@@ -13,6 +13,7 @@ from sklearn.model_selection import cross_val_score
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
+from services.pesos_rebanho import arrobas_categorias
 
 # ==================================================================
 # CONSTANTES GLOBAIS
@@ -535,7 +536,7 @@ def calcular_indicadores(v: list) -> dict:
 def calcular_ano(
     matrizes, femeas_024, machos_024, bois,
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
-    venda_bez_pct, mort_pct, preco_arroba, custo_cab_ano,
+    venda_bez_pct, mort_pct, preco_arroba, custo_arroba,
     peso_boi: float = 20.0, peso_vaca: float = 17.0, peso_bezerra: float = 8.0,
     peso_garrote: float = None,
 ) -> dict:
@@ -574,7 +575,12 @@ def calcular_ano(
         bez_vend        * peso_bezerra +
         machos_024_vend * peso_garrote
     ) * preco_arroba
-    custo_tot = total_prox * custo_cab_ano
+    arrobas_rebanho = arrobas_categorias(
+        matrizes=mat_prox, bois=bois_prox,
+        jovens_f=femeas_024_prx, jovens_m=machos_024_prx,
+        peso_vaca=peso_vaca, peso_boi=peso_boi,
+        peso_bezerra=peso_bezerra, peso_garrote=peso_garrote)
+    custo_tot = arrobas_rebanho * custo_arroba
     resultado = receita - custo_tot
     return {
         'bezerros_produzidos': int(bezerros),
@@ -645,7 +651,8 @@ def _montar_resultado(cenario, sc, anos_proj, total_ini, ciclo):
 
 def _simular_cria(
     v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
-    preco_bezerro, custo_cab_ano, anos,
+    preco_arroba_bezerro, custo_arroba, anos,
+    peso_matriz=17.0, peso_bezerra=8.0,
 ):
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
@@ -655,7 +662,7 @@ def _simular_cria(
     mort     = (mort_pct / 100) * m['mort']
     desmama  = (desmama_pct / 100)
     venda_bz = (venda_bez_pct / 100)
-    preco_bz = preco_bezerro * m['preco']
+    preco_bz = (preco_arroba_bezerro * m['preco']) * peso_bezerra   # R$/cabeça derivado de R$/@
 
     matrizes    = float(va[6] + va[8])
     fem_recria  = float(va[0] + va[2] + va[4])
@@ -676,7 +683,7 @@ def _simular_cria(
         mortes        = round((matrizes + fem_recria) * mort)
 
         receita   = vez_vendidos * preco_bz
-        custo     = (matrizes + fem_recria) * custo_cab_ano
+        custo     = (matrizes * peso_matriz + fem_recria * peso_bezerra) * custo_arroba
         resultado = receita - custo
 
         anos_proj.append({
@@ -699,10 +706,10 @@ def _simular_cria(
 
     result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'CRIA')
     ano1 = anos_proj[0]
-    units = float(max(ano1['vendidos'], 1))
+    units = float(max(ano1['vendidos'], 1)) * peso_bezerra
     result.update({
-        'preco_breakeven':         round(ano1['custo'] / units, 2),
-        'preco_breakeven_unidade': 'R$/cabeça',
+        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
+        'preco_breakeven_unidade': 'R$/arroba',
         'preco_usado':             preco_bz,
         'slider_units':            units,
         'slider_custo_ano1':       ano1['custo'],
@@ -713,7 +720,7 @@ def _simular_cria(
 
 def _simular_recria(
     v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
-    meses_recria, custo_cab_mes, anos,
+    meses_recria, custo_arroba, anos,
 ):
     """
     Receita calculada sobre o PESO TOTAL NA SAÍDA (memorial §6 e §12):
@@ -742,7 +749,8 @@ def _simular_recria(
 
         # Receita = peso total na saída (memorial §6)
         receita   = animais_sai * peso_saida_arr * preco
-        custo     = animais * meses_recria * custo_cab_mes
+        peso_medio = (peso_entrada_arr + peso_saida_arr) / 2.0
+        custo      = animais * peso_medio * custo_arroba * (meses_recria / 12.0)
         resultado = receita - custo
 
         animais_prox = animais * (1 + min(0.05, 0.04 * m['nat']))
@@ -782,7 +790,7 @@ def _simular_recria(
 
 def _simular_engorda(
     v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
-    rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
+    rendimento_carcaca, custo_arroba, dias_engorda, anos,
 ):
     """
     Receita calculada sobre o PESO TOTAL NA SAÍDA — arrobas de carcaça
@@ -817,7 +825,8 @@ def _simular_engorda(
 
         # Receita = arrobas totais de carcaça na saída (memorial §7)
         receita   = bois_abatidos * arrobas_saida * preco
-        custo     = bois_no_ano   * dias_engorda  * custo_cab_dia
+        arrobas_media = (arrobas_saida + (peso_entrada_kg * rend) / 15.0) / 2.0
+        custo         = bois_no_ano * arrobas_media * custo_arroba * (dias_engorda / 365.0)
         resultado = receita - custo
 
         bois_prox = bois * (1 + min(0.05, 0.04 * m['nat']))
@@ -865,7 +874,7 @@ def simular_cenario(
     mort_pct:       float = 3.0,        # memorial §16: 3%
     desc_pct:       float = None,
     preco_arroba:   float = 320.0,      # memorial §16: R$320
-    custo_cab_ano:  float = 850.0,      # memorial §16: R$850
+    custo_arroba:   float = 57.0,       # R$/@ ano (default de formulário)
     peso_arroba:    float = 8.0,        # memorial §16: bezerra = 8@
     peso_garrote:   float = 13.0,       # garrote macho jovem (~195kg)
     prop_boi:       float = None,
@@ -874,15 +883,14 @@ def simular_cenario(
     anos:           int   = 5,
     ciclo:              str   = 'CICLO_COMPLETO',
     preco_bezerro:      float = 1800.0, # memorial §16: R$1.800
+    preco_arroba_bezerro: float = None, # R$/@ do bezerro; default = preco_arroba
     desmama_pct:        float = 80.0,   # memorial §5:  80%
     peso_entrada_arr:   float = 10.0,   # memorial §16: 10@
     peso_saida_arr:     float = 18.0,   # memorial §16: 18@
     meses_recria:       int   = 12,
-    custo_cab_mes:      float = 80.0,   # memorial §16: R$80
     peso_entrada_kg:    float = 300.0,  # memorial §16: 300kg
     peso_saida_kg:      float = 520.0,  # memorial §16: 520kg
     rendimento_carcaca: float = 52.0,
-    custo_cab_dia:      float = 12.0,   # memorial §16: R$12
     dias_engorda:       int   = 90,
     peso_boi:           float = 20.0,   # memorial §16: 20@
     peso_vaca:          float = 17.0,   # memorial §16: 17@
@@ -894,21 +902,23 @@ def simular_cenario(
     if desc_pct      is None: desc_pct      = ciclo_params['desc_mat_pct']
     if venda_bez_pct is None: venda_bez_pct = ciclo_params['venda_bez_pct']
     if nat_pct       is None: nat_pct       = ciclo_params.get('nat_pct', 75.0)
+    if preco_arroba_bezerro is None: preco_arroba_bezerro = preco_arroba
 
     if ciclo == 'CRIA':
         return _simular_cria(
             v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
-            preco_bezerro, custo_cab_ano, anos,
+            preco_arroba_bezerro, custo_arroba, anos,
+            peso_matriz=peso_vaca, peso_bezerra=peso_arroba,
         )
     if ciclo == 'RECRIA':
         return _simular_recria(
             v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
-            meses_recria, custo_cab_mes, anos,
+            meses_recria, custo_arroba, anos,
         )
     if ciclo == 'ENGORDA':
         return _simular_engorda(
             v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
-            rendimento_carcaca, custo_cab_dia, dias_engorda, anos,
+            rendimento_carcaca, custo_arroba, dias_engorda, anos,
         )
 
     # CICLO_COMPLETO
@@ -936,7 +946,7 @@ def simular_cenario(
             venda_bez_pct=venda_bez_pct/100,
             mort_pct=mort,
             preco_arroba=preco_arroba * m['preco'],
-            custo_cab_ano=custo_cab_ano,
+            custo_arroba=custo_arroba,
             peso_boi=peso_boi,
             peso_vaca=peso_vaca,
             peso_bezerra=peso_arroba,
@@ -1187,12 +1197,15 @@ def calcular_breakeven_simples(v: list, ciclo: str) -> dict:
     CICLO:   (total × R$850) / (total × 0,30 × 16@)               → R$/arroba
     """
     va = np.array(v, dtype=float)
-    custo_cab_ano = 850.0  # memorial §16
+    custo_arroba = 57.0
 
     if ciclo == 'CRIA':
         matrizes  = float(va[6] + va[8])
         total     = float(va.sum()) or 1.0
-        custo     = total * custo_cab_ano
+        arrobas = arrobas_categorias(
+            matrizes=float(va[6] + va[8]), bois=float(va[7] + va[9]),
+            jovens_f=float(va[0] + va[2] + va[4]), jovens_m=float(va[1] + va[3] + va[5]))
+        custo = arrobas * custo_arroba
         # nat=75%, desmama=80%, venda=60% (memorial §9)
         bezerros  = matrizes * 0.75 * 0.80 * 0.60
         if bezerros <= 0:
@@ -1212,6 +1225,9 @@ def calcular_breakeven_simples(v: list, ciclo: str) -> dict:
 
     # CICLO_COMPLETO: 30% do rebanho × 16@ médias (memorial §9)
     total = float(va.sum()) or 1.0
-    custo = total * custo_cab_ano
+    arrobas = arrobas_categorias(
+        matrizes=float(va[6] + va[8]), bois=float(va[7] + va[9]),
+        jovens_f=float(va[0] + va[2] + va[4]), jovens_m=float(va[1] + va[3] + va[5]))
+    custo = arrobas * custo_arroba
     units = total * 0.30 * 16.0
     return {'preco_breakeven': round(custo / max(units, 1), 2), 'unidade': 'R$/arroba'}

@@ -179,6 +179,20 @@ def init_db():
         )
     ''', commit=True)
 
+    # Pareceres de crédito (histórico consultável por fazenda)
+    _exec(f'''
+        CREATE TABLE IF NOT EXISTS pareceres (
+            id           {_AI},
+            fazenda_id   INTEGER,
+            user_id      INTEGER NOT NULL,
+            solicitacao  TEXT,
+            parecer      TEXT,
+            recomendacao TEXT,
+            dscr         REAL,
+            created_at   TIMESTAMP DEFAULT {_NOW}
+        )
+    ''', commit=True)
+
     # Colunas adicionadas de forma segura (retrocompatibilidade)
     _add_column_safe('registros', 'user_id',    'INTEGER')
     _add_column_safe('registros', 'fazenda_id', 'INTEGER')
@@ -310,6 +324,32 @@ def historico_fazenda(fazenda_id: int, user_id: int = None, limit: int = 30) -> 
         d['created_at'] = str(d.get('created_at', ''))
         result.append(d)
     return result
+
+def salvar_parecer(user_id: int, fazenda_id: int,
+                   solicitacao: dict, parecer: dict) -> int:
+    ph = _PH
+    concl = (parecer or {}).get('conclusao', {})
+    rid = _exec(
+        f'''INSERT INTO pareceres (fazenda_id, user_id, solicitacao, parecer,
+                                   recomendacao, dscr)
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph})''',
+        (fazenda_id, user_id, json.dumps(solicitacao), json.dumps(parecer),
+         concl.get('recomendacao'), concl.get('dscr')),
+        fetch='lastrow', commit=True
+    )
+    return int(rid)
+
+def listar_pareceres(fazenda_id: int, user_id: int, limit: int = 30) -> list:
+    ph = _PH
+    rows = _exec(
+        f'''SELECT id, solicitacao, parecer, recomendacao, dscr, created_at
+            FROM pareceres WHERE fazenda_id={ph} AND user_id={ph}
+            ORDER BY created_at DESC LIMIT {ph}''',
+        (fazenda_id, user_id, limit), fetch='all'
+    ) or []
+    for r in rows:
+        r['created_at'] = str(r.get('created_at', ''))
+    return rows
 
 def excluir_registro(registro_id: int, user_id: int) -> bool:
     ph = _PH
