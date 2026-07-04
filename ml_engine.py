@@ -651,7 +651,8 @@ def _montar_resultado(cenario, sc, anos_proj, total_ini, ciclo):
 
 def _simular_cria(
     v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
-    preco_bezerro, custo_cab_ano, anos,
+    preco_arroba_bezerro, custo_arroba, anos,
+    peso_matriz=17.0, peso_bezerra=8.0,
 ):
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
@@ -661,7 +662,7 @@ def _simular_cria(
     mort     = (mort_pct / 100) * m['mort']
     desmama  = (desmama_pct / 100)
     venda_bz = (venda_bez_pct / 100)
-    preco_bz = preco_bezerro * m['preco']
+    preco_bz = (preco_arroba_bezerro * m['preco']) * peso_bezerra   # R$/cabeça derivado de R$/@
 
     matrizes    = float(va[6] + va[8])
     fem_recria  = float(va[0] + va[2] + va[4])
@@ -682,7 +683,7 @@ def _simular_cria(
         mortes        = round((matrizes + fem_recria) * mort)
 
         receita   = vez_vendidos * preco_bz
-        custo     = (matrizes + fem_recria) * custo_cab_ano
+        custo     = (matrizes * peso_matriz + fem_recria * peso_bezerra) * custo_arroba
         resultado = receita - custo
 
         anos_proj.append({
@@ -705,10 +706,10 @@ def _simular_cria(
 
     result = _montar_resultado(cenario, sc, anos_proj, total_ini, 'CRIA')
     ano1 = anos_proj[0]
-    units = float(max(ano1['vendidos'], 1))
+    units = float(max(ano1['vendidos'], 1)) * peso_bezerra
     result.update({
-        'preco_breakeven':         round(ano1['custo'] / units, 2),
-        'preco_breakeven_unidade': 'R$/cabeça',
+        'preco_breakeven':         round(ano1['custo'] / max(units, 1), 2),
+        'preco_breakeven_unidade': 'R$/arroba',
         'preco_usado':             preco_bz,
         'slider_units':            units,
         'slider_custo_ano1':       ano1['custo'],

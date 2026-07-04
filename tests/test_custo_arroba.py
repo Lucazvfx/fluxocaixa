@@ -15,3 +15,17 @@ def test_calcular_ano_custo_em_arroba():
         jovens_f=r['femeas_024_prox'], jovens_m=r['machos_024_prox'],
         peso_vaca=17, peso_boi=20, peso_bezerra=8, peso_garrote=12)
     assert abs(r['custo'] - arrobas * 57) < 1.0
+
+
+def test_simular_cria_custo_arroba():
+    from ml_engine import _simular_cria
+    r = _simular_cria(
+        [10,10, 8,8, 6,6, 30,2, 40,3], 'conservador',
+        nat_pct=75, mort_pct=3, desmama_pct=85, venda_bez_pct=30,
+        preco_arroba_bezerro=300, custo_arroba=57, anos=1,
+        peso_matriz=17, peso_bezerra=8)
+    ano1 = r['anos'][0]
+    # custo = (matrizes×17 + fem_recria×8) × 57
+    matrizes = 30 + 40; fem_recria = 10 + 8 + 6
+    assert abs(ano1['custo'] - (matrizes*17 + fem_recria*8) * 57) < 1.0
+    assert r['preco_breakeven_unidade'] == 'R$/arroba'
