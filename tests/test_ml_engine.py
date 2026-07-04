@@ -100,12 +100,12 @@ from ml_engine import simular_cenario, calcular_breakeven_simples, calcular_ano
 
 def test_simular_cria_retorna_breakeven():
     v = [300, 280, 200, 80, 100, 40, 150, 10, 600, 15]
-    result = simular_cenario(v, 'crescimento', ciclo='CRIA', preco_bezerro=1800,
+    result = simular_cenario(v, 'crescimento', ciclo='CRIA', preco_arroba_bezerro=300,
                              nat_pct=75, mort_pct=3, desmama_pct=80,
-                             venda_bez_pct=60, custo_cab_ano=850)
+                             venda_bez_pct=60, custo_arroba=57)
     assert 'preco_breakeven' in result
     assert result['preco_breakeven'] > 0
-    assert result['preco_breakeven_unidade'] == 'R$/cabeça'
+    assert result['preco_breakeven_unidade'] == 'R$/arroba'
     assert 'slider_units' in result
     assert 'slider_custo_ano1' in result
     assert 'margem_atual_pct' in result
@@ -115,7 +115,7 @@ def test_simular_engorda_retorna_breakeven():
     v = [10, 8, 20, 18, 50, 80, 20, 120, 10, 400]
     result = simular_cenario(v, 'crescimento', ciclo='ENGORDA', preco_arroba=330,
                              mort_pct=2, peso_entrada_kg=300, peso_saida_kg=520,
-                             rendimento_carcaca=52, custo_cab_dia=12, dias_engorda=90)
+                             rendimento_carcaca=52, custo_arroba=57, dias_engorda=90)
     assert 'preco_breakeven' in result
     # memorial §7/§12: receita sobre peso TOTAL na saída (não ganho) —
     # breakeven em R$/arroba comparável diretamente ao preço de mercado.
@@ -128,7 +128,7 @@ def test_simular_recria_retorna_breakeven():
     v = [50, 45, 80, 70, 400, 600, 100, 80, 80, 20]
     result = simular_cenario(v, 'crescimento', ciclo='RECRIA', preco_arroba=300,
                              mort_pct=2, peso_entrada_arr=8, peso_saida_arr=14,
-                             meses_recria=12, custo_cab_mes=80)
+                             meses_recria=12, custo_arroba=57)
     assert 'preco_breakeven' in result
     # memorial §6/§12: receita sobre peso TOTAL na saída (não ganho)
     assert result['preco_breakeven_unidade'] == 'R$/arroba'
@@ -161,7 +161,7 @@ def test_calcular_ano_pesos_separados():
         matrizes=500, femeas_024=300, machos_024=200, bois=20,
         nat_pct=0.75, desc_mat_pct=0.30, prop_boi=30, renov_boi_pct=0.20,
         venda_bez_pct=0.30, mort_pct=0.03,
-        preco_arroba=350.0, custo_cab_ano=850.0,
+        preco_arroba=350.0, custo_arroba=57.0,
         peso_boi=20.0, peso_vaca=17.0, peso_bezerra=8.0, peso_garrote=13.0,
     )
     assert r['receita'] > 0
