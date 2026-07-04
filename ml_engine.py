@@ -13,6 +13,7 @@ from sklearn.model_selection import cross_val_score
 import joblib
 import warnings
 warnings.filterwarnings('ignore')
+from services.pesos_rebanho import arrobas_categorias
 
 # ==================================================================
 # CONSTANTES GLOBAIS
@@ -535,7 +536,7 @@ def calcular_indicadores(v: list) -> dict:
 def calcular_ano(
     matrizes, femeas_024, machos_024, bois,
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
-    venda_bez_pct, mort_pct, preco_arroba, custo_cab_ano,
+    venda_bez_pct, mort_pct, preco_arroba, custo_arroba,
     peso_boi: float = 20.0, peso_vaca: float = 17.0, peso_bezerra: float = 8.0,
     peso_garrote: float = None,
 ) -> dict:
@@ -574,7 +575,12 @@ def calcular_ano(
         bez_vend        * peso_bezerra +
         machos_024_vend * peso_garrote
     ) * preco_arroba
-    custo_tot = total_prox * custo_cab_ano
+    arrobas_rebanho = arrobas_categorias(
+        matrizes=mat_prox, bois=bois_prox,
+        jovens_f=femeas_024_prx, jovens_m=machos_024_prx,
+        peso_vaca=peso_vaca, peso_boi=peso_boi,
+        peso_bezerra=peso_bezerra, peso_garrote=peso_garrote)
+    custo_tot = arrobas_rebanho * custo_arroba
     resultado = receita - custo_tot
     return {
         'bezerros_produzidos': int(bezerros),
