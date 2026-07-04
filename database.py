@@ -7,7 +7,32 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from contextlib import contextmanager
 
-_DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+def _sanitizar_database_url(raw: str) -> str:
+    """Extrai uma URL Postgres válida de DATABASE_URL.
+
+    Tolera o valor corrompido que o Railway às vezes injeta: várias URLs de
+    conexão concatenadas sem separador e referências ``${{...}}`` não
+    resolvidas. Retorna '' quando não há URL utilizável (o app cai no SQLite).
+    """
+    raw = (raw or '').strip()
+    if not raw:
+        return ''
+    # Valor limpo: exatamente uma URL, sem placeholders do Railway.
+    if raw.count('://') == 1 and '${' not in raw and '{' not in raw:
+        return raw
+    # Valor corrompido: pega o primeiro trecho bem-formado (com host e sem
+    # placeholder). split() remove o delimitador, então cada parte já fica
+    # delimitada pela próxima ocorrência de 'postgresql://'.
+    for esquema in ('postgresql://', 'postgres://'):
+        for parte in raw.split(esquema):
+            parte = parte.strip()
+            if '@' in parte and not ({'$', '{', '}'} & set(parte)):
+                return esquema + parte
+    return ''
+
+
+_DATABASE_URL = _sanitizar_database_url(os.environ.get('DATABASE_URL', ''))
 _USE_PG = bool(_DATABASE_URL)
 
 # ─────────────────────────────────────────────
