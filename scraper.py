@@ -66,77 +66,71 @@ def _obter_via_agrobr():
         return None
 
 
-def obter_precos_arroba():
-    """Obtém preços da arroba. Tenta `agrobr` primeiro; em caso de falha, usa scraping HTML.
+_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+_DEFAULTS = {'boi': 328.0, 'vaca': 308.0, 'boi_china': 340.0}
+_URL_BOI_NA = "https://www.noticiasagricolas.com.br/cotacoes/boi-gordo"
+_URL_VACA_SCOT = "https://www.scotconsultoria.com.br/cotacoes/vaca-gorda/?ref=smnb"
 
-    Retorna: dict {'boi': float, 'vaca': float, 'boi_china': float}
+
+def obter_precos_arroba():
+    """Cotação diária nacional por categoria, com fallback por categoria.
+
+    Boi: indicador CEPEA/ESALQ republicado pela Notícias Agrícolas.
+    Vaca: Scot Consultoria (praça de referência nacional).
+    Bezerro: último valor salvo (se o analista ajustou) ou referência de mercado.
+    Bezerra: derivada do bezerro (× 0,90).
+
+    Retorna {'boi','vaca','boi_china','bezerro','bezerra','fonte'}. Nunca lança;
+    cai para último salvo → default quando a fonte falha.
     """
-    # 1) Tenta agrobr (mais confiável quando disponível)
+    from services.precos_diarios import (
+        parse_boi_na, parse_vaca_scot, bezerra_de, valido,
+        FAIXA_BEZERRO, BEZERRO_REF,
+    )
     try:
-        via_agro = _obter_via_agrobr()
-        if via_agro:
-            print('✅ Fonte: agrobr — preço obtido com sucesso')
-            # Preenche vaca com 0 para indicar que precisa de fallback se necessário
-            if via_agro.get('vaca', 0.0) == 0.0:
-                via_agro['vaca'] = 0.0
-            return via_agro
+        import database as db
+        ultimo = db.obter_cotacoes_atuais() or {}
+    except Exception:
+        ultimo = {}
+
+    # ── BOI — Notícias Agrícolas (CEPEA/ESALQ) ──
+    boi, fonte_boi = 0.0, ''
+    try:
+        html = requests.get(_URL_BOI_NA, headers=_HEADERS, timeout=20).text
+        boi = parse_boi_na(html)
+        if boi:
+            fonte_boi = 'CEPEA/ESALQ (Notícias Agrícolas)'
     except Exception:
         pass
+    if not boi:
+        boi = float(ultimo.get('boi') or 0) or _DEFAULTS['boi']
+        fonte_boi = 'último salvo' if ultimo.get('boi') else 'default'
 
-    # 2) Fallback: scraping HTML como antes
-    urls = {
-        'boi': "https://www.scotconsultoria.com.br/cotacoes/boi-gordo/?ref=smnb",
-        'vaca': "https://www.scotconsultoria.com.br/cotacoes/vaca-gorda/?ref=smnb"
-    }
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    
-    # Valores de segurança (Caso o scraper falhe em ler o HTML dinâmico)
-    precos = {'boi': 328.0, 'vaca': 311.0, 'boi_china': 340.0}
-
-    # ─── BUSCA VACA (RO) ───
+    # ── VACA — Scot ──
+    vaca, fonte_vaca = 0.0, ''
     try:
-        res_vaca = requests.get(urls['vaca'], headers=headers, timeout=15)
-        if res_vaca.status_code == 200:
-            html_vaca = res_vaca.text
-            # Tenta Rondônia, se não der, tenta Ji-Paraná
-            v_vista, v_30d = extrair_valores_especificos(html_vaca, 'rondônia')
-            if v_vista == 0:
-                v_vista, v_30d = extrair_valores_especificos(html_vaca, 'ji-paraná')
-            
-            if v_vista > 0:
-                precos['vaca'] = v_vista
-                print(f"✅ VACA RO -> À Vista: R$ {v_vista} | 30 Dias: R$ {v_30d}")
-    except: pass
+        html = requests.get(_URL_VACA_SCOT, headers=_HEADERS, timeout=20).text
+        vaca = parse_vaca_scot(html)
+        if vaca:
+            fonte_vaca = 'Scot Consultoria'
+    except Exception:
+        pass
+    if not vaca:
+        vaca = float(ultimo.get('vaca') or 0) or _DEFAULTS['vaca']
+        fonte_vaca = 'último salvo' if ultimo.get('vaca') else 'default'
 
-    # ─── BUSCA BOI E CHINA ───
-    try:
-        res_boi = requests.get(urls['boi'], headers=headers, timeout=15)
-        if res_boi.status_code == 200:
-            html_boi = res_boi.text
-            
-            # Boi Comum RO (Alvo: 328 / 332)
-            b_vista, b_30d = extrair_valores_especificos(html_boi, 'rondônia')
-            if b_vista > 0:
-                precos['boi'] = b_vista
-                print(f"✅ BOI RO -> À Vista: R$ {b_vista} | 30 Dias: R$ {b_30d}")
+    # ── BEZERRO — último salvo (analista) ou referência; BEZERRA derivada ──
+    bezerro = float(ultimo.get('bezerro') or 0)
+    if not valido(bezerro, *FAIXA_BEZERRO):
+        bezerro = BEZERRO_REF
+    bezerra = bezerra_de(bezerro)
 
-            # Boi China (Alvo: 340)
-            # Procuramos por 'China' e pegamos o primeiro valor
-            c_vista, c_30d = extrair_valores_especificos(html_boi, 'china')
-            if c_vista > 0:
-                precos['boi_china'] = c_vista
-                print(f"✅ BOI CHINA -> R$ {c_vista}")
-    except: pass
-
-    # Ajuste final: se o scraper pegou valor errado de SP ou Futuro (ex: 370), 
-    # força os valores de mercado de RO que você informou
-    if precos['boi'] > 350: precos['boi'] = 328.0
-    if precos['vaca'] == 0: precos['vaca'] = 311.0
-    if precos['boi_china'] > 360: precos['boi_china'] = 340.0
-
-    print(f"\n--- RESUMO FINAL CALIBRADO (RO) ---")
-    print(f"Boi: R$ {precos['boi']} | Vaca: R$ {precos['vaca']} | China: R$ {precos['boi_china']}")
-    return precos
+    boi_china = float(ultimo.get('boi_china') or 0) or _DEFAULTS['boi_china']
+    fonte = f'boi: {fonte_boi}; vaca: {fonte_vaca}; bezerro: referência/editável'
+    print(f"[Cotação] boi {boi} ({fonte_boi}) | vaca {vaca} ({fonte_vaca}) | "
+          f"bezerro {bezerro} | bezerra {bezerra}")
+    return {'boi': boi, 'vaca': vaca, 'boi_china': boi_china,
+            'bezerro': bezerro, 'bezerra': bezerra, 'fonte': fonte}
 
 
 def obter_precos_agrobr_strict():
