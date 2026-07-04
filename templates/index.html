@@ -254,6 +254,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <button class="tab-btn active" onclick="showTab('entrada',this)">Inserir Dados</button>
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
+  <button class="tab-btn" id="tab-rec" onclick="showTab('reconciliacao',this)">Reconciliação</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -479,6 +480,37 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
       <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
     </div>
     <div id="sc-result"></div>
+  </div>
+</div>
+
+<!-- ═══ RECONCILIAÇÃO DE GARANTIA ═══ -->
+<div class="panel" id="panel-reconciliacao">
+  <div class="ptitle">Reconciliação de <em>Garantia</em></div>
+  <p class="psub">Cruza o rebanho declarado em documentos distintos para detectar garantia superavaliada (rebanho de papel maior que o físico).</p>
+
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="ch"><div class="ct"><div class="cd"></div>Documentos Declarados</div></div>
+        <div class="cb">
+          <div class="field" style="margin-bottom:14px">
+            <label>Ficha Sanitária — total de cabeças <span style="color:var(--mu)">(piso físico vacinado)</span></label>
+            <input type="number" id="rec-ficha" min="0" placeholder="ex.: 9433" oninput="reconRebanhoAviso()">
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>Imposto de Renda — total de cabeças</label>
+            <input type="number" id="rec-ir" min="0" placeholder="ex.: 45361">
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>GTA — total de cabeças</label>
+            <input type="number" id="rec-gta" min="0" placeholder="opcional">
+          </div>
+          <div id="rec-rebanho-aviso" style="font-family:var(--fm);font-size:.68rem;color:var(--mu);margin-bottom:14px"></div>
+          <button class="btn" onclick="reconciliar()">Reconciliar Documentos</button>
+        </div>
+      </div>
+    </div>
+    <div id="recon-result"></div>
   </div>
 </div>
 </main>
@@ -1376,9 +1408,64 @@ function showTab(id,btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   if(btn)btn.classList.add('active');
-  else document.querySelectorAll('.tab-btn')[{entrada:0,pdf:1,resultado:2,cenarios:3}[id]]?.classList.add('active');
+  else document.querySelectorAll('.tab-btn')[{entrada:0,resultado:1,cenarios:2,reconciliacao:3}[id]]?.classList.add('active');
+  if(id==='reconciliacao')reconPrefill();
 }
 function resetApp(){clearAll();document.getElementById('tab-res').style.display='none';document.getElementById('tab-cen').style.display='none';showTab('entrada',document.querySelectorAll('.tab-btn')[0]);lastVals=null;document.getElementById('result-wrap').innerHTML='';document.getElementById('sc-result').innerHTML=''}
+
+// ================== RECONCILIAÇÃO DE GARANTIA ==================
+const REC_NOME={ficha:'Ficha Sanitária',ir:'Imposto de Renda',gta:'GTA'};
+const REC_SEV_COR={ok:'#4ADE80',alerta:'#FBBF24',erro:'#F87171'};
+function reconTotalRebanho(){try{return getVals().reduce((a,b)=>a+b,0)}catch(e){return 0}}
+function reconPrefill(){
+  const tot=reconTotalRebanho(),el=document.getElementById('rec-ficha');
+  if(tot>0&&(el.value===''||el.value==='0'))el.value=tot;
+  reconRebanhoAviso();
+}
+function reconRebanhoAviso(){
+  const tot=reconTotalRebanho(),av=document.getElementById('rec-rebanho-aviso');
+  av.innerHTML = tot>0
+    ? `Rebanho classificado na aba <em>Inserir Dados</em>: <b style="color:var(--tx)">${fN(tot)}</b> cab. — puxado como Ficha Sanitária (edite se necessário).`
+    : 'Sem rebanho classificado. Informe a Ficha Sanitária manualmente.';
+}
+async function reconciliar(){
+  const g=id=>{const v=document.getElementById(id).value;return v===''?null:parseFloat(v)};
+  const body={ficha:g('rec-ficha'),ir:g('rec-ir'),gta:g('rec-gta')};
+  const box=document.getElementById('recon-result');
+  box.innerHTML='<div class="card"><div class="cb" style="color:var(--mu);font-family:var(--fm);font-size:.72rem">Reconciliando…</div></div>';
+  try{
+    const res=await fetch('/api/reconciliacao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await res.json();
+    if(!res.ok){box.innerHTML=`<div class="card"><div class="cb" style="color:#F87171;font-family:var(--fm);font-size:.72rem">${j.erro||'Erro ao reconciliar.'}</div></div>`;return}
+    box.innerHTML=renderRecon(j);
+  }catch(e){box.innerHTML='<div class="card"><div class="cb" style="color:#F87171;font-family:var(--fm);font-size:.72rem">Falha de conexão.</div></div>'}
+}
+function renderRecon(j){
+  const vcor={'GARANTIA SUPERAVALIADA':'#F87171','REVISAR DIVERGÊNCIA':'#FBBF24','DOCUMENTOS CONSISTENTES':'#4ADE80'}[j.veredito]||'var(--tx)';
+  const linhas=j.divergencias.map(d=>{
+    const c=REC_SEV_COR[d.severidade],[a,b]=d.par;
+    return `<tr>
+      <td style="font-family:var(--fm);font-size:.72rem;color:var(--tx)">${REC_NOME[a]} × ${REC_NOME[b]}</td>
+      <td class="tdc" style="font-family:var(--fm);font-size:.72rem">${fN(d.a)} × ${fN(d.b)}</td>
+      <td class="tdc" style="font-family:var(--fm);font-size:.72rem">${fN(d.divergencia_abs)}</td>
+      <td class="tdc" style="font-family:var(--fm);font-size:.72rem;color:${c}">${d.divergencia_pct}%</td>
+      <td class="tdc"><span style="color:${c};border:1px solid ${c}55;background:${c}18;border-radius:6px;padding:2px 8px;font-family:var(--fm);font-size:.62rem;text-transform:uppercase;letter-spacing:.5px">${d.severidade}</span></td>
+    </tr>`;
+  }).join('');
+  return `<div class="card">
+    <div class="ch"><div class="ct"><div class="cd" style="background:${vcor}"></div>Veredito</div></div>
+    <div class="cb">
+      <div style="font-family:var(--fn);font-weight:700;font-size:1.1rem;color:${vcor};letter-spacing:.5px;margin-bottom:6px">${j.veredito}</div>
+      <div style="font-family:var(--fm);font-size:.68rem;color:var(--mu);margin-bottom:16px">Base de comparação: <b style="color:var(--tx)">${REC_NOME[j.base]}</b> · ${j.resumo.erros} erro(s), ${j.resumo.alertas} alerta(s), ${j.resumo.ok} ok</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="color:var(--mu);font-family:var(--fm);font-size:.62rem;text-transform:uppercase;letter-spacing:.5px;text-align:left">
+          <th style="padding:4px 0">Par</th><th class="tdc">Cabeças</th><th class="tdc">Divergência</th><th class="tdc">%</th><th class="tdc">Status</th>
+        </tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
 
 // ================== DRAG & DROP ==================
 const dz2=document.getElementById('dz');

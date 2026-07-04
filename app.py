@@ -37,6 +37,7 @@ from scraper import obter_precos_arroba, obter_precos_agrobr_strict
 from parsers.composicao_rebanho import ler_template
 from services.consistencia_rebanho import analisar_consistencia
 from services.benchmarks_nacionais import avaliar_nacional
+from services.reconciliacao import reconciliar
 
 # Configuração de logging
 logging.basicConfig(
@@ -582,6 +583,28 @@ def api_ler_planilha():
         except Exception as e:
             logger.error(f"Erro ao processar planilha: {e}", exc_info=True)
             return jsonify({'erro': str(e)}), 500
+
+
+@app.route('/api/reconciliacao', methods=['POST'])
+@login_required
+def api_reconciliacao():
+    """Cruza o rebanho declarado em Ficha Sanitária, IR e GTA.
+
+    Detecta garantia superavaliada (rebanho de papel > rebanho físico).
+    """
+    data = request.get_json() or {}
+    totais = {
+        'ficha': data.get('ficha'),
+        'ir': data.get('ir'),
+        'gta': data.get('gta'),
+    }
+    try:
+        return jsonify(reconciliar(totais))
+    except ValueError as e:
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Erro na reconciliação: {e}", exc_info=True)
+        return jsonify({'erro': str(e)}), 500
 
 
 @app.route('/api/parse-text', methods=['POST'])
