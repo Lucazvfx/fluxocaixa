@@ -275,6 +275,20 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   </div>
 
   <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Solicitação de Crédito <span style="font-size:.65rem;opacity:.6">(opcional)</span></div></div>
+    <div class="cb">
+      <div class="fgrid">
+        <div class="field"><label>Valor solicitado (R$)</label><input type="number" id="credito_valor" min="0" step="1000" placeholder="Ex: 500000"></div>
+        <div class="field"><label>Prazo (meses)</label><input type="number" id="credito_prazo" min="1" placeholder="Ex: 24"></div>
+        <div class="field"><label>Carência (meses)</label><input type="number" id="credito_carencia" min="0" value="0"></div>
+        <div class="field"><label>Juros (% a.a.)</label><input type="number" id="credito_juros" min="0" step="0.1" placeholder="Ex: 10"></div>
+        <div class="field"><label>Dívidas mensais (R$/mês)</label><input type="number" id="dividas_mensais" min="0" value="0"></div>
+        <div class="field"><label>Finalidade</label><select id="credito_finalidade"><option value="custeio">Custeio</option><option value="investimento">Investimento</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
     <div class="ch">
       <div class="ct"><div class="cd" style="background:var(--cy)"></div>Composição por Faixa Etária</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -478,7 +492,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="sc-card sc-cons" onclick="selSc('conservador',this)"><div class="sc-name">Conservador — Manutenção</div><div class="sc-desc">Estabilidade mínima em cenário de baixa de preços.</div></div>
         </div>
       </div>
-      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Custo/Cab/Ano (R$)</label><input type="number" id="sc-custo" value="850" min="200" max="3000" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--am)"></div>Parâmetros da Projeção</div></div><div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Mortalidade (%)</label><input type="number" id="sc-mort" value="3" min="0" max="15" oninput="runSc()"></div><div class="field"><label>Custo (R$/@·ano)</label><input type="number" id="sc-custo" value="57" min="10" max="300" step="0.5" oninput="runSc()"></div><div class="field"><label>Peso médio boi (@)</label><input type="number" id="sc-peso" value="16" min="8" max="30" step="0.5" oninput="runSc()"></div></div><div style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)">Natalidade, proporção bois, descarte e venda de bezerras são lidos da aba Parâmetros.</div></div></div>
     </div>
     <div id="sc-result"></div>
   </div>
@@ -674,6 +688,14 @@ async function classificar(){
   showLoading('Classificando com ML...');
   try{
     const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
+    // Custo em R$/@ (mesmo input da projeção) e solicitação de crédito
+    body.custo_arroba=+document.getElementById('sc-custo').value||57;
+    body.credito_valor=+document.getElementById('credito_valor').value||0;
+    body.prazo_meses=+document.getElementById('credito_prazo').value||0;
+    body.carencia_meses=+document.getElementById('credito_carencia').value||0;
+    body.juros_aa=(+document.getElementById('credito_juros').value||0)/100;
+    body.dividas_mensais=+document.getElementById('dividas_mensais').value||0;
+    body.credito_finalidade=document.getElementById('credito_finalidade').value;
     const natV=document.getElementById('c-nat').value;
     const boisvV=document.getElementById('c-boisv').value;
     const bezvV=document.getElementById('c-bezv').value;
@@ -700,6 +722,7 @@ async function classificar(){
     lastVals=v;
     lastRegistroId=data.registro_id||null;
     renderResult(data);
+    renderConsistencia(data.consistencia);
     showTab('resultado',null);
     document.getElementById('tab-res').style.display='flex';
     document.getElementById('tab-cen').style.display='flex';
@@ -914,6 +937,24 @@ async function classificarPDF(v,meta){
 }
 
 // ================== RENDER RESULTADO ==================
+function renderParecer(data){
+  const p=data.parecer; if(!p) return '';
+  const c=p.conclusao||{};
+  const LBL={aprovar:'APROVAR',ressalva:'APROVAR COM RESSALVA',negar:'NEGAR'};
+  const cor={aprovar:'#4ADE80',ressalva:'#FBBF24',negar:'#F87171'}[c.recomendacao]||'#8891A5';
+  const concl=c.recomendacao
+    ? `<div style="padding:16px;border-radius:10px;border:1px solid ${cor}55;background:${cor}12">
+         <div style="font-family:var(--fn);font-weight:800;font-size:1.1rem;letter-spacing:1px;color:${cor}">${LBL[c.recomendacao]||c.recomendacao}</div>
+         <div style="font-family:var(--fm);font-size:.72rem;color:var(--mu);margin-top:4px">DSCR ${c.dscr} · parcela ${fR(c.parcela_mensal)}/mês · geração de caixa ${fR(c.geracao_caixa_anual)}/ano</div>
+         <div style="margin-top:8px;font-size:.85rem">${c.justificativa||''}</div>
+       </div>`
+    : `<div style="padding:14px;border-radius:10px;border:1px dashed var(--b);color:var(--mu);font-size:.8rem">Informe a Solicitação de Crédito na aba de entrada para gerar a conclusão de capacidade de pagamento.</div>`;
+  return `<div class="card" style="margin-bottom:24px">
+    <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div></div>
+    <div class="cb">${concl}</div>
+  </div>`;
+}
+
 function renderResult(data){
   const tipo=data.tipo, col=TC[tipo];
   const ind=data.indicadores;
@@ -968,6 +1009,8 @@ function renderResult(data){
         <div class="rhero-em">${TE[tipo]}</div>
       </div>
     </div>
+
+    ${renderParecer(data)}
 
     <div class="sstrip">
       <div class="sc2"><div class="sc2-l">Total Rebanho</div><div class="sc2-v cg">${fN(ind.total)}</div></div>
