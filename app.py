@@ -38,6 +38,8 @@ from parsers.composicao_rebanho import ler_template
 from services.consistencia_rebanho import analisar_consistencia
 from services.benchmarks_nacionais import avaliar_nacional
 from services.parecer_credito import montar_parecer
+from services.pesos_rebanho import arrobas_categorias
+from services.custos_desembolso import custo_arroba_de_desembolso, COMPONENTES
 from services.reconciliacao import reconciliar
 
 # Configuração de logging
@@ -372,12 +374,35 @@ def api_classificar():
     # roda também no fluxo principal, não só na importação de PDF.
     consistencia = analisar_consistencia(v)
 
+    # Custo real por componentes (desembolso R$/cab/mês) → custo_arroba exato.
+    # Se não vierem componentes, mantém o custo_arroba do campo único (default 57).
+    custo_arroba = float(data.get('custo_arroba', 57) or 57)
+    custo_desembolso = None
+    componentes = data.get('custo_componentes') or {}
+    desembolso_cab_mes = sum(float(componentes.get(k, 0) or 0) for k, _ in COMPONENTES)
+    if desembolso_cab_mes > 0:
+        femeas_024 = float(v[0] + v[2] + v[4])
+        machos_024 = float(v[1] + v[3] + v[5])
+        matrizes   = float(v[6] + v[8])
+        bois       = float(v[7] + v[9])
+        arrobas_rebanho = arrobas_categorias(
+            matrizes=matrizes, bois=bois, jovens_f=femeas_024, jovens_m=machos_024)
+        total_cabecas = int(sum(v))
+        custo_arroba = custo_arroba_de_desembolso(
+            desembolso_cab_mes, arrobas_rebanho, total_cabecas)
+        custo_desembolso = {
+            'componentes': {k: float(componentes.get(k, 0) or 0) for k, _ in COMPONENTES},
+            'desembolso_cab_mes': round(desembolso_cab_mes, 2),
+            'custo_arroba': round(custo_arroba, 2),
+            'peso_medio_arroba': round(arrobas_rebanho / max(total_cabecas, 1), 2),
+        }
+
     # Geração de caixa recorrente: resultado do ano 1 no cenário conservador,
     # dentro do ciclo detectado (número mais conservador e recorrente).
     _cx = simular_cenario(
         v, 'conservador', ciclo=result['tipo'],
         preco_arroba=float(data.get('preco', 320)),
-        custo_arroba=float(data.get('custo_arroba', 57)))
+        custo_arroba=custo_arroba)
     geracao_caixa_anual = _cx['anos'][0]['resultado']
 
     credito_inputs = {k: data.get(k) for k in
@@ -407,6 +432,7 @@ def api_classificar():
         'breakeven_simples': breakeven,
         'consistencia': consistencia,
         'parecer': parecer,
+        'custo_desembolso': custo_desembolso,
         'valores': v,
         'registro_id': registro_id,
     })
