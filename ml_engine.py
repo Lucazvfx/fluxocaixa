@@ -543,6 +543,8 @@ def calcular_ano(
     venda_bez_pct, mort_pct, preco_arroba, custo_arroba,
     peso_boi: float = PESO_BOI_ARR, peso_vaca: float = PESO_VACA_ARR,
     peso_bezerra: float = PESO_BEZERRA_ARR, peso_garrote: float = None,
+    preco_boi_arr: float = None, preco_vaca_arr: float = None,
+    preco_bezerra_cab: float = None, preco_bezerro_cab: float = None,
 ) -> dict:
     """
     Pesos diferenciados na faixa jovem (0-25 meses):
@@ -573,12 +575,15 @@ def calcular_ano(
     femeas_024_prx = round(bezerros * 0.5)
     machos_024_prx = round(bezerros * 0.5)
     total_prox     = mat_prox + femeas_024_prx + machos_024_prx + bois_prox
-    receita = (
-        bois_vendidos   * peso_boi     +
-        desc_mat        * peso_vaca    +
-        bez_vend        * peso_bezerra +
-        machos_024_vend * peso_garrote
-    ) * preco_arroba
+    # Receita por categoria: boi/vaca em R$/@ (× peso), bezerra/bezerro em
+    # R$/cabeça (direto). Sem preço da categoria → cai no preço da arroba único.
+    p_boi  = preco_boi_arr  if preco_boi_arr  is not None else preco_arroba
+    p_vaca = preco_vaca_arr if preco_vaca_arr is not None else preco_arroba
+    receita = bois_vendidos * peso_boi * p_boi + desc_mat * peso_vaca * p_vaca
+    receita += (bez_vend * preco_bezerra_cab if preco_bezerra_cab is not None
+                else bez_vend * peso_bezerra * preco_arroba)
+    receita += (machos_024_vend * preco_bezerro_cab if preco_bezerro_cab is not None
+                else machos_024_vend * peso_garrote * preco_arroba)
     arrobas_rebanho = arrobas_categorias(
         matrizes=mat_prox, bois=bois_prox,
         jovens_f=femeas_024_prx, jovens_m=machos_024_prx,
@@ -898,6 +903,10 @@ def simular_cenario(
     dias_engorda:       int   = 90,
     peso_boi:           float = PESO_BOI_ARR,   # ref. mercado (18@)
     peso_vaca:          float = PESO_VACA_ARR,  # ref. mercado (14@)
+    preco_boi_arr:      float = None,   # R$/@ boi do dia (senão usa preco_arroba)
+    preco_vaca_arr:     float = None,   # R$/@ vaca do dia
+    preco_bezerra_cab:  float = None,   # R$/cabeça bezerra do dia
+    preco_bezerro_cab:  float = None,   # R$/cabeça bezerro do dia
 ) -> dict:
     # Preenche defaults a partir de PARAMS_POR_CICLO quando não passados explicitamente
     ciclo_params = PARAMS_POR_CICLO.get(ciclo, PARAMS_POR_CICLO['CICLO_COMPLETO'])
@@ -955,6 +964,10 @@ def simular_cenario(
             peso_vaca=peso_vaca,
             peso_bezerra=peso_arroba,
             peso_garrote=peso_garrote,
+            preco_boi_arr=(preco_boi_arr * m['preco']) if preco_boi_arr is not None else None,
+            preco_vaca_arr=(preco_vaca_arr * m['preco']) if preco_vaca_arr is not None else None,
+            preco_bezerra_cab=(preco_bezerra_cab * m['preco']) if preco_bezerra_cab is not None else None,
+            preco_bezerro_cab=(preco_bezerro_cab * m['preco']) if preco_bezerro_cab is not None else None,
         )
         anos_proj.append({
             'ano':      yr,

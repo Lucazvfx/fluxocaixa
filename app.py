@@ -397,12 +397,24 @@ def api_classificar():
             'peso_medio_arroba': round(arrobas_rebanho / max(total_cabecas, 1), 2),
         }
 
+    # Preços por categoria (cotação do dia): request → banco → None (usa arroba).
+    _cot = db.obter_cotacoes_atuais() or {}
+    def _preco(chave):
+        v_ = float(data.get(chave) or _cot.get(chave.replace('preco_', '')) or 0)
+        return v_ if v_ > 0 else None
+    preco_boi = _preco('preco_boi')
+    preco_vaca = _preco('preco_vaca')
+    preco_bezerra = _preco('preco_bezerra')
+    preco_bezerro = _preco('preco_bezerro')
+
     # Geração de caixa recorrente: resultado do ano 1 no cenário conservador,
     # dentro do ciclo detectado (número mais conservador e recorrente).
     _cx = simular_cenario(
         v, 'conservador', ciclo=result['tipo'],
-        preco_arroba=float(data.get('preco', 320)),
-        custo_arroba=custo_arroba)
+        preco_arroba=preco_boi or float(data.get('preco', 320)),
+        custo_arroba=custo_arroba,
+        preco_boi_arr=preco_boi, preco_vaca_arr=preco_vaca,
+        preco_bezerra_cab=preco_bezerra, preco_bezerro_cab=preco_bezerro)
     geracao_caixa_anual = _cx['anos'][0]['resultado']
 
     credito_inputs = {k: data.get(k) for k in

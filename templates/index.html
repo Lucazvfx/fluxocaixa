@@ -710,6 +710,11 @@ async function classificar(){
   showLoading('Classificando com ML...');
   try{
     const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
+    // Preços por categoria (cotação do dia, editáveis) — cada um segue seu preço
+    body.preco_boi=+document.getElementById('cot-boi')?.value||0;
+    body.preco_vaca=+document.getElementById('cot-vaca')?.value||0;
+    body.preco_bezerro=+document.getElementById('cot-bezerro')?.value||0;
+    body.preco_bezerra=+document.getElementById('cot-bezerra')?.value||0;
     // Custo em R$/@ (mesmo input da projeção) e solicitação de crédito
     body.custo_componentes={};
     COMP_DESEMB.forEach(k=>{body.custo_componentes[k]=parseFloat(document.getElementById('cd-'+k)?.value)||0;});
