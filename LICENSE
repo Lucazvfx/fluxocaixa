@@ -1,0 +1,87 @@
+LICENÇA PROPRIETÁRIA — SOFTWARE DE ANÁLISE DE CRÉDITO PECUÁRIO
+
+Copyright © 2026 Lucas Vinicius
+Todos os direitos reservados.
+
+Este software e seu código-fonte são obra intelectual de Lucas Vinicius,
+protegidos pela Lei n.º 9.610/98 (Lei de Direitos Autorais) e pela
+Lei n.º 9.609/98 (Lei do Software) da República Federativa do Brasil,
+bem como pelos tratados internacionais de proteção à propriedade
+intelectual dos quais o Brasil é signatário (Convenção de Berna,
+Acordo TRIPS/OMC).
+
+─────────────────────────────────────────────────────────────────────
+
+DIREITOS CONCEDIDOS
+
+O titular concede ao licenciado autorizado (pessoa física ou jurídica
+que celebrou contrato escrito com o titular) o direito não exclusivo,
+intransferível e revogável de:
+
+  a) Instalar e executar o software nos sistemas internos do licenciado;
+  b) Utilizar o software para prestação de serviços de análise de
+     crédito pecuário aos clientes do licenciado;
+  c) Acessar a interface web e os endpoints da API para as finalidades
+     acima descritas.
+
+─────────────────────────────────────────────────────────────────────
+
+RESTRIÇÕES
+
+É expressamente vedado ao licenciado e a qualquer terceiro, sem
+autorização prévia e por escrito do titular:
+
+  1. Copiar, reproduzir ou duplicar o software no todo ou em parte,
+     exceto para fins de backup interno;
+  2. Modificar, adaptar, traduzir ou criar obras derivadas do software;
+  3. Distribuir, sublicenciar, alugar, arrendar ou transferir o
+     software ou quaisquer direitos sobre ele a terceiros;
+  4. Fazer engenharia reversa, descompilar ou desmontar o software;
+  5. Remover, ocultar ou alterar qualquer aviso de direitos autorais,
+     marca ou indicação de propriedade contidos no software;
+  6. Usar o software para desenvolver produto ou serviço concorrente;
+  7. Divulgar publicamente o código-fonte ou qualquer parte dele.
+
+─────────────────────────────────────────────────────────────────────
+
+AUSÊNCIA DE GARANTIAS
+
+O software é fornecido "no estado em que se encontra" ("AS IS"), sem
+garantias de qualquer natureza, expressas ou implícitas, incluindo,
+mas não se limitando a, garantias de comercialização, adequação a
+finalidade específica ou não violação de direitos de terceiros.
+
+─────────────────────────────────────────────────────────────────────
+
+LIMITAÇÃO DE RESPONSABILIDADE
+
+Em nenhuma hipótese o titular será responsável por danos diretos,
+indiretos, incidentais, especiais ou consequenciais decorrentes do
+uso ou da impossibilidade de uso do software, ainda que informado da
+possibilidade de tais danos.
+
+─────────────────────────────────────────────────────────────────────
+
+PROVA DE AUTORIA E ANTERIORIDADE
+
+A autoria e a data de criação deste software estão documentadas no
+histórico de commits do repositório Git (git log), constituindo prova
+de anterioridade nos termos da legislação aplicável.
+
+─────────────────────────────────────────────────────────────────────
+
+FORO E LEI APLICÁVEL
+
+Este instrumento é regido pelas leis da República Federativa do Brasil.
+As partes elegem o foro da Comarca de domicílio do titular para dirimir
+quaisquer controvérsias oriundas desta licença, com renúncia a qualquer
+outro, por mais privilegiado que seja.
+
+─────────────────────────────────────────────────────────────────────
+
+CONTATO
+
+Para licenciamento comercial, parcerias ou autorizações:
+  E-mail: viniciuslukas353@gmail.com
+
+─────────────────────────────────────────────────────────────────────
