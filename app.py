@@ -352,20 +352,21 @@ def api_fazenda_pareceres(fid):
     itens = db.listar_pareceres(fazenda_id=fid, user_id=current_user.id)
     return jsonify({'pareceres': itens})
 
-@app.route('/api/perfil-consultoria', methods=['GET', 'POST'])
+@app.route('/api/empresa/perfil', methods=['GET', 'POST'])
 @login_required
-def api_perfil_consultoria():
+def api_empresa_perfil():
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
     if request.method == 'POST':
         data = request.json or {}
-        db.atualizar_perfil_consultoria(
-            current_user.id,
-            data.get('nome_consultoria', ''),
-            data.get('logo_base64', ''))
+        db.atualizar_perfil_empresa(
+            empresa_id, data.get('nome_consultoria', ''), data.get('logo_base64', ''))
         return jsonify({'ok': True})
-    u = db.buscar_usuario_id(current_user.id)
+    e = db.buscar_empresa(empresa_id)
     return jsonify({
-        'nome_consultoria': (u.get('nome_consultoria') or '') if u else '',
-        'logo_base64': (u.get('logo_base64') or '') if u else '',
+        'nome_consultoria': (e.get('nome') or '') if e else '',
+        'logo_base64': (e.get('logo_base64') or '') if e else '',
     })
 
 @app.route('/api/parecer/pdf', methods=['POST'])
@@ -374,9 +375,10 @@ def api_parecer_pdf():
     parecer = (request.json or {}).get('parecer')
     if not parecer:
         return jsonify({'erro': 'parecer é obrigatório'}), 400
-    u = db.buscar_usuario_id(current_user.id)
-    branding = {'nome_consultoria': u.get('nome_consultoria') or '',
-                'logo_base64': u.get('logo_base64') or ''} if u else None
+    empresa_id = _resolver_empresa_ativa()
+    e = db.buscar_empresa(empresa_id) if empresa_id else None
+    branding = {'nome_consultoria': e.get('nome') or '',
+                'logo_base64': e.get('logo_base64') or ''} if e else None
     pdf_bytes = gerar_pdf_parecer(parecer, branding=branding)
     return send_file(io.BytesIO(pdf_bytes), mimetype='application/pdf',
                      as_attachment=True, download_name='parecer_credito.pdf')
