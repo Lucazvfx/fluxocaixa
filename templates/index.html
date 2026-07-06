@@ -256,6 +256,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
   <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
   <button class="tab-btn" id="tab-rec" onclick="showTab('reconciliacao',this)">Reconciliação</button>
+  <button class="tab-btn" onclick="showTab('historico',this)">Histórico</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -270,6 +271,12 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <div class="field"><label>Fazenda</label><input type="text" id="f_faz" placeholder="Ex: Fazenda Santa Cruz"></div>
         <div class="field"><label>Município / Estado</label><input type="text" id="f_mun" placeholder="Ex: Juara - MT"></div>
         <div class="field"><label>Proprietário</label><input type="text" id="f_prop" placeholder="Ex: João da Silva"></div>
+      </div>
+      <div class="fgrid" style="margin-top:12px;align-items:end">
+        <div class="field"><label>Cliente cadastrado (opcional — habilita histórico)</label>
+          <select id="f_fazenda_id" onchange="onFazendaSelecionada()"><option value="">— análise avulsa (não salva histórico) —</option></select>
+        </div>
+        <button class="btn-sm" onclick="novaFazendaPrompt()">+ Nova fazenda</button>
       </div>
     </div>
   </div>
@@ -550,6 +557,21 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <div id="recon-result"></div>
   </div>
 </div>
+
+<!-- ═══ HISTÓRICO DE PARECERES ═══ -->
+<div class="panel" id="panel-historico">
+  <div class="ptitle">Histórico de <em>Pareceres</em></div>
+  <p class="psub">Pareceres salvos por fazenda cliente.</p>
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="cd"></div>Fazenda</div></div>
+    <div class="cb">
+      <div class="field"><label>Selecione a fazenda</label>
+        <select id="hist-fazenda-id" onchange="carregarHistoricoPareceres()"><option value="">— selecione —</option></select>
+      </div>
+      <div id="hist-lista" style="margin-top:14px"></div>
+    </div>
+  </div>
+</div>
 </main>
 
 <script>
@@ -710,6 +732,8 @@ async function classificar(){
   showLoading('Classificando com ML...');
   try{
     const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
+    // Cliente cadastrado (opcional) — necessário para persistir o parecer no histórico
+    body.fazenda_id=+document.getElementById('f_fazenda_id')?.value||null;
     // Preços por categoria (cotação do dia, editáveis) — cada um segue seu preço
     body.preco_boi=+document.getElementById('cot-boi')?.value||0;
     body.preco_vaca=+document.getElementById('cot-vaca')?.value||0;
@@ -968,6 +992,7 @@ async function classificarPDF(v,meta){
 // ================== RENDER RESULTADO ==================
 function renderParecer(data){
   const p=data.parecer; if(!p) return '';
+  window._lastParecer = p;
   const c=p.conclusao||{};
   const LBL={aprovar:'APROVAR',ressalva:'APROVAR COM RESSALVA',negar:'NEGAR'};
   const cor={aprovar:'#4ADE80',ressalva:'#FBBF24',negar:'#F87171'}[c.recomendacao]||'#8891A5';
@@ -979,7 +1004,8 @@ function renderParecer(data){
        </div>`
     : `<div style="padding:14px;border-radius:10px;border:1px dashed var(--b);color:var(--mu);font-size:.8rem">Informe a Solicitação de Crédito na aba de entrada para gerar a conclusão de capacidade de pagamento.</div>`;
   return `<div class="card" style="margin-bottom:24px">
-    <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div></div>
+    <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div>
+      <button class="btn-sm" onclick="baixarPdfParecer(window._lastParecer)">⬇ Baixar PDF</button></div>
     <div class="cb">${concl}</div>
   </div>`;
 }
@@ -1606,6 +1632,91 @@ function logout() {
   window.location.href = '/logout';
 }
 
+// ================== FAZENDAS (cliente cadastrado) ==================
+let fazendasCache = [];
+async function carregarFazendasSelect(){
+  try{
+    const r = await fetch('/api/fazendas');
+    const d = await r.json();
+    fazendasCache = d.fazendas || [];
+    const opts = fazendasCache.map(f=>`<option value="${f.id}">${f.nome}${f.municipio?' — '+f.municipio:''}</option>`).join('');
+    const selEntrada = document.getElementById('f_fazenda_id');
+    const selHist = document.getElementById('hist-fazenda-id');
+    if(selEntrada) selEntrada.innerHTML = '<option value="">— análise avulsa (não salva histórico) —</option>' + opts;
+    if(selHist) selHist.innerHTML = '<option value="">— selecione —</option>' + opts;
+  }catch(e){}
+}
+function onFazendaSelecionada(){
+  const id = document.getElementById('f_fazenda_id').value;
+  const f = fazendasCache.find(x=>String(x.id)===String(id));
+  if(!f) return;
+  document.getElementById('f_faz').value = f.nome||'';
+  document.getElementById('f_mun').value = f.municipio||'';
+  document.getElementById('f_prop').value = f.proprietario||'';
+}
+async function novaFazendaPrompt(){
+  const nome = prompt('Nome da fazenda:');
+  if(!nome) return;
+  const proprietario = prompt('Proprietário (opcional):') || '';
+  const municipio = prompt('Município / Estado (opcional):') || '';
+  try{
+    const r = await fetch('/api/fazendas', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({nome, proprietario, municipio})});
+    const d = await r.json();
+    if(!d.ok){ showToast(d.erro||'Erro ao criar fazenda', true); return; }
+    await carregarFazendasSelect();
+    const sel = document.getElementById('f_fazenda_id');
+    if(sel){ sel.value = d.id; onFazendaSelecionada(); }
+    showToast('Fazenda cadastrada.');
+  }catch(e){ showToast('Erro ao criar fazenda.', true); }
+}
+
+// ================== HISTÓRICO DE PARECERES ==================
+async function carregarHistoricoPareceres(){
+  const fid = document.getElementById('hist-fazenda-id').value;
+  const el = document.getElementById('hist-lista');
+  if(!el) return;
+  if(!fid){ el.innerHTML=''; return; }
+  el.innerHTML = '<div style="color:var(--mu);font-size:.8rem">Carregando...</div>';
+  try{
+    const r = await fetch(`/api/fazendas/${fid}/pareceres`);
+    const d = await r.json();
+    const itens = d.pareceres || [];
+    if(!itens.length){ el.innerHTML = '<div style="color:var(--mu);font-size:.85rem">Nenhum parecer salvo ainda para esta fazenda.</div>'; return; }
+    const cor = {aprovar:'#4ADE80', ressalva:'#FBBF24', negar:'#F87171'};
+    el.innerHTML = itens.map((it,i)=>{
+      const c = cor[it.recomendacao]||'#8891A5';
+      let solic = {}; try{ solic = JSON.parse(it.solicitacao||'{}'); }catch(e){}
+      return `<div class="card" style="margin-bottom:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div>
+            <span style="font-weight:800;color:${c};text-transform:uppercase">${it.recomendacao||'—'}</span>
+            <span style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-left:10px">DSCR ${it.dscr??'—'} · ${it.created_at||''}</span>
+            ${solic.credito_valor?`<span style="font-family:var(--fm);font-size:.7rem;color:var(--mu);margin-left:10px">Crédito: ${fR(solic.credito_valor)}</span>`:''}
+          </div>
+          <button class="btn-sm" onclick="baixarPdfParecerHistorico(${i})">⬇ Baixar PDF</button>
+        </div>
+      </div>`;
+    }).join('');
+    window._histPareceres = itens;
+  }catch(e){ el.innerHTML = '<div style="color:var(--rd)">Erro ao carregar histórico.</div>'; }
+}
+async function baixarPdfParecer(parecerObj){
+  try{
+    const r = await fetch('/api/parecer/pdf', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({parecer:parecerObj})});
+    if(!r.ok){ showToast('Erro ao gerar PDF.', true); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='parecer_credito.pdf'; a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){ showToast('Erro ao gerar PDF.', true); }
+}
+function baixarPdfParecerHistorico(i){
+  const it = (window._histPareceres||[])[i];
+  if(!it) return;
+  let parecerObj = {}; try{ parecerObj = JSON.parse(it.parecer||'{}'); }catch(e){}
+  baixarPdfParecer(parecerObj);
+}
+
 // ================== COTAÇÃO DO DIA ==================
 let cotacaoDia = null;
 async function carregarCotacaoDia(){
@@ -1642,6 +1753,7 @@ recalcCiclo();
 runSc();
 atualizarDbStats();
 carregarCotacaoDia();
+carregarFazendasSelect();
 </script>
 <footer style="text-align: center; padding: 24px 16px 16px; border-top: 1px solid var(--border); margin-top: 32px; font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted);">
   <p> Desenvolvido por <strong style="color: var(--green);">Lucas Vinicius</strong>.</p>
