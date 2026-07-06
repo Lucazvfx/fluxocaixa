@@ -257,7 +257,40 @@ def admin():
         usuarios=db.listar_usuarios(),
         usuario=current_user,
         nova_conta=None,
+        empresas=db._exec('SELECT * FROM empresas ORDER BY nome', fetch='all') or [],
+        membros=db._exec('''SELECT m.empresa_id, m.user_id, e.nome as empresa_nome,
+                            u.email as user_email FROM empresa_membros m
+                            JOIN empresas e ON e.id=m.empresa_id
+                            JOIN usuarios u ON u.id=m.user_id ORDER BY e.nome''', fetch='all') or [],
     )
+
+@app.route('/admin/empresas/criar', methods=['POST'])
+@admin_required
+def admin_criar_empresa():
+    nome = (request.form.get('nome') or '').strip()
+    if nome:
+        db._exec(f"INSERT INTO empresas (nome) VALUES ({db._PH})", (nome,), commit=True)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/empresas/vincular', methods=['POST'])
+@admin_required
+def admin_vincular_empresa():
+    user_id = request.form.get('user_id')
+    empresa_id = request.form.get('empresa_id')
+    if user_id and empresa_id and not db.usuario_pertence_a_empresa(int(user_id), int(empresa_id)):
+        db._exec(f"INSERT INTO empresa_membros (empresa_id, user_id) VALUES ({db._PH},{db._PH})",
+                 (int(empresa_id), int(user_id)), commit=True)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/empresas/desvincular', methods=['POST'])
+@admin_required
+def admin_desvincular_empresa():
+    user_id = request.form.get('user_id')
+    empresa_id = request.form.get('empresa_id')
+    if user_id and empresa_id:
+        db._exec(f"DELETE FROM empresa_membros WHERE user_id={db._PH} AND empresa_id={db._PH}",
+                 (int(user_id), int(empresa_id)), commit=True)
+    return redirect(url_for('admin'))
 
 
 @app.route('/admin/criar', methods=['POST'])
@@ -281,6 +314,11 @@ def admin_criar():
         usuario=current_user,
         nova_conta=nova_conta,
         erro=erro,
+        empresas=db._exec('SELECT * FROM empresas ORDER BY nome', fetch='all') or [],
+        membros=db._exec('''SELECT m.empresa_id, m.user_id, e.nome as empresa_nome,
+                            u.email as user_email FROM empresa_membros m
+                            JOIN empresas e ON e.id=m.empresa_id
+                            JOIN usuarios u ON u.id=m.user_id ORDER BY e.nome''', fetch='all') or [],
     )
 
 
