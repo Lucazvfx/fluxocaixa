@@ -10,7 +10,7 @@ import subprocess
 import threading
 from functools import wraps
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -88,6 +88,28 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return wrapper
+
+
+def _resolver_empresa_ativa():
+    """Empresa ativa da sessão; escolhe a primeira se ausente/inválida.
+    Devolve None se o usuário não pertence a nenhuma empresa."""
+    empresas = db.empresas_do_usuario(current_user.id)
+    if not empresas:
+        return None
+    ativa = session.get('empresa_ativa_id')
+    if ativa and any(e['id'] == ativa for e in empresas):
+        return ativa
+    nova_ativa = empresas[0]['id']
+    session['empresa_ativa_id'] = nova_ativa
+    return nova_ativa
+
+
+def _empresa_ativa_ou_400():
+    """Para endpoints JSON: devolve (empresa_id, None) ou (None, response_erro)."""
+    eid = _resolver_empresa_ativa()
+    if eid is None:
+        return None, (jsonify({'erro': 'Usuário sem empresa vinculada'}), 400)
+    return eid, None
 
 
 def garantir_admins():
@@ -275,6 +297,23 @@ def admin_remover(uid):
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+# ── Empresa ativa ────────────────────────────────────────────────────────────
+@app.route('/api/empresa/ativa', methods=['GET'])
+@login_required
+def api_empresa_ativa_get():
+    empresas = db.empresas_do_usuario(current_user.id)
+    ativa_id = _resolver_empresa_ativa()
+    return jsonify({'empresas': empresas, 'ativa_id': ativa_id})
+
+@app.route('/api/empresa/ativa', methods=['POST'])
+@login_required
+def api_empresa_ativa_post():
+    empresa_id = (request.json or {}).get('empresa_id')
+    if not db.usuario_pertence_a_empresa(current_user.id, empresa_id):
+        return jsonify({'erro': 'Você não pertence a essa empresa'}), 403
+    session['empresa_ativa_id'] = empresa_id
+    return jsonify({'ok': True})
 
 # ── Fazendas ─────────────────────────────────────────────────────────────────
 @app.route('/api/fazendas', methods=['GET'])
