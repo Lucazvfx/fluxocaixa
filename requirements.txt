@@ -11,3 +11,4 @@ xgboost>=1.7
 apscheduler>=3.10
 requests>=2.31
 lightgbm>=3.3.0
+reportlab>=4.0
