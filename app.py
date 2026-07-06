@@ -36,7 +36,7 @@ except ImportError:
 from scraper import obter_precos_arroba, obter_precos_agrobr_strict
 
 from parsers.composicao_rebanho import ler_template
-from services.consistencia_rebanho import analisar_consistencia
+from services.consistencia_rebanho import analisar_consistencia, analisar_consistencia_historica
 from services.benchmarks_nacionais import avaliar_nacional
 from services.parecer_credito import montar_parecer
 from services.parecer_pdf import gerar_pdf_parecer
@@ -505,6 +505,21 @@ def api_classificar():
     # Consistência do rebanho declarado (diferencial de análise de crédito):
     # roda também no fluxo principal, não só na importação de PDF.
     consistencia = analisar_consistencia(v)
+
+    # Consistência histórica: compara com a declaração anterior da mesma fazenda.
+    fazenda_id_hist = data.get('fazenda_id')
+    if fazenda_id_hist:
+        hist = db.historico_fazenda(int(fazenda_id_hist), limit=1)
+        if hist and hist[0].get('valores'):
+            flags_hist = analisar_consistencia_historica(v, hist[0]['valores'])
+            if flags_hist:
+                consistencia['flags'] = flags_hist + consistencia['flags']
+                erros_hist = sum(1 for f in flags_hist if f['severidade'] == 'erro')
+                alertas_hist = sum(1 for f in flags_hist if f['severidade'] == 'alerta')
+                consistencia['resumo']['erros'] += erros_hist
+                consistencia['resumo']['alertas'] += alertas_hist
+                penalidade = erros_hist * 25 + alertas_hist * 8
+                consistencia['score_consistencia'] = max(0, consistencia['score_consistencia'] - penalidade)
 
     # Custo real por componentes (desembolso R$/cab/mês) → custo_arroba exato.
     # Se não vierem componentes, mantém o custo_arroba do campo único (default 57).

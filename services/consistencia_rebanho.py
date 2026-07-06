@@ -219,3 +219,64 @@ def analisar_consistencia(
         "resumo": resumo,
         "flags": flags,
     }
+
+
+def analisar_consistencia_historica(
+    v_atual: list,
+    v_anterior: list,
+    *,
+    crescimento_max: float = 0.40,
+    desaparecimento_min: int = 30,
+) -> list:
+    """Compara o rebanho atual com a declaração anterior e retorna flags adicionais.
+
+    Args:
+        v_atual: Vetor de 10 quantidades da declaração atual.
+        v_anterior: Vetor de 10 quantidades da declaração anterior.
+        crescimento_max: Percentual máximo de crescimento total plausível entre
+            declarações sem compra declarada.
+        desaparecimento_min: Mínimo de animais que, ao zerar de uma declaração
+            para outra, gera um flag de desaparecimento.
+
+    Returns:
+        Lista de flags (mesmo formato que `analisar_consistencia`).
+    """
+    if len(v_atual) != 10 or len(v_anterior) != 10:
+        return []
+
+    v_atual = [max(float(x), 0.0) for x in v_atual]
+    v_anterior = [max(float(x), 0.0) for x in v_anterior]
+    flags = []
+    total_atual = sum(v_atual)
+    total_anterior = sum(v_anterior)
+
+    # 1. Crescimento total implausível
+    if total_anterior > 10:
+        crescimento = (total_atual - total_anterior) / total_anterior
+        if crescimento > crescimento_max:
+            flags.append(_flag(
+                "crescimento_implicavel", ERRO,
+                "Crescimento implausível entre declarações",
+                f"Rebanho cresceu {crescimento:.0%} desde a última declaração "
+                f"({total_anterior:.0f} → {total_atual:.0f}). Acima do limite "
+                f"biológico de {crescimento_max:.0%} sem compra declarada.",
+                declarado=total_atual, esperado=total_anterior * (1 + crescimento_max)))
+
+    # 2. Categoria que desaparece (venda seletiva escondida)
+    NOMES_FAIXAS = [
+        "fêmeas 0–4m", "machos 0–4m",
+        "fêmeas 5–12m", "machos 5–12m",
+        "fêmeas 13–24m", "machos 13–24m",
+        "fêmeas 25–36m", "machos 25–36m",
+        "fêmeas +36m", "machos +36m",
+    ]
+    for i, (ant, atu) in enumerate(zip(v_anterior, v_atual)):
+        if ant >= desaparecimento_min and atu == 0:
+            flags.append(_flag(
+                f"desaparecimento_{i}", ERRO,
+                f"Categoria desapareceu: {NOMES_FAIXAS[i]}",
+                f"{ant:.0f} animais em {NOMES_FAIXAS[i]} na declaração anterior; "
+                f"agora zerou. Venda seletiva ou subdeclaração.",
+                declarado=atu, esperado=ant))
+
+    return flags
