@@ -201,6 +201,8 @@ def init_db():
     _add_column_safe('cotacao_arroba', 'preco_bezerra', 'REAL')
     _add_column_safe('usuarios', 'security_question', 'TEXT DEFAULT \'\'')
     _add_column_safe('usuarios', 'security_answer_hash', 'TEXT DEFAULT \'\'')
+    _add_column_safe('usuarios', 'nome_consultoria', 'TEXT DEFAULT \'\'')
+    _add_column_safe('usuarios', 'logo_base64', 'TEXT DEFAULT \'\'')
 
 
 # ─────────────────────────────────────────────
@@ -241,6 +243,11 @@ def buscar_usuario_id(user_id: int) -> dict | None:
         f'SELECT * FROM usuarios WHERE id={ph}',
         (user_id,), fetch='one'
     )
+
+def atualizar_perfil_consultoria(user_id: int, nome_consultoria: str, logo_base64: str):
+    ph = _PH
+    _exec(f'UPDATE usuarios SET nome_consultoria={ph}, logo_base64={ph} WHERE id={ph}',
+          ((nome_consultoria or '').strip()[:120], logo_base64 or '', user_id), commit=True)
 
 def verificar_senha(email: str, senha: str) -> dict | None:
     u = buscar_usuario_email(email)

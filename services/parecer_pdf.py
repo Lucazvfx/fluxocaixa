@@ -8,6 +8,8 @@ qualquer alvo de deploy.
 """
 from __future__ import annotations
 import io
+import base64
+import logging
 from datetime import datetime
 
 from reportlab.lib.pagesizes import A4
@@ -15,8 +17,10 @@ from reportlab.lib import colors
 from reportlab.lib.units import cm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image,
 )
+
+_logger = logging.getLogger(__name__)
 
 _COR_RECOMENDACAO = {
     'aprovar': colors.HexColor('#2E7D32'),
@@ -44,7 +48,25 @@ def _fmt_moeda(v) -> str:
         return '—'
 
 
-def gerar_pdf_parecer(parecer: dict) -> bytes:
+def _logo_flowable(logo_base64: str):
+    """Decodifica o logo em base64 para uma Image do reportlab. None se inválido."""
+    if not logo_base64:
+        return None
+    try:
+        raw = base64.b64decode(logo_base64, validate=False)
+        img = Image(io.BytesIO(raw))
+        largura_max = 4 * cm
+        if img.imageWidth > 0:
+            escala = largura_max / img.imageWidth
+            img.drawWidth = largura_max
+            img.drawHeight = img.imageHeight * escala
+        return img
+    except Exception:
+        _logger.warning('Logo inválido no PDF do parecer — gerando sem logo.', exc_info=True)
+        return None
+
+
+def gerar_pdf_parecer(parecer: dict, branding: dict | None = None) -> bytes:
     ss = _styles()
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
@@ -52,8 +74,17 @@ def gerar_pdf_parecer(parecer: dict) -> bytes:
                             leftMargin=2*cm, rightMargin=2*cm)
     story = []
 
+    branding = branding or {}
+    nome_consultoria = (branding.get('nome_consultoria') or '').strip()
+    logo = _logo_flowable(branding.get('logo_base64') or '')
+    if logo is not None:
+        story.append(logo)
+        story.append(Spacer(1, 6))
+
     ident = parecer.get('identificacao') or {}
-    story.append(Paragraph('Parecer de Crédito — Análise Técnico-Financeira', ss['Titulo']))
+    titulo = (f"{nome_consultoria} — Parecer de Crédito" if nome_consultoria
+              else 'Parecer de Crédito — Análise Técnico-Financeira')
+    story.append(Paragraph(titulo, ss['Titulo']))
     fazenda = ident.get('fazenda') or '—'
     municipio = ident.get('municipio') or '—'
     proprietario = ident.get('proprietario') or '—'
