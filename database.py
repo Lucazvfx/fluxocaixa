@@ -193,6 +193,25 @@ def init_db():
         )
     ''', commit=True)
 
+    # Empresas (consultorias) e vínculo N:N com usuários
+    _exec(f'''
+        CREATE TABLE IF NOT EXISTS empresas (
+            id          {_AI},
+            nome        TEXT NOT NULL,
+            logo_base64 TEXT DEFAULT '',
+            created_at  TIMESTAMP DEFAULT {_NOW}
+        )
+    ''', commit=True)
+
+    _exec(f'''
+        CREATE TABLE IF NOT EXISTS empresa_membros (
+            id          {_AI},
+            empresa_id  INTEGER NOT NULL,
+            user_id     INTEGER NOT NULL,
+            created_at  TIMESTAMP DEFAULT {_NOW}
+        )
+    ''', commit=True)
+
     # Colunas adicionadas de forma segura (retrocompatibilidade)
     _add_column_safe('registros', 'user_id',    'INTEGER')
     _add_column_safe('registros', 'fazenda_id', 'INTEGER')
@@ -203,6 +222,7 @@ def init_db():
     _add_column_safe('usuarios', 'security_answer_hash', 'TEXT DEFAULT \'\'')
     _add_column_safe('usuarios', 'nome_consultoria', 'TEXT DEFAULT \'\'')
     _add_column_safe('usuarios', 'logo_base64', 'TEXT DEFAULT \'\'')
+    _add_column_safe('fazendas', 'empresa_id', 'INTEGER')
 
 
 # ─────────────────────────────────────────────
