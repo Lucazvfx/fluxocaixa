@@ -345,19 +345,19 @@ def remover_usuario(user_id: int):
 # ─────────────────────────────────────────────
 # FAZENDAS
 # ─────────────────────────────────────────────
-def criar_fazenda(nome: str, proprietario: str = '',
-                  municipio: str = '', estado: str = '', user_id: int = None) -> int:
+def criar_fazenda(nome: str, proprietario: str = '', municipio: str = '',
+                  estado: str = '', empresa_id: int = None, criado_por: int = None) -> int:
     ph = _PH
     rid = _exec(
-        f'''INSERT INTO fazendas (user_id, nome, proprietario, municipio, estado)
-            VALUES ({ph},{ph},{ph},{ph},{ph})''',
-        (user_id, nome.strip()[:120], proprietario.strip()[:120],
+        f'''INSERT INTO fazendas (user_id, empresa_id, nome, proprietario, municipio, estado)
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph})''',
+        (criado_por, empresa_id, nome.strip()[:120], proprietario.strip()[:120],
          municipio.strip()[:80], estado.strip()[:40]),
         fetch='lastrow', commit=True
     )
     return int(rid)
 
-def listar_fazendas(user_id: int) -> list:
+def listar_fazendas(empresa_id: int) -> list:
     ph = _PH
     rows = _exec(
         f'''SELECT f.id, f.nome, f.proprietario, f.municipio, f.estado,
@@ -366,10 +366,10 @@ def listar_fazendas(user_id: int) -> list:
                    MAX(r.created_at) as ultima_analise
             FROM fazendas f
             LEFT JOIN registros r ON r.fazenda_id = f.id
-            WHERE f.user_id = {ph}
+            WHERE f.empresa_id = {ph}
             GROUP BY f.id, f.nome, f.proprietario, f.municipio, f.estado, f.created_at
             ORDER BY ultima_analise DESC NULLS LAST, f.created_at DESC''',
-        (user_id,), fetch='all'
+        (empresa_id,), fetch='all'
     ) or []
     result = []
     for r in rows:
@@ -379,30 +379,25 @@ def listar_fazendas(user_id: int) -> list:
         result.append(d)
     return result
 
-def buscar_fazenda(fazenda_id: int, user_id: int = None) -> dict | None:
+def buscar_fazenda(fazenda_id: int, empresa_id: int = None) -> dict | None:
     ph = _PH
     sql = f'SELECT * FROM fazendas WHERE id={ph}'
     params = [fazenda_id]
-    if user_id is not None:
-        sql += f' AND user_id={ph}'
-        params.append(user_id)
+    if empresa_id is not None:
+        sql += f' AND empresa_id={ph}'
+        params.append(empresa_id)
     return _exec(sql, tuple(params), fetch='one')
 
-def historico_fazenda(fazenda_id: int, user_id: int = None, limit: int = 30) -> list:
+def historico_fazenda(fazenda_id: int, limit: int = 30) -> list:
     ph = _PH
-    sql = f'''SELECT r.id, r.valores, r.class_ml, r.class_conf, r.confianca,
+    rows = _exec(
+        f'''SELECT r.id, r.valores, r.class_ml, r.class_conf, r.confianca,
                    r.nat_pct, r.created_at
             FROM registros r
-            WHERE r.fazenda_id={ph}'''
-    params = [fazenda_id]
-    if user_id is not None:
-        sql += f' AND r.user_id={ph}'
-        params.append(user_id)
-    
-    sql += f' ORDER BY r.created_at DESC LIMIT {ph}'
-    params.append(limit)
-    
-    rows = _exec(sql, tuple(params), fetch='all') or []
+            WHERE r.fazenda_id={ph}
+            ORDER BY r.created_at DESC LIMIT {ph}''',
+        (fazenda_id, limit), fetch='all'
+    ) or []
     result = []
     for r in rows:
         d = dict(r)
@@ -425,13 +420,13 @@ def salvar_parecer(user_id: int, fazenda_id: int,
     )
     return int(rid)
 
-def listar_pareceres(fazenda_id: int, user_id: int, limit: int = 30) -> list:
+def listar_pareceres(fazenda_id: int, limit: int = 30) -> list:
     ph = _PH
     rows = _exec(
         f'''SELECT id, solicitacao, parecer, recomendacao, dscr, created_at
-            FROM pareceres WHERE fazenda_id={ph} AND user_id={ph}
+            FROM pareceres WHERE fazenda_id={ph}
             ORDER BY created_at DESC, id DESC LIMIT {ph}''',
-        (fazenda_id, user_id, limit), fetch='all'
+        (fazenda_id, limit), fetch='all'
     ) or []
     for r in rows:
         r['created_at'] = str(r.get('created_at', ''))
@@ -443,13 +438,14 @@ def excluir_registro(registro_id: int, user_id: int) -> bool:
           (registro_id, user_id), commit=True)
     return True
 
-def excluir_fazenda(fazenda_id: int, user_id: int) -> bool:
+def excluir_fazenda(fazenda_id: int, empresa_id: int) -> bool:
     ph = _PH
-    # Primeiro apaga registros vinculados para limpar histórico
-    _exec(f'DELETE FROM registros WHERE fazenda_id={ph} AND user_id={ph}',
-          (fazenda_id, user_id), commit=True)
-    _exec(f'DELETE FROM fazendas WHERE id={ph} AND user_id={ph}',
-          (fazenda_id, user_id), commit=True)
+    if not buscar_fazenda(fazenda_id, empresa_id):
+        return False
+    _exec(f'DELETE FROM registros WHERE fazenda_id={ph}', (fazenda_id,), commit=True)
+    _exec(f'DELETE FROM pareceres WHERE fazenda_id={ph}', (fazenda_id,), commit=True)
+    _exec(f'DELETE FROM fazendas WHERE id={ph} AND empresa_id={ph}',
+          (fazenda_id, empresa_id), commit=True)
     return True
 
 

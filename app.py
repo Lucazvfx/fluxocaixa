@@ -10,7 +10,7 @@ import subprocess
 import threading
 from functools import wraps
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -88,6 +88,28 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return wrapper
+
+
+def _resolver_empresa_ativa():
+    """Empresa ativa da sessão; escolhe a primeira se ausente/inválida.
+    Devolve None se o usuário não pertence a nenhuma empresa."""
+    empresas = db.empresas_do_usuario(current_user.id)
+    if not empresas:
+        return None
+    ativa = session.get('empresa_ativa_id')
+    if ativa and any(e['id'] == ativa for e in empresas):
+        return ativa
+    nova_ativa = empresas[0]['id']
+    session['empresa_ativa_id'] = nova_ativa
+    return nova_ativa
+
+
+def _empresa_ativa_ou_400():
+    """Para endpoints JSON: devolve (empresa_id, None) ou (None, response_erro)."""
+    eid = _resolver_empresa_ativa()
+    if eid is None:
+        return None, (jsonify({'erro': 'Usuário sem empresa vinculada'}), 400)
+    return eid, None
 
 
 def garantir_admins():
@@ -235,7 +257,40 @@ def admin():
         usuarios=db.listar_usuarios(),
         usuario=current_user,
         nova_conta=None,
+        empresas=db._exec('SELECT * FROM empresas ORDER BY nome', fetch='all') or [],
+        membros=db._exec('''SELECT m.empresa_id, m.user_id, e.nome as empresa_nome,
+                            u.email as user_email FROM empresa_membros m
+                            JOIN empresas e ON e.id=m.empresa_id
+                            JOIN usuarios u ON u.id=m.user_id ORDER BY e.nome''', fetch='all') or [],
     )
+
+@app.route('/admin/empresas/criar', methods=['POST'])
+@admin_required
+def admin_criar_empresa():
+    nome = (request.form.get('nome') or '').strip()
+    if nome:
+        db._exec(f"INSERT INTO empresas (nome) VALUES ({db._PH})", (nome,), commit=True)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/empresas/vincular', methods=['POST'])
+@admin_required
+def admin_vincular_empresa():
+    user_id = request.form.get('user_id')
+    empresa_id = request.form.get('empresa_id')
+    if user_id and empresa_id and not db.usuario_pertence_a_empresa(int(user_id), int(empresa_id)):
+        db._exec(f"INSERT INTO empresa_membros (empresa_id, user_id) VALUES ({db._PH},{db._PH})",
+                 (int(empresa_id), int(user_id)), commit=True)
+    return redirect(url_for('admin'))
+
+@app.route('/admin/empresas/desvincular', methods=['POST'])
+@admin_required
+def admin_desvincular_empresa():
+    user_id = request.form.get('user_id')
+    empresa_id = request.form.get('empresa_id')
+    if user_id and empresa_id:
+        db._exec(f"DELETE FROM empresa_membros WHERE user_id={db._PH} AND empresa_id={db._PH}",
+                 (int(user_id), int(empresa_id)), commit=True)
+    return redirect(url_for('admin'))
 
 
 @app.route('/admin/criar', methods=['POST'])
@@ -259,6 +314,11 @@ def admin_criar():
         usuario=current_user,
         nova_conta=nova_conta,
         erro=erro,
+        empresas=db._exec('SELECT * FROM empresas ORDER BY nome', fetch='all') or [],
+        membros=db._exec('''SELECT m.empresa_id, m.user_id, e.nome as empresa_nome,
+                            u.email as user_email FROM empresa_membros m
+                            JOIN empresas e ON e.id=m.empresa_id
+                            JOIN usuarios u ON u.id=m.user_id ORDER BY e.nome''', fetch='all') or [],
     )
 
 
@@ -276,57 +336,90 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# ── Empresa ativa ────────────────────────────────────────────────────────────
+@app.route('/api/empresa/ativa', methods=['GET'])
+@login_required
+def api_empresa_ativa_get():
+    empresas = db.empresas_do_usuario(current_user.id)
+    ativa_id = _resolver_empresa_ativa()
+    return jsonify({'empresas': empresas, 'ativa_id': ativa_id})
+
+@app.route('/api/empresa/ativa', methods=['POST'])
+@login_required
+def api_empresa_ativa_post():
+    empresa_id = (request.json or {}).get('empresa_id')
+    if not db.usuario_pertence_a_empresa(current_user.id, empresa_id):
+        return jsonify({'erro': 'Você não pertence a essa empresa'}), 403
+    session['empresa_ativa_id'] = empresa_id
+    return jsonify({'ok': True})
+
 # ── Fazendas ─────────────────────────────────────────────────────────────────
 @app.route('/api/fazendas', methods=['GET'])
 @login_required
 def api_listar_fazendas():
-    return jsonify({'fazendas': db.listar_fazendas(current_user.id)})
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
+    return jsonify({'fazendas': db.listar_fazendas(empresa_id)})
 
 @app.route('/api/fazendas', methods=['POST'])
 @login_required
 def api_criar_fazenda():
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
     data = request.json
     nome = (data.get('nome') or '').strip()
     if not nome:
         return jsonify({'erro': 'Nome obrigatório'}), 400
     fid = db.criar_fazenda(
-        user_id=current_user.id,
         nome=nome,
         proprietario=data.get('proprietario', ''),
         municipio=data.get('municipio', ''),
         estado=data.get('estado', ''),
+        empresa_id=empresa_id,
+        criado_por=current_user.id,
     )
     return jsonify({'ok': True, 'id': fid})
 
 @app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
 @login_required
 def api_historico_fazenda(fid):
-    f = db.buscar_fazenda(fid, current_user.id)
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
+    f = db.buscar_fazenda(fid, empresa_id)
     if not f:
         return jsonify({'erro': 'Fazenda não encontrada'}), 404
-    hist = db.historico_fazenda(fid, current_user.id)
+    hist = db.historico_fazenda(fid)
     return jsonify({'fazenda': dict(f), 'historico': hist})
 
 @app.route('/api/fazendas/<int:fid>/pareceres', methods=['GET'])
 @login_required
 def api_fazenda_pareceres(fid):
-    itens = db.listar_pareceres(fazenda_id=fid, user_id=current_user.id)
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
+    if not db.buscar_fazenda(fid, empresa_id):
+        return jsonify({'erro': 'Fazenda não encontrada'}), 404
+    itens = db.listar_pareceres(fazenda_id=fid)
     return jsonify({'pareceres': itens})
 
-@app.route('/api/perfil-consultoria', methods=['GET', 'POST'])
+@app.route('/api/empresa/perfil', methods=['GET', 'POST'])
 @login_required
-def api_perfil_consultoria():
+def api_empresa_perfil():
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
     if request.method == 'POST':
         data = request.json or {}
-        db.atualizar_perfil_consultoria(
-            current_user.id,
-            data.get('nome_consultoria', ''),
-            data.get('logo_base64', ''))
+        db.atualizar_perfil_empresa(
+            empresa_id, data.get('nome_consultoria', ''), data.get('logo_base64', ''))
         return jsonify({'ok': True})
-    u = db.buscar_usuario_id(current_user.id)
+    e = db.buscar_empresa(empresa_id)
     return jsonify({
-        'nome_consultoria': (u.get('nome_consultoria') or '') if u else '',
-        'logo_base64': (u.get('logo_base64') or '') if u else '',
+        'nome_consultoria': (e.get('nome') or '') if e else '',
+        'logo_base64': (e.get('logo_base64') or '') if e else '',
     })
 
 @app.route('/api/parecer/pdf', methods=['POST'])
@@ -335,9 +428,10 @@ def api_parecer_pdf():
     parecer = (request.json or {}).get('parecer')
     if not parecer:
         return jsonify({'erro': 'parecer é obrigatório'}), 400
-    u = db.buscar_usuario_id(current_user.id)
-    branding = {'nome_consultoria': u.get('nome_consultoria') or '',
-                'logo_base64': u.get('logo_base64') or ''} if u else None
+    empresa_id = _resolver_empresa_ativa()
+    e = db.buscar_empresa(empresa_id) if empresa_id else None
+    branding = {'nome_consultoria': e.get('nome') or '',
+                'logo_base64': e.get('logo_base64') or ''} if e else None
     pdf_bytes = gerar_pdf_parecer(parecer, branding=branding)
     return send_file(io.BytesIO(pdf_bytes), mimetype='application/pdf',
                      as_attachment=True, download_name='parecer_credito.pdf')
@@ -346,7 +440,8 @@ def api_parecer_pdf():
 @app.route('/')
 @login_required
 def index():
-    fazendas = db.listar_fazendas(current_user.id)
+    empresa_id = _resolver_empresa_ativa()
+    fazendas = db.listar_fazendas(empresa_id) if empresa_id else []
     cotacoes_dia = db.obter_cotacoes_atuais()
     return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
                            usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia,
@@ -469,8 +564,10 @@ def api_classificar():
     # Persiste no histórico da fazenda apenas quando há fazenda e solicitação.
     fazenda_id = data.get('fazenda_id')
     if fazenda_id and data.get('credito_valor'):
-        db.salvar_parecer(current_user.id, int(fazenda_id),
-                          solicitacao=credito_inputs, parecer=parecer)
+        empresa_id = _resolver_empresa_ativa()
+        if empresa_id and db.buscar_fazenda(int(fazenda_id), empresa_id):
+            db.salvar_parecer(current_user.id, int(fazenda_id),
+                              solicitacao=credito_inputs, parecer=parecer)
 
     return jsonify({
         **result,
@@ -513,7 +610,8 @@ def api_confirmar():
         return jsonify({'erro': 'Registro não encontrado'}), 404
     fazenda_nome = row[0]
     # Verifica se o usuário possui uma fazenda com esse nome
-    fazendas_do_user = db.listar_fazendas(current_user.id)
+    empresa_id = _resolver_empresa_ativa()
+    fazendas_do_user = db.listar_fazendas(empresa_id) if empresa_id else []
     if not any(f['nome'] == fazenda_nome for f in fazendas_do_user):
         return jsonify({'erro': 'Você não tem permissão para confirmar este registro'}), 403
 
@@ -545,9 +643,10 @@ def api_retrain_status():
 @app.route('/api/historico', methods=['GET'])
 @login_required
 def api_historico():
-    """Retorna o histórico de classificações do usuário (apenas registros de suas fazendas)."""
-    # Busca todas as fazendas do usuário
-    fazendas = db.listar_fazendas(current_user.id)
+    """Retorna o histórico de classificações da empresa ativa (registros de suas fazendas)."""
+    # Busca todas as fazendas da empresa ativa
+    empresa_id = _resolver_empresa_ativa()
+    fazendas = db.listar_fazendas(empresa_id) if empresa_id else []
     nomes_fazendas = [f['nome'] for f in fazendas]
     if not nomes_fazendas:
         return jsonify({'registros': [], 'stats': db.stats()})
