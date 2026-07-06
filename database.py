@@ -117,6 +117,30 @@ def _add_column_safe(table, col, tipo):
 
 
 # ─────────────────────────────────────────────
+# MIGRATIONS
+# ─────────────────────────────────────────────
+def _migrar_usuarios_para_empresas():
+    """Garante que todo usuário tenha ao menos uma empresa (idempotente).
+
+    Usuários criados após esta feature já ganham empresa em criar_usuario();
+    esta função cobre só quem foi criado antes dela existir.
+    """
+    ph = _PH
+    usuarios_sem_empresa = _exec('''
+        SELECT u.id, u.nome, u.nome_consultoria, u.logo_base64 FROM usuarios u
+        WHERE NOT EXISTS (SELECT 1 FROM empresa_membros m WHERE m.user_id = u.id)
+    ''', fetch='all') or []
+    for u in usuarios_sem_empresa:
+        nome_empresa = (u.get('nome_consultoria') or '').strip() or f"{u['nome']} — Consultoria"
+        eid = _exec(f'INSERT INTO empresas (nome, logo_base64) VALUES ({ph},{ph})',
+                    (nome_empresa, u.get('logo_base64') or ''), fetch='lastrow', commit=True)
+        _exec(f'INSERT INTO empresa_membros (empresa_id, user_id) VALUES ({ph},{ph})',
+              (eid, u['id']), commit=True)
+        _exec(f'UPDATE fazendas SET empresa_id={ph} WHERE user_id={ph} AND empresa_id IS NULL',
+              (eid, u['id']), commit=True)
+
+
+# ─────────────────────────────────────────────
 # SCHEMA
 # ─────────────────────────────────────────────
 def init_db():
@@ -223,6 +247,8 @@ def init_db():
     _add_column_safe('usuarios', 'nome_consultoria', 'TEXT DEFAULT \'\'')
     _add_column_safe('usuarios', 'logo_base64', 'TEXT DEFAULT \'\'')
     _add_column_safe('fazendas', 'empresa_id', 'INTEGER')
+
+    _migrar_usuarios_para_empresas()
 
 
 # ─────────────────────────────────────────────
