@@ -246,9 +246,25 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca (R$/arroba)">Vaca: --</span>
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
     {% if eh_admin %}<a class="ml-acc" href="{{ url_for('admin') }}" style="cursor:pointer;text-decoration:none;background:rgba(96,165,250,.1);color:var(--cy);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(96,165,250,.3)" title="Gerenciar acessos">⚙ Acessos</a>{% endif %}
+    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(167,139,250,.1);color:#A78BFA;font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(167,139,250,.3)" onclick="abrirMarcaModal()" title="Marca da consultoria no PDF">⚙ Marca</button>
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(248,113,113,.1);color:var(--rd);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(248,113,113,.3)" onclick="logout()">🚪 Sair</button>
   </div>
 </header>
+
+<!-- ═══ MODAL: MARCA DA CONSULTORIA ═══ -->
+<div id="marca-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(6,8,16,.85);z-index:400;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div class="card" style="width:min(420px,92vw);padding:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:800">Marca da Consultoria</div>
+      <button class="btn-sm" onclick="fecharMarcaModal()">✕</button>
+    </div>
+    <p style="font-size:.78rem;color:var(--mu);margin-bottom:14px">Aparece no PDF do parecer exportado. Deixe em branco para usar o padrão.</p>
+    <div class="field" style="margin-bottom:12px"><label>Nome da consultoria</label><input type="text" id="marca-nome" placeholder="Ex: Consultoria Agropecuária XYZ"></div>
+    <div class="field" style="margin-bottom:12px"><label>Logo</label><input type="file" id="marca-logo-input" accept="image/*" onchange="onMarcaLogoSelecionado(event)"></div>
+    <div id="marca-logo-preview" style="margin-bottom:14px"></div>
+    <button class="btn" style="width:100%;justify-content:center" onclick="salvarMarcaConsultoria()">Salvar</button>
+  </div>
+</div>
 
 <main>
 <div class="tab-bar">
@@ -1630,6 +1646,45 @@ async function atualizarDbStats(s=null){
 
 function logout() {
   window.location.href = '/logout';
+}
+
+// ================== MARCA DA CONSULTORIA ==================
+let marcaLogoBase64 = '';
+async function abrirMarcaModal(){
+  document.getElementById('marca-modal-overlay').style.display='flex';
+  try{
+    const r = await fetch('/api/perfil-consultoria');
+    const d = await r.json();
+    document.getElementById('marca-nome').value = d.nome_consultoria || '';
+    marcaLogoBase64 = d.logo_base64 || '';
+    atualizarMarcaLogoPreview();
+  }catch(e){}
+}
+function fecharMarcaModal(){ document.getElementById('marca-modal-overlay').style.display='none'; }
+function atualizarMarcaLogoPreview(){
+  const el = document.getElementById('marca-logo-preview');
+  el.innerHTML = marcaLogoBase64 ? `<img src="data:image/png;base64,${marcaLogoBase64}" style="max-width:120px;max-height:60px;border-radius:6px;border:1px solid var(--b)">` : '';
+}
+function onMarcaLogoSelecionado(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    // data:image/png;base64,XXXX → só a parte depois da vírgula
+    marcaLogoBase64 = String(reader.result).split(',')[1] || '';
+    atualizarMarcaLogoPreview();
+  };
+  reader.readAsDataURL(file);
+}
+async function salvarMarcaConsultoria(){
+  const nome_consultoria = document.getElementById('marca-nome').value;
+  try{
+    const r = await fetch('/api/perfil-consultoria', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nome_consultoria, logo_base64: marcaLogoBase64})});
+    const d = await r.json();
+    if(d.ok){ showToast('Marca salva.'); fecharMarcaModal(); }
+    else { showToast('Erro ao salvar marca.', true); }
+  }catch(e){ showToast('Erro ao salvar marca.', true); }
 }
 
 // ================== FAZENDAS (cliente cadastrado) ==================
