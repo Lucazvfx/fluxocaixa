@@ -486,6 +486,39 @@ def exportar_treino():
             y.append(TIPOS.index(t))
     return X, y
 
+def buscar_registro_por_id(registro_id: int) -> dict | None:
+    ph = _PH
+    row = _exec(f'SELECT id, fazenda, valores, class_ml FROM registros WHERE id={ph}',
+                (registro_id,), fetch='one')
+    return dict(row) if row else None
+
+
+def listar_registros_por_fazendas(nomes_fazendas: list, limit: int = 60) -> list:
+    """Lista registros cujo campo fazenda está na lista fornecida."""
+    if not nomes_fazendas:
+        return []
+    ph = _PH
+    placeholders = ','.join([ph] * len(nomes_fazendas))
+    rows = _exec(
+        f'''SELECT id, valores, class_ml, class_conf, confianca,
+                   fazenda, municipio, created_at, nat_pct
+            FROM registros
+            WHERE fazenda IN ({placeholders})
+            ORDER BY created_at DESC LIMIT {ph}''',
+        tuple(nomes_fazendas) + (limit,), fetch='all'
+    ) or []
+    result = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d['valores'] = json.loads(d['valores']) if isinstance(d['valores'], str) else d['valores']
+        except Exception:
+            pass
+        d['created_at'] = str(d.get('created_at', ''))
+        result.append(d)
+    return result
+
+
 def listar(limit: int = 60, user_id: int = None) -> list:
     ph = _PH
     sql = 'SELECT id, valores, class_ml, class_conf, confianca, fazenda, municipio, created_at FROM registros'

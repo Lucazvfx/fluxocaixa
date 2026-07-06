@@ -595,21 +595,11 @@ def api_confirmar():
     if not rid or not cls:
         return jsonify({'erro': 'Campos registro_id e classificacao são obrigatórios'}), 400
 
-    # Buscar o registro para verificar se a fazenda pertence ao usuário
-    registros = db.listar(limit=1, registro_id=rid)  # precisa de uma função que busque por id
-    # Como db.listar não tem filtro por id, vamos criar uma consulta direta ou modificar db.py.
-    # Para simplificar, assumimos que db.listar(limit=1) retorna o registro se existir, mas sem filtro de usuário.
-    # Vamos fazer uma verificação manual com uma query SQL (provisório).
-    import sqlite3
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT fazenda FROM registros WHERE id = ?", (rid,))
-    row = cursor.fetchone()
-    conn.close()
-    if not row:
+    # Buscar o registro e verificar se a fazenda pertence à empresa ativa.
+    registro = db.buscar_registro_por_id(int(rid))
+    if not registro:
         return jsonify({'erro': 'Registro não encontrado'}), 404
-    fazenda_nome = row[0]
-    # Verifica se o usuário possui uma fazenda com esse nome
+    fazenda_nome = registro['fazenda']
     empresa_id = _resolver_empresa_ativa()
     fazendas_do_user = db.listar_fazendas(empresa_id) if empresa_id else []
     if not any(f['nome'] == fazenda_nome for f in fazendas_do_user):
@@ -651,36 +641,20 @@ def api_historico():
     if not nomes_fazendas:
         return jsonify({'registros': [], 'stats': db.stats()})
 
-    # Busca registros cujo campo fazenda esteja na lista de nomes
-    # Como db.listar não suporta filtro por lista, fazemos uma consulta manual.
-    import sqlite3
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    placeholders = ','.join(['?'] * len(nomes_fazendas))
-    query = f"""
-        SELECT id, valores, classificacao_ml, confianca, classificacao_confirmada,
-               fazenda, municipio, data_criacao, natalidade_pct
-        FROM registros
-        WHERE fazenda IN ({placeholders})
-        ORDER BY data_criacao DESC
-        LIMIT ?
-    """
     limit = min(int(request.args.get('limit', 60)), 200)
-    cursor.execute(query, nomes_fazendas + [limit])
-    rows = cursor.fetchall()
-    conn.close()
+    rows = db.listar_registros_por_fazendas(nomes_fazendas, limit=limit)
     registros = []
     for row in rows:
         registros.append({
-            'id': row[0],
-            'valores': eval(row[1]) if isinstance(row[1], str) else row[1],  # cuidado com eval
-            'classificacao_ml': row[2],
-            'confianca': row[3],
-            'classificacao_confirmada': row[4],
-            'fazenda': row[5],
-            'municipio': row[6],
-            'data_criacao': row[7],
-            'natalidade_pct': row[8]
+            'id': row['id'],
+            'valores': row['valores'],
+            'classificacao_ml': row.get('class_ml'),
+            'confianca': row.get('confianca'),
+            'classificacao_confirmada': row.get('class_conf'),
+            'fazenda': row.get('fazenda'),
+            'municipio': row.get('municipio'),
+            'data_criacao': row.get('created_at'),
+            'natalidade_pct': row.get('nat_pct'),
         })
     return jsonify({'registros': registros, 'stats': db.stats()})
 
