@@ -231,13 +231,44 @@ def init_db():
 def criar_usuario(email: str, nome: str, senha: str,
                   security_question: str = '', security_answer: str = '') -> int:
     ph = _PH
+    nome = nome.strip()
     rid = _exec(
         f'INSERT INTO usuarios (email, nome, senha_hash, security_question, security_answer_hash) VALUES ({ph},{ph},{ph},{ph},{ph})',
-        (email.lower().strip(), nome.strip(), generate_password_hash(senha),
+        (email.lower().strip(), nome, generate_password_hash(senha),
          security_question, generate_password_hash(security_answer.lower().strip()) if security_answer else ''),
         fetch='lastrow', commit=True
     )
-    return int(rid)
+    uid = int(rid)
+    eid = _exec(f'INSERT INTO empresas (nome) VALUES ({ph})',
+                (f'{nome} — Consultoria',), fetch='lastrow', commit=True)
+    _exec(f'INSERT INTO empresa_membros (empresa_id, user_id) VALUES ({ph},{ph})',
+          (eid, uid), commit=True)
+    return uid
+
+def empresas_do_usuario(user_id: int) -> list:
+    """Empresas às quais o usuário pertence."""
+    ph = _PH
+    return _exec(f'''SELECT e.id, e.nome, e.logo_base64 FROM empresas e
+                     JOIN empresa_membros m ON m.empresa_id = e.id
+                     WHERE m.user_id={ph} ORDER BY e.nome''', (user_id,), fetch='all') or []
+
+
+def usuario_pertence_a_empresa(user_id: int, empresa_id: int) -> bool:
+    ph = _PH
+    r = _exec(f'SELECT 1 FROM empresa_membros WHERE user_id={ph} AND empresa_id={ph}',
+              (user_id, empresa_id), fetch='one')
+    return bool(r)
+
+
+def buscar_empresa(empresa_id: int) -> dict | None:
+    ph = _PH
+    return _exec(f'SELECT * FROM empresas WHERE id={ph}', (empresa_id,), fetch='one')
+
+
+def atualizar_perfil_empresa(empresa_id: int, nome: str, logo_base64: str):
+    ph = _PH
+    _exec(f'UPDATE empresas SET nome={ph}, logo_base64={ph} WHERE id={ph}',
+          ((nome or '').strip()[:120], logo_base64 or '', empresa_id), commit=True)
 
 def resetar_senha(email: str, nova_senha: str):
     ph = _PH
