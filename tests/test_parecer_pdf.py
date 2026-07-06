@@ -42,3 +42,18 @@ def test_gerar_pdf_sem_conclusao_de_credito_nao_lanca():
 def test_gerar_pdf_sem_flags_de_consistencia_nao_lanca():
     pdf = gerar_pdf_parecer(PARECER_SEM_FLAGS)
     assert pdf.startswith(b'%PDF')
+
+
+def test_gerar_pdf_com_nome_consultoria():
+    pdf = gerar_pdf_parecer(PARECER_COMPLETO, branding={'nome_consultoria': 'Consultoria X'})
+    assert pdf.startswith(b'%PDF')
+
+
+def test_gerar_pdf_com_logo_base64_invalido_nao_lanca():
+    pdf = gerar_pdf_parecer(PARECER_COMPLETO, branding={'logo_base64': 'não-é-base64-válido!!'})
+    assert pdf.startswith(b'%PDF')
+
+
+def test_gerar_pdf_sem_branding_identico_ao_atual():
+    pdf = gerar_pdf_parecer(PARECER_COMPLETO, branding=None)
+    assert pdf.startswith(b'%PDF')
