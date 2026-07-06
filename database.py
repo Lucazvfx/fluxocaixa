@@ -346,7 +346,7 @@ def listar_pareceres(fazenda_id: int, user_id: int, limit: int = 30) -> list:
     rows = _exec(
         f'''SELECT id, solicitacao, parecer, recomendacao, dscr, created_at
             FROM pareceres WHERE fazenda_id={ph} AND user_id={ph}
-            ORDER BY created_at DESC LIMIT {ph}''',
+            ORDER BY created_at DESC, id DESC LIMIT {ph}''',
         (fazenda_id, user_id, limit), fetch='all'
     ) or []
     for r in rows:

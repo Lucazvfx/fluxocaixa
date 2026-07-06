@@ -4,12 +4,13 @@ BoviML — Servidor Flask (CORRIGIDO)
 import logging
 import os
 import re
+import io
 import tempfile
 import subprocess
 import threading
 from functools import wraps
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -38,6 +39,7 @@ from parsers.composicao_rebanho import ler_template
 from services.consistencia_rebanho import analisar_consistencia
 from services.benchmarks_nacionais import avaliar_nacional
 from services.parecer_credito import montar_parecer
+from services.parecer_pdf import gerar_pdf_parecer
 from services.pesos_rebanho import arrobas_categorias
 from services.custos_desembolso import custo_arroba_de_desembolso, COMPONENTES
 from services.reconciliacao import reconciliar
@@ -304,6 +306,22 @@ def api_historico_fazenda(fid):
         return jsonify({'erro': 'Fazenda não encontrada'}), 404
     hist = db.historico_fazenda(fid, current_user.id)
     return jsonify({'fazenda': dict(f), 'historico': hist})
+
+@app.route('/api/fazendas/<int:fid>/pareceres', methods=['GET'])
+@login_required
+def api_fazenda_pareceres(fid):
+    itens = db.listar_pareceres(fazenda_id=fid, user_id=current_user.id)
+    return jsonify({'pareceres': itens})
+
+@app.route('/api/parecer/pdf', methods=['POST'])
+@login_required
+def api_parecer_pdf():
+    parecer = (request.json or {}).get('parecer')
+    if not parecer:
+        return jsonify({'erro': 'parecer é obrigatório'}), 400
+    pdf_bytes = gerar_pdf_parecer(parecer)
+    return send_file(io.BytesIO(pdf_bytes), mimetype='application/pdf',
+                     as_attachment=True, download_name='parecer_credito.pdf')
 
 # ── App principal ─────────────────────────────────────────────────────────────
 @app.route('/')
