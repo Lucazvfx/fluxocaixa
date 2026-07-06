@@ -157,6 +157,17 @@ python -m pytest tests/ -v
 # ~175 testes passam; ignorar test_pdf_reais_indea (PDFs locais) e test_csrf_e_limiter
 ```
 
-## Licença
+## Direitos Autorais e Licença
 
-Uso interno / consultoria. Todos os direitos reservados.
+© 2026 Lucas Vinicius. Todos os direitos reservados.
+
+Este software é obra intelectual de Lucas Vinicius, protegido pela **Lei 9.610/98 (Lei de Direitos Autorais)** e pela **Lei 9.609/98 (Lei do Software)**, ambas do Brasil.
+
+**É vedado**, sem autorização prévia e expressa por escrito do autor:
+- Copiar, modificar, distribuir ou sublicenciar este software no todo ou em parte
+- Usar o software para prestar serviços a terceiros sem licença comercial
+- Remover ou alterar os avisos de direitos autorais
+
+O registro da autoria e data de criação está documentado no histórico de commits deste repositório (`git log`), constituindo prova de anterioridade nos termos da legislação aplicável.
+
+Para licenciamento comercial ou dúvidas: **viniciuslukas353@gmail.com**
