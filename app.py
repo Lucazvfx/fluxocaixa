@@ -319,37 +319,52 @@ def api_empresa_ativa_post():
 @app.route('/api/fazendas', methods=['GET'])
 @login_required
 def api_listar_fazendas():
-    return jsonify({'fazendas': db.listar_fazendas(current_user.id)})
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
+    return jsonify({'fazendas': db.listar_fazendas(empresa_id)})
 
 @app.route('/api/fazendas', methods=['POST'])
 @login_required
 def api_criar_fazenda():
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
     data = request.json
     nome = (data.get('nome') or '').strip()
     if not nome:
         return jsonify({'erro': 'Nome obrigatório'}), 400
     fid = db.criar_fazenda(
-        user_id=current_user.id,
         nome=nome,
         proprietario=data.get('proprietario', ''),
         municipio=data.get('municipio', ''),
         estado=data.get('estado', ''),
+        empresa_id=empresa_id,
+        criado_por=current_user.id,
     )
     return jsonify({'ok': True, 'id': fid})
 
 @app.route('/api/fazendas/<int:fid>/historico', methods=['GET'])
 @login_required
 def api_historico_fazenda(fid):
-    f = db.buscar_fazenda(fid, current_user.id)
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
+    f = db.buscar_fazenda(fid, empresa_id)
     if not f:
         return jsonify({'erro': 'Fazenda não encontrada'}), 404
-    hist = db.historico_fazenda(fid, current_user.id)
+    hist = db.historico_fazenda(fid)
     return jsonify({'fazenda': dict(f), 'historico': hist})
 
 @app.route('/api/fazendas/<int:fid>/pareceres', methods=['GET'])
 @login_required
 def api_fazenda_pareceres(fid):
-    itens = db.listar_pareceres(fazenda_id=fid, user_id=current_user.id)
+    empresa_id, erro = _empresa_ativa_ou_400()
+    if erro:
+        return erro
+    if not db.buscar_fazenda(fid, empresa_id):
+        return jsonify({'erro': 'Fazenda não encontrada'}), 404
+    itens = db.listar_pareceres(fazenda_id=fid)
     return jsonify({'pareceres': itens})
 
 @app.route('/api/empresa/perfil', methods=['GET', 'POST'])
@@ -387,7 +402,8 @@ def api_parecer_pdf():
 @app.route('/')
 @login_required
 def index():
-    fazendas = db.listar_fazendas(current_user.id)
+    empresa_id = _resolver_empresa_ativa()
+    fazendas = db.listar_fazendas(empresa_id) if empresa_id else []
     cotacoes_dia = db.obter_cotacoes_atuais()
     return render_template('index.html', model_stats=stats, cenarios=CENARIOS,
                            usuario=current_user, fazendas=fazendas, cotacoes=cotacoes_dia,
@@ -510,8 +526,10 @@ def api_classificar():
     # Persiste no histórico da fazenda apenas quando há fazenda e solicitação.
     fazenda_id = data.get('fazenda_id')
     if fazenda_id and data.get('credito_valor'):
-        db.salvar_parecer(current_user.id, int(fazenda_id),
-                          solicitacao=credito_inputs, parecer=parecer)
+        empresa_id = _resolver_empresa_ativa()
+        if empresa_id and db.buscar_fazenda(int(fazenda_id), empresa_id):
+            db.salvar_parecer(current_user.id, int(fazenda_id),
+                              solicitacao=credito_inputs, parecer=parecer)
 
     return jsonify({
         **result,
@@ -554,7 +572,8 @@ def api_confirmar():
         return jsonify({'erro': 'Registro não encontrado'}), 404
     fazenda_nome = row[0]
     # Verifica se o usuário possui uma fazenda com esse nome
-    fazendas_do_user = db.listar_fazendas(current_user.id)
+    empresa_id = _resolver_empresa_ativa()
+    fazendas_do_user = db.listar_fazendas(empresa_id) if empresa_id else []
     if not any(f['nome'] == fazenda_nome for f in fazendas_do_user):
         return jsonify({'erro': 'Você não tem permissão para confirmar este registro'}), 403
 
@@ -586,9 +605,10 @@ def api_retrain_status():
 @app.route('/api/historico', methods=['GET'])
 @login_required
 def api_historico():
-    """Retorna o histórico de classificações do usuário (apenas registros de suas fazendas)."""
-    # Busca todas as fazendas do usuário
-    fazendas = db.listar_fazendas(current_user.id)
+    """Retorna o histórico de classificações da empresa ativa (registros de suas fazendas)."""
+    # Busca todas as fazendas da empresa ativa
+    empresa_id = _resolver_empresa_ativa()
+    fazendas = db.listar_fazendas(empresa_id) if empresa_id else []
     nomes_fazendas = [f['nome'] for f in fazendas]
     if not nomes_fazendas:
         return jsonify({'registros': [], 'stats': db.stats()})
