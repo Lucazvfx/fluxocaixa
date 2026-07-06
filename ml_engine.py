@@ -661,7 +661,7 @@ def _montar_resultado(cenario, sc, anos_proj, total_ini, ciclo):
 def _simular_cria(
     v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
     preco_arroba_bezerro, custo_arroba, anos,
-    peso_matriz=17.0, peso_bezerra=8.0,
+    peso_matriz=17.0, peso_bezerra=8.0, preco_vaca_arr=None,
 ):
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
@@ -672,6 +672,9 @@ def _simular_cria(
     desmama  = (desmama_pct / 100)
     venda_bz = (venda_bez_pct / 100)
     preco_bz = (preco_arroba_bezerro * m['preco']) * peso_bezerra   # R$/cabeça derivado de R$/@
+    # Preço da vaca descartada: usa preco_vaca_arr se informado, senão usa o mesmo preco/@ do bezerro
+    _preco_vaca_cab = ((preco_vaca_arr if preco_vaca_arr is not None else preco_arroba_bezerro)
+                       * m['preco']) * peso_matriz
 
     matrizes    = float(va[6] + va[8])
     fem_recria  = float(va[0] + va[2] + va[4])
@@ -691,7 +694,8 @@ def _simular_cria(
         total_prox    = int(matrizes_prox + bezerras_ret)
         mortes        = round((matrizes + fem_recria) * mort)
 
-        receita   = vez_vendidos * preco_bz
+        # Receita: bezerros vendidos + descarte de matrizes (ambos geram caixa na cria)
+        receita   = vez_vendidos * preco_bz + descarte_mat * _preco_vaca_cab
         custo     = (matrizes * peso_matriz + fem_recria * peso_bezerra) * custo_arroba
         resultado = receita - custo
 
@@ -922,6 +926,7 @@ def simular_cenario(
             v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
             preco_arroba_bezerro, custo_arroba, anos,
             peso_matriz=peso_vaca, peso_bezerra=peso_arroba,
+            preco_vaca_arr=preco_vaca_arr,
         )
     if ciclo == 'RECRIA':
         return _simular_recria(
