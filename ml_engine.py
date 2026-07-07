@@ -888,6 +888,9 @@ def simular_cenario(
     desc_pct:       float = None,
     preco_arroba:   float = 320.0,      # memorial §16: R$320
     custo_arroba:   float = 57.0,       # R$/@ ano (default de formulário)
+    custo_arroba_cria:    float = None,  # se informado, substitui custo_arroba p/ cria
+    custo_arroba_recria:  float = None,  # se informado, substitui custo_arroba p/ recria
+    custo_arroba_engorda: float = None,  # se informado, substitui custo_arroba p/ engorda
     peso_arroba:    float = PESO_BEZERRA_ARR,  # bezerra (ref. mercado, 7@)
     peso_garrote:   float = PESO_GARROTE_ARR,  # garrote macho jovem (ref. 11@)
     prop_boi:       float = None,
@@ -921,22 +924,26 @@ def simular_cenario(
     if nat_pct       is None: nat_pct       = ciclo_params.get('nat_pct', 75.0)
     if preco_arroba_bezerro is None: preco_arroba_bezerro = preco_arroba
 
+    _custo_cria    = custo_arroba_cria    if custo_arroba_cria    is not None else custo_arroba
+    _custo_recria  = custo_arroba_recria  if custo_arroba_recria  is not None else custo_arroba
+    _custo_engorda = custo_arroba_engorda if custo_arroba_engorda is not None else custo_arroba
+
     if ciclo == 'CRIA':
         return _simular_cria(
             v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
-            preco_arroba_bezerro, custo_arroba, anos,
+            preco_arroba_bezerro, _custo_cria, anos,
             peso_matriz=peso_vaca, peso_bezerra=peso_arroba,
             preco_vaca_arr=preco_vaca_arr,
         )
     if ciclo == 'RECRIA':
         return _simular_recria(
             v, cenario, mort_pct, preco_arroba, peso_entrada_arr, peso_saida_arr,
-            meses_recria, custo_arroba, anos,
+            meses_recria, _custo_recria, anos,
         )
     if ciclo == 'ENGORDA':
         return _simular_engorda(
             v, cenario, mort_pct, preco_arroba, peso_entrada_kg, peso_saida_kg,
-            rendimento_carcaca, custo_arroba, dias_engorda, anos,
+            rendimento_carcaca, _custo_engorda, dias_engorda, anos,
         )
 
     # CICLO_COMPLETO
@@ -964,7 +971,7 @@ def simular_cenario(
             venda_bez_pct=venda_bez_pct/100,
             mort_pct=mort,
             preco_arroba=preco_arroba * m['preco'],
-            custo_arroba=custo_arroba,
+            custo_arroba=sum(c for c in [_custo_cria, _custo_recria, _custo_engorda]) / 3,
             peso_boi=peso_boi,
             peso_vaca=peso_vaca,
             peso_bezerra=peso_arroba,

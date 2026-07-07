@@ -467,6 +467,16 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Estrutura de Custo (Desembolso · R$/cab/mês)</div>
           <div style="display:flex;gap:6px"><button class="btn-sm" onclick="aplicarPresetDesembolso('media')">Média</button><button class="btn-sm" onclick="aplicarPresetDesembolso('top')">Top Rentáveis</button></div></div>
           <div class="cb">
+            <!-- Abas por fase -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--b);padding-bottom:8px">
+              <button class="btn-sm" id="fase-btn-geral" onclick="mostrarFaseCusto('geral',this)" style="font-weight:800">Geral</button>
+              <button class="btn-sm" id="fase-btn-cria" onclick="mostrarFaseCusto('cria',this)">Cria</button>
+              <button class="btn-sm" id="fase-btn-recria" onclick="mostrarFaseCusto('recria',this)">Recria</button>
+              <button class="btn-sm" id="fase-btn-engorda" onclick="mostrarFaseCusto('engorda',this)">Engorda</button>
+              <span style="font-family:var(--fm);font-size:.6rem;color:var(--mu);align-self:center;margin-left:4px">Cria/Recria/Engorda sobrepõem o Geral quando preenchidos</span>
+            </div>
+            <!-- Fase Geral (sempre visível por padrão) -->
+            <div id="fase-geral">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
               <div class="field"><label>Insumos do rebanho</label><input type="number" id="cd-insumos" min="0" step="0.5" value="44.92" oninput="recalcCiclo()"></div>
               <div class="field"><label>Mão de obra</label><input type="number" id="cd-mao_obra" min="0" step="0.5" value="18.10" oninput="recalcCiclo()"></div>
@@ -476,6 +486,49 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
               <div class="field"><label>Infraestrutura (custeio+inv.)</label><input type="number" id="cd-infraestrutura" min="0" step="0.5" value="13.69" oninput="recalcCiclo()"></div>
               <div class="field"><label>Taxas e impostos</label><input type="number" id="cd-taxas_impostos" min="0" step="0.5" value="3.66" oninput="recalcCiclo()"></div>
               <div class="field"><label>Outros</label><input type="number" id="cd-outros" min="0" step="0.5" value="0.76" oninput="recalcCiclo()"></div>
+            </div>
+            </div>
+            <!-- Fase Cria -->
+            <div id="fase-cria" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="field"><label>Insumos</label><input type="number" id="cd-cria-insumos" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Mão de obra</label><input type="number" id="cd-cria-mao_obra" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Administração</label><input type="number" id="cd-cria-administracao" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Máquinas</label><input type="number" id="cd-cria-maquinas" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Pastagem</label><input type="number" id="cd-cria-pastagem" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Infraestrutura</label><input type="number" id="cd-cria-infraestrutura" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Taxas e impostos</label><input type="number" id="cd-cria-taxas_impostos" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Outros</label><input type="number" id="cd-cria-outros" min="0" step="0.5" oninput="recalcCiclo()"></div>
+            </div>
+            <div style="margin-top:8px"><button class="btn-sm" onclick="aplicarPresetFase('cria','media')">Média GEP</button> <button class="btn-sm" onclick="aplicarPresetFase('cria','top')">Top GEP</button> <button class="btn-sm" onclick="limparFaseCusto('cria')">Limpar (usar Geral)</button></div>
+            </div>
+            <!-- Fase Recria -->
+            <div id="fase-recria" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="field"><label>Insumos</label><input type="number" id="cd-recria-insumos" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Mão de obra</label><input type="number" id="cd-recria-mao_obra" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Administração</label><input type="number" id="cd-recria-administracao" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Máquinas</label><input type="number" id="cd-recria-maquinas" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Pastagem</label><input type="number" id="cd-recria-pastagem" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Infraestrutura</label><input type="number" id="cd-recria-infraestrutura" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Taxas e impostos</label><input type="number" id="cd-recria-taxas_impostos" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Outros</label><input type="number" id="cd-recria-outros" min="0" step="0.5" oninput="recalcCiclo()"></div>
+            </div>
+            <div style="margin-top:8px"><button class="btn-sm" onclick="aplicarPresetFase('recria','media')">Média GEP</button> <button class="btn-sm" onclick="aplicarPresetFase('recria','top')">Top GEP</button> <button class="btn-sm" onclick="limparFaseCusto('recria')">Limpar (usar Geral)</button></div>
+            </div>
+            <!-- Fase Engorda -->
+            <div id="fase-engorda" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="field"><label>Insumos</label><input type="number" id="cd-engorda-insumos" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Mão de obra</label><input type="number" id="cd-engorda-mao_obra" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Administração</label><input type="number" id="cd-engorda-administracao" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Máquinas</label><input type="number" id="cd-engorda-maquinas" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Pastagem</label><input type="number" id="cd-engorda-pastagem" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Infraestrutura</label><input type="number" id="cd-engorda-infraestrutura" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Taxas e impostos</label><input type="number" id="cd-engorda-taxas_impostos" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Outros</label><input type="number" id="cd-outros-engorda" min="0" step="0.5" oninput="recalcCiclo()"></div>
+            </div>
+            <div style="margin-top:8px"><button class="btn-sm" onclick="aplicarPresetFase('engorda','media')">Média GEP</button> <button class="btn-sm" onclick="aplicarPresetFase('engorda','top')">Top GEP</button> <button class="btn-sm" onclick="limparFaseCusto('engorda')">Limpar (usar Geral)</button></div>
             </div>
             <div id="s-desemb-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)"><span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Custo Total do Rebanho</span><span id="s-custo-total" style="font-family:var(--fn);font-weight:800;font-size:1.6rem;color:var(--rd)">—</span></div>
@@ -759,6 +812,16 @@ async function classificar(){
     // Custo em R$/@ (mesmo input da projeção) e solicitação de crédito
     body.custo_componentes={};
     COMP_DESEMB.forEach(k=>{body.custo_componentes[k]=parseFloat(document.getElementById('cd-'+k)?.value)||0;});
+    // Custos por fase (sobrepõem o geral quando preenchidos)
+    ['cria','recria','engorda'].forEach(fase=>{
+      const tot=desembolhoFaseMensal(fase);
+      if(tot>0){
+        const comp={};
+        COMP_DESEMB.forEach(k=>{comp[k]=parseFloat(document.getElementById('cd-'+fase+'-'+k)?.value)||0;});
+        body['custo_componentes_'+fase]=comp;
+        body['custo_arroba_'+fase]=custoArrobaFase(fase);
+      }
+    });
     body.credito_valor=+document.getElementById('credito_valor').value||0;
     body.prazo_meses=+document.getElementById('credito_prazo').value||0;
     body.carencia_meses=+document.getElementById('credito_carencia').value||0;
@@ -1297,6 +1360,24 @@ const PERFIL_DESEMBOLSO={
 const COMP_DESEMB=['insumos','mao_obra','administracao','maquinas','pastagem','infraestrutura','taxas_impostos','outros'];
 const COMP_LABEL={insumos:'Insumos',mao_obra:'Mão de obra',administracao:'Administração',maquinas:'Máquinas',pastagem:'Pastagem',infraestrutura:'Infraestrutura',taxas_impostos:'Taxas e impostos',outros:'Outros'};
 function desembolsoTotalMensal(){return COMP_DESEMB.reduce((s,k)=>s+(parseFloat(document.getElementById('cd-'+k)?.value)||0),0);}
+function desembolhoFaseMensal(fase){return COMP_DESEMB.reduce((s,k)=>s+(parseFloat(document.getElementById('cd-'+fase+'-'+k)?.value)||0),0);}
+function custoArrobaFase(fase){const pm=pesoMedioArrobaRebanho(); if(pm<=0) return 0; const d=desembolhoFaseMensal(fase); return d>0?d*12/pm:0;}
+function mostrarFaseCusto(fase, btn){
+  ['geral','cria','recria','engorda'].forEach(f=>{
+    const el=document.getElementById('fase-'+f); if(el) el.style.display=f===fase?'':'none';
+    const b=document.getElementById('fase-btn-'+f); if(b) b.style.fontWeight=f===fase?'800':'';
+  });
+}
+function aplicarPresetFase(fase, perfil){
+  const mod=fase==='cria'?'CRIA':(fase==='recria'||fase==='engorda'?'RECRIA_ENGORDA':'CICLO_COMPLETO');
+  const idx=perfil==='media'?0:1; const p=PERFIL_DESEMBOLSO[mod];
+  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+fase+'-'+k); if(el) el.value=p[k][idx];});
+  recalcCiclo();
+}
+function limparFaseCusto(fase){
+  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+fase+'-'+k); if(el) el.value='';});
+  recalcCiclo();
+}
 function pesoMedioArrobaRebanho(){
   const v=getVals(); const tot=v.reduce((a,b)=>a+b,0); if(tot<=0) return 0;
   const fj=v[0]+v[2]+v[4], mj=v[1]+v[3]+v[5], mat=v[6]+v[8], boi=v[7]+v[9];
@@ -1461,6 +1542,9 @@ function runSc(){
       renovboi:document.getElementById('s-renovboi').value,
       vendbez:document.getElementById('s-vendbez').value,
     };
+    ['cria','recria','engorda'].forEach(fase=>{
+      const ca=custoArrobaFase(fase); if(ca>0) body['custo_arroba_'+fase]=ca;
+    });
     const res=await fetch('/api/cenario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await res.json();
     renderSc(data);

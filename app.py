@@ -556,10 +556,16 @@ def api_classificar():
 
     # Geração de caixa recorrente: resultado do ano 1 no cenário conservador,
     # dentro do ciclo detectado (número mais conservador e recorrente).
+    def _custo_fase(chave):
+        v_ = float(data.get(chave) or 0)
+        return v_ if v_ > 0 else None
     _cx = simular_cenario(
         v, 'conservador', ciclo=result['tipo'],
         preco_arroba=preco_boi or float(data.get('preco', 320)),
         custo_arroba=custo_arroba,
+        custo_arroba_cria=_custo_fase('custo_arroba_cria'),
+        custo_arroba_recria=_custo_fase('custo_arroba_recria'),
+        custo_arroba_engorda=_custo_fase('custo_arroba_engorda'),
         preco_boi_arr=preco_boi, preco_vaca_arr=preco_vaca,
         preco_bezerra_cab=preco_bezerra, preco_bezerro_cab=preco_bezerro)
     geracao_caixa_anual = _cx['anos'][0]['resultado']
@@ -729,6 +735,10 @@ def api_cenario():
         'renov_boi_pct': float(data.get('renovboi', 20)),
         'venda_bez_pct': float(data.get('vendbez', 30)),
     }
+    for fase in ('custo_arroba_cria', 'custo_arroba_recria', 'custo_arroba_engorda'):
+        v_ = float(data.get(fase) or 0)
+        if v_ > 0:
+            params[fase] = v_
     if len(v) != 10:
         return jsonify({'erro': 'Valores inválidos'}), 400
     result = simular_cenario(v, cenario, **params)
