@@ -48,6 +48,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 .tab-btn{font-family:var(--fn);font-weight:700;font-size:.76rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--mu);padding:10px 20px;border-radius:12px;transition:all .2s;display:flex;align-items:center;gap:7px}
 .tab-btn:hover{color:var(--tx);background:var(--b)}
 .tab-btn.active{background:var(--g);color:#000}
+.tab-btn.tab-locked{opacity:.32;cursor:not-allowed;pointer-events:none}
 
 .panel{display:none;animation:rise .35s cubic-bezier(.22,1,.36,1)}
 .panel.active{display:block}
@@ -271,8 +272,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <main>
 <div class="tab-bar">
   <button class="tab-btn active" onclick="showTab('entrada',this)">Inserir Dados</button>
-  <button class="tab-btn" id="tab-res" style="display:none" onclick="showTab('resultado',this)">Resultado</button>
-  <button class="tab-btn" id="tab-cen" style="display:none" onclick="showTab('cenarios',this)">Simular Cenários</button>
+  <button class="tab-btn tab-locked" id="tab-res" onclick="showTab('resultado',this)">Resultado</button>
+  <button class="tab-btn tab-locked" id="tab-cen" onclick="showTab('cenarios',this)">Simular Cenários</button>
   <button class="tab-btn" id="tab-rec" onclick="showTab('reconciliacao',this)">Reconciliação</button>
   <button class="tab-btn" onclick="showTab('historico',this)">Histórico</button>
 </div>
@@ -374,6 +375,12 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     </div>
   </div>
 
+  <div id="cot-strip" style="display:flex;justify-content:center;align-items:center;gap:20px;margin-top:20px;margin-bottom:10px;padding:10px 16px;border-radius:var(--rs);background:var(--c);border:1px solid var(--b);font-family:var(--fm);font-size:.65rem;color:var(--mu)">
+    <span>Boi: <strong id="cs-boi" style="color:var(--g)">—</strong></span>
+    <span>Vaca: <strong id="cs-vaca" style="color:var(--am)">—</strong></span>
+    <span>Bezerro: <strong id="cs-bez" style="color:var(--cy)">—</strong></span>
+    <span style="opacity:.5">· cotações usadas no cálculo de valor do rebanho</span>
+  </div>
   <button class="btn-p" id="btn-class" onclick="classificar()"><span>Classificar</span></button>
 </div>
 
@@ -800,7 +807,7 @@ let lastRegistroId=null;
 async function classificar(){
   const v=getVals();
   if(v.reduce((a,b)=>a+b,0)<10){showToast('Insira pelo menos 10 animais.',true);return}
-  showLoading('Classificando com ML...');
+  showLoading(['Analisando composição do rebanho...','Calculando indicadores técnicos...','Calculando fluxo GEP...','Gerando parecer de crédito...']);
   try{
     const body={valores:v,fazenda:document.getElementById('f_faz').value,municipio:document.getElementById('f_mun').value,proprietario:document.getElementById('f_prop').value};
     // Cliente cadastrado (opcional) — necessário para persistir o parecer no histórico
@@ -858,8 +865,9 @@ async function classificar(){
     renderResult(data);
     renderConsistencia(data.consistencia);
     showTab('resultado',null);
-    document.getElementById('tab-res').style.display='flex';
-    document.getElementById('tab-cen').style.display='flex';
+    document.getElementById('tab-res').classList.remove('tab-locked');
+    document.getElementById('tab-cen').classList.remove('tab-locked');
+    window.scrollTo({top:0,behavior:'smooth'});
     const cc=document.getElementById('card-confirmar');
     const mlTipo=document.getElementById('conf-ml-tipo');
     const selTipo=document.getElementById('conf-tipo');
@@ -1776,8 +1784,16 @@ dz2.addEventListener('dragleave',()=>dz2.classList.remove('drag'));
 dz2.addEventListener('drop',e=>{e.preventDefault();dz2.classList.remove('drag');const fs=[...e.dataTransfer.files].filter(f=>f.name.toLowerCase().endsWith('.pdf'));if(fs.length)lerPDFs(fs)});
 
 // ================== UTILS ==================
-function showLoading(t){document.getElementById('loading-ov').classList.add('show');document.getElementById('loading-txt').textContent=t}
-function hideLoading(){document.getElementById('loading-ov').classList.remove('show')}
+let _loadTimer=null;
+function showLoading(msgs){
+  const arr=Array.isArray(msgs)?msgs:[msgs];
+  const el=document.getElementById('loading-txt');
+  el.textContent=arr[0];
+  document.getElementById('loading-ov').classList.add('show');
+  if(_loadTimer){clearInterval(_loadTimer);_loadTimer=null;}
+  if(arr.length>1){let i=0;_loadTimer=setInterval(()=>{i=(i+1)%arr.length;el.textContent=arr[i];},1400);}
+}
+function hideLoading(){document.getElementById('loading-ov').classList.remove('show');if(_loadTimer){clearInterval(_loadTimer);_loadTimer=null;}}
 function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500)}
 
 // ================== CONFIRMAR E RETREINAR ==================
@@ -1990,6 +2006,10 @@ async function carregarCotacaoDia(){
     set('cot-vaca', d.precos.vaca);
     set('cot-bezerro', d.precos.bezerro);
     set('cot-bezerra', d.precos.bezerra);
+    const fmtC=v=>v>0?`R$ ${(+v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,'.')}/@`:'—';
+    const sboi=document.getElementById('cs-boi'); if(sboi) sboi.textContent=fmtC(d.precos.boi);
+    const svac=document.getElementById('cs-vaca'); if(svac) svac.textContent=fmtC(d.precos.vaca);
+    const sbez=document.getElementById('cs-bez'); if(sbez) sbez.textContent=d.precos.bezerro>0?`R$ ${Math.round(d.precos.bezerro)}/cab`:'—';
     const f=document.getElementById('cot-fonte');
     if(f) f.textContent = d.origem==='banco' ? 'CEPEA/ESALQ (boi) · Scot (vaca)' : 'referência (sem cotação salva ainda)';
     usarCotacaoDia();
