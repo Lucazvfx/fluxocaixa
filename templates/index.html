@@ -1193,6 +1193,7 @@ function renderResult(data){
   const mun=document.getElementById('f_mun').value||'—';
   const prop=document.getElementById('f_prop').value||'—';
   const v=data.valores;
+  const _vr = (data.fluxo_gep||{}).valor_rebanho_ini || 0;
 
   const probs=data.probabilidades;
   const confBars=Object.entries(probs).map(([t,p])=>`
@@ -1243,13 +1244,14 @@ function renderResult(data){
 
     ${renderParecer(data)}
 
-    <div class="sstrip">
+    <div class="sstrip" style="grid-template-columns:repeat(${_vr>0?7:6},1fr)">
       <div class="sc2"><div class="sc2-l">Total Rebanho</div><div class="sc2-v cg">${fN(ind.total)}</div></div>
       <div class="sc2"><div class="sc2-l">Fêmeas</div><div class="sc2-v cg">${fN(ind.total_femeas)}</div></div>
       <div class="sc2"><div class="sc2-l">Machos</div><div class="sc2-v ca">${fN(ind.total_machos)}</div></div>
       <div class="sc2"><div class="sc2-l">Cria 0–12m</div><div class="sc2-v cc">${fN(ind.cria)}</div></div>
       <div class="sc2"><div class="sc2-l">Recria 13–24m</div><div class="sc2-v ca">${fN(ind.recria)}</div></div>
       <div class="sc2"><div class="sc2-l">Adultos 25m+</div><div class="sc2-v cp">${fN(ind.adultos)}</div></div>
+      ${_vr>0?`<div class="sc2" style="border-left:1px solid var(--g)22"><div class="sc2-l" style="color:var(--g)">Valor do Rebanho</div><div class="sc2-v" style="color:var(--g)">${fR(_vr)}</div></div>`:''}
     </div>
 
     <div class="card" style="margin-bottom:24px">
