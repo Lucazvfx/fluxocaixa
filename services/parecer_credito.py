@@ -19,6 +19,33 @@ def parcela_price(pv: float, juros_aa: float, n_meses: int) -> float:
     return pv * i / (1 - (1 + i) ** (-n_meses))
 
 
+def credito_maximo(
+    geracao_caixa_anual: float,
+    juros_aa: float,
+    prazo_meses: int,
+    carencia_meses: int = 0,
+    dividas_mensais: float = 0.0,
+    dscr_alvo: float = DSCR_APROVAR,
+) -> float:
+    """
+    Capacidade máxima de endividamento: PV tal que DSCR = dscr_alvo.
+
+    Inverso do Price: parcela_max = caixa_disponivel / 12
+    PV_max = parcela_max × (1 − (1+i)^−n) / i
+    """
+    n = max(prazo_meses - carencia_meses, 0)
+    if n <= 0 or juros_aa <= 0 or geracao_caixa_anual <= 0:
+        return 0.0
+    caixa_disponivel = geracao_caixa_anual / dscr_alvo - 12 * max(dividas_mensais, 0.0)
+    if caixa_disponivel <= 0:
+        return 0.0
+    parcela_max = caixa_disponivel / 12
+    i = (1 + juros_aa) ** (1 / 12) - 1
+    if i <= 0:
+        return round(parcela_max * n, 2)
+    return round(parcela_max * (1 - (1 + i) ** (-n)) / i, 2)
+
+
 def avaliar_capacidade_pagamento(
     geracao_caixa_anual: float,
     credito_valor: float,
@@ -30,11 +57,14 @@ def avaliar_capacidade_pagamento(
     n = max(prazo_meses - carencia_meses, 0)
     parcela = parcela_price(credito_valor, juros_aa, n)
     servico_anual = 12 * (parcela + max(dividas_mensais, 0.0))
+    cap_max = credito_maximo(geracao_caixa_anual, juros_aa, prazo_meses,
+                             carencia_meses, dividas_mensais)
 
     if servico_anual <= 0:
         return {'dscr': None, 'parcela_mensal': round(parcela, 2),
                 'servico_divida_anual': 0.0,
                 'geracao_caixa_anual': round(geracao_caixa_anual, 2),
+                'capacidade_maxima': cap_max,
                 'recomendacao': None, 'faixa': None,
                 'justificativa': 'Sem crédito a avaliar.'}
 
@@ -51,12 +81,13 @@ def avaliar_capacidade_pagamento(
     return {'dscr': round(dscr, 2), 'parcela_mensal': round(parcela, 2),
             'servico_divida_anual': round(servico_anual, 2),
             'geracao_caixa_anual': round(geracao_caixa_anual, 2),
+            'capacidade_maxima': cap_max,
             'recomendacao': rec, 'faixa': rec, 'justificativa': just}
 
 
 def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
                    consistencia, financeiro, geracao_caixa_anual, credito,
-                   fluxo_gep=None) -> dict:
+                   fluxo_gep=None, sensibilidade=None) -> dict:
     conclusao = avaliar_capacidade_pagamento(
         geracao_caixa_anual=geracao_caixa_anual,
         credito_valor=float(credito.get('credito_valor') or 0),
@@ -73,12 +104,13 @@ def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
 
     return {
         'secoes': ['identificacao', 'composicao', 'indicadores',
-                   'consistencia', 'financeiro', 'fluxo_gep', 'conclusao'],
+                   'consistencia', 'financeiro', 'fluxo_gep', 'sensibilidade', 'conclusao'],
         'identificacao': identificacao,
         'composicao': composicao,
         'indicadores': {'valores': indicadores, 'benchmarks': benchmarks},
         'consistencia': consistencia,
         'financeiro': financeiro,
         'fluxo_gep': fluxo_gep,
+        'sensibilidade': sensibilidade,
         'conclusao': conclusao,
     }

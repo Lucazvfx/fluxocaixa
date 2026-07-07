@@ -619,6 +619,39 @@ def api_classificar():
     credito_inputs = {k: data.get(k) for k in
                       ('credito_valor', 'prazo_meses', 'juros_aa',
                        'carencia_meses', 'dividas_mensais')}
+
+    # ── Sensibilidade de preço: −15% / base / +15% ───────────────────────────
+    _servico_base = _servico_gep  # já calculado acima (mesma base do DSCR)
+    sensibilidade = []
+    for _label, _fator in (('queda_15pct', 0.85), ('base', 1.00), ('alta_15pct', 1.15)):
+        _pb_s = _preco_boi_ref * _fator
+        _cx_s = simular_cenario(
+            v, 'conservador', ciclo=result['tipo'],
+            preco_arroba=_pb_s,
+            custo_arroba=custo_arroba,
+            custo_arroba_cria=_custo_fase('custo_arroba_cria'),
+            custo_arroba_recria=_custo_fase('custo_arroba_recria'),
+            custo_arroba_engorda=_custo_fase('custo_arroba_engorda'),
+            preco_boi_arr=_pb_s,
+            preco_vaca_arr=(preco_vaca * _fator) if preco_vaca else None,
+            preco_bezerra_cab=(preco_bezerra * _fator) if preco_bezerra else None,
+            preco_bezerro_cab=(preco_bezerro * _fator) if preco_bezerro else None,
+        )
+        _gc_s = _cx_s['anos'][0]['resultado']
+        _dscr_s = round(_gc_s / _servico_base, 2) if _servico_base > 0 else None
+        sensibilidade.append({
+            'cenario': _label,
+            'variacao_pct': round((_fator - 1) * 100),
+            'preco_boi': round(_pb_s, 2),
+            'geracao_caixa': round(_gc_s, 2),
+            'dscr': _dscr_s,
+            'recomendacao': (
+                'aprovar'  if _dscr_s and _dscr_s >= 1.30 else
+                'ressalva' if _dscr_s and _dscr_s >= 1.00 else
+                'negar'    if _dscr_s is not None else None
+            ),
+        })
+
     parecer = montar_parecer(
         identificacao={'fazenda': fazenda, 'municipio': municipio,
                        'proprietario': data.get('proprietario', '')},
@@ -627,7 +660,8 @@ def api_classificar():
         consistencia=consistencia, financeiro=breakeven,
         geracao_caixa_anual=geracao_caixa_anual,
         credito=credito_inputs,
-        fluxo_gep=fluxo_gep)
+        fluxo_gep=fluxo_gep,
+        sensibilidade=sensibilidade)
 
     # Persiste no histórico da fazenda apenas quando há fazenda e solicitação.
     fazenda_id = data.get('fazenda_id')
@@ -647,6 +681,7 @@ def api_classificar():
         'consistencia': consistencia,
         'parecer': parecer,
         'fluxo_gep': fluxo_gep,
+        'sensibilidade': sensibilidade,
         'custo_desembolso': custo_desembolso,
         'valores': v,
         'registro_id': registro_id,

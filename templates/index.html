@@ -1076,11 +1076,18 @@ function renderParecer(data){
   const c=p.conclusao||{};
   const LBL={aprovar:'APROVAR',ressalva:'APROVAR COM RESSALVA',negar:'NEGAR'};
   const cor={aprovar:'#4ADE80',ressalva:'#FBBF24',negar:'#F87171'}[c.recomendacao]||'#8891A5';
+  const capMax = c.capacidade_maxima;
+  const capMaxHtml = capMax > 0
+    ? `<div style="margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--bg2);border:1px solid var(--b);display:flex;align-items:center;gap:12px">
+         <div style="font-size:.7rem;color:var(--mu);white-space:nowrap">CRÉDITO MÁXIMO<br>(DSCR ≥ 1,30)</div>
+         <div style="font-size:1.2rem;font-weight:800;color:var(--g)">${fR(capMax)}</div>
+       </div>` : '';
   const concl=c.recomendacao
     ? `<div style="padding:16px;border-radius:10px;border:1px solid ${cor}55;background:${cor}12">
          <div style="font-family:var(--fn);font-weight:800;font-size:1.1rem;letter-spacing:1px;color:${cor}">${LBL[c.recomendacao]||c.recomendacao}</div>
          <div style="font-family:var(--fm);font-size:.72rem;color:var(--mu);margin-top:4px">DSCR ${c.dscr} · parcela ${fR(c.parcela_mensal)}/mês · geração de caixa ${fR(c.geracao_caixa_anual)}/ano</div>
          <div style="margin-top:8px;font-size:.85rem">${c.justificativa||''}</div>
+         ${capMaxHtml}
        </div>`
     : `<div style="padding:14px;border-radius:10px;border:1px dashed var(--b);color:var(--mu);font-size:.8rem">Informe a Solicitação de Crédito na aba de entrada para gerar a conclusão de capacidade de pagamento.</div>`;
 
@@ -1114,10 +1121,47 @@ function renderParecer(data){
       <div style="margin-top:8px;font-size:.72rem;color:var(--mu)">Variação de estoque = riqueza criada pelo crescimento do rebanho. Não é caixa, mas é valor real do ativo.</div>
     </div>` : '';
 
+  // Tabela de sensibilidade de preço
+  const sens = data.sensibilidade || [];
+  const SREC = {aprovar:'#4ADE80', ressalva:'#FBBF24', negar:'#F87171'};
+  const SLBL = {aprovar:'Aprovar', ressalva:'Ressalva', negar:'Negar'};
+  const sensHtml = sens.length ? `
+    <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--b);background:var(--bg2)">
+      <div style="font-family:var(--fn);font-size:.7rem;font-weight:700;color:var(--mu);letter-spacing:.08em;margin-bottom:10px">SENSIBILIDADE DE PREÇO — CENÁRIO CONSERVADOR</div>
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr style="border-bottom:1px solid var(--b)">
+          <th style="text-align:left;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Cenário</th>
+          <th style="text-align:right;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Preço @/boi</th>
+          <th style="text-align:right;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Geração de caixa</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">DSCR</th>
+          <th style="text-align:center;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Resultado</th>
+        </tr></thead>
+        <tbody>${sens.map(s=>{
+          const sc = s.variacao_pct < 0 ? '#F87171' : s.variacao_pct > 0 ? '#4ADE80' : 'var(--t)';
+          const rc = SREC[s.recomendacao] || 'var(--mu)';
+          const rl = SLBL[s.recomendacao] || '—';
+          const isBase = s.variacao_pct === 0;
+          return `<tr style="${isBase?'background:var(--b)22;':''}border-bottom:1px solid var(--b)22">
+            <td style="padding:5px 6px;font-weight:${isBase?700:400}">
+              ${s.variacao_pct > 0 ? '▲' : s.variacao_pct < 0 ? '▼' : '●'}
+              ${s.variacao_pct > 0 ? '+' : ''}${s.variacao_pct}% preço
+            </td>
+            <td style="text-align:right;padding:5px 6px;color:${sc}">${fR(s.preco_boi)}</td>
+            <td style="text-align:right;padding:5px 6px">${fR(s.geracao_caixa)}</td>
+            <td style="text-align:center;padding:5px 6px;font-weight:700;color:${rc}">${s.dscr ?? '—'}</td>
+            <td style="text-align:center;padding:5px 6px">
+              ${s.recomendacao ? `<span style="color:${rc};font-size:.72rem;font-weight:700">${rl}</span>` : '—'}
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      <div style="margin-top:6px;font-size:.7rem;color:var(--mu)">DSCR mínimo para aprovação: 1,30 · Ressalva: 1,00–1,30 · Negar: &lt;1,00</div>
+    </div>` : '';
+
   return `<div class="card" style="margin-bottom:24px">
     <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div>
       <button class="btn-sm" onclick="baixarPdfParecer(window._lastParecer)">⬇ Baixar PDF</button></div>
-    <div class="cb">${concl}${fluxoGep}</div>
+    <div class="cb">${concl}${fluxoGep}${sensHtml}</div>
   </div>`;
 }
 

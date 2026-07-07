@@ -165,6 +165,36 @@ def gerar_pdf_parecer(parecer: dict, branding: dict | None = None) -> bytes:
             '<i>Variação de estoque: riqueza criada pelo crescimento do rebanho — '
             'não é caixa, mas é valor real do ativo.</i>', ss['Subtitulo']))
 
+    sensibilidade = parecer.get('sensibilidade') or []
+    if sensibilidade:
+        story.append(Paragraph('Sensibilidade de Preço', ss['SecaoTitulo']))
+        _SLBL = {'aprovar': 'APROVAR', 'ressalva': 'RESSALVA', 'negar': 'NEGAR'}
+        linhas_s = [['Cenário', 'Preço R$/@', 'Geração de Caixa', 'DSCR', 'Resultado']]
+        for s in sensibilidade:
+            vp = s.get('variacao_pct', 0)
+            prefix = f'+{vp}%' if vp > 0 else f'{vp}%'
+            linhas_s.append([
+                prefix,
+                _fmt_moeda(s.get('preco_boi')),
+                _fmt_moeda(s.get('geracao_caixa')),
+                str(s.get('dscr') or '—'),
+                _SLBL.get(s.get('recomendacao'), '—'),
+            ])
+        ts = Table(linhas_s, colWidths=[2.5*cm, 3.5*cm, 4*cm, 2*cm, 4*cm])
+        _base_idx = next((i+1 for i, s in enumerate(sensibilidade) if s.get('variacao_pct', 0) == 0), None)
+        _s_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EEEEEE')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ]
+        if _base_idx:
+            _s_style.append(('BACKGROUND', (0, _base_idx), (-1, _base_idx), colors.HexColor('#F5F5F5')))
+            _s_style.append(('FONTNAME', (0, _base_idx), (-1, _base_idx), 'Helvetica-Bold'))
+        ts.setStyle(TableStyle(_s_style))
+        story.append(ts)
+        story.append(Spacer(1, 4))
+
     conclusao = parecer.get('conclusao') or {}
     story.append(Paragraph('Conclusão — Capacidade de Pagamento', ss['SecaoTitulo']))
     rec = conclusao.get('recomendacao')
@@ -182,6 +212,10 @@ def gerar_pdf_parecer(parecer: dict, branding: dict | None = None) -> bytes:
         story.append(Paragraph(
             f"DSCR: {conclusao.get('dscr')} · Parcela mensal: "
             f"{_fmt_moeda(conclusao.get('parcela_mensal'))}", ss['Corpo']))
+        if conclusao.get('capacidade_maxima', 0) > 0:
+            story.append(Paragraph(
+                f"Crédito máximo (DSCR ≥ 1,30): <b>{_fmt_moeda(conclusao.get('capacidade_maxima'))}</b>",
+                ss['Corpo']))
         story.append(Paragraph(conclusao.get('justificativa', ''), ss['Corpo']))
     else:
         story.append(Paragraph(
