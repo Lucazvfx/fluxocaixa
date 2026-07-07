@@ -43,6 +43,7 @@ from services.parecer_pdf import gerar_pdf_parecer
 from services.pesos_rebanho import arrobas_categorias
 from services.custos_desembolso import custo_arroba_de_desembolso, COMPONENTES
 from services.reconciliacao import reconciliar
+from services.fluxo_caixa_gep import valor_rebanho_gep, calcular_fluxo_gep
 
 # Configuração de logging
 logging.basicConfig(
@@ -570,6 +571,51 @@ def api_classificar():
         preco_bezerra_cab=preco_bezerra, preco_bezerro_cab=preco_bezerro)
     geracao_caixa_anual = _cx['anos'][0]['resultado']
 
+    # ── Fluxo de caixa completo — metodologia GEP Araguaia ──────────────────
+    # Calcula variação de estoque do rebanho (ativo que valoriza ou deprecia).
+    # Diferencial: nenhum sistema de crédito rural calcula isso automaticamente.
+    _va = [float(x) for x in v]
+    _preco_boi_ref = preco_boi or float(data.get('preco', 320))
+    _val_ini = valor_rebanho_gep(
+        matrizes  = _va[6] + _va[8],
+        bois      = _va[7] + _va[9],
+        jovens_f  = _va[0] + _va[2] + _va[4],
+        jovens_m  = _va[1] + _va[3] + _va[5],
+        preco_boi = _preco_boi_ref,
+        preco_vaca    = preco_vaca,
+        preco_bezerra = preco_bezerra,
+        preco_bezerro = preco_bezerro,
+    )
+    _ano1 = _cx['anos'][0]
+    _val_fim = valor_rebanho_gep(
+        matrizes  = float(_ano1['matrizes']),
+        bois      = _ano1.get('bois_fim', _va[7] + _va[9]),
+        jovens_f  = float(_ano1.get('jovens_f_fim', 0)),
+        jovens_m  = float(_ano1.get('jovens_m_fim', 0)),
+        preco_boi = _preco_boi_ref,
+        preco_vaca    = preco_vaca,
+        preco_bezerra = preco_bezerra,
+        preco_bezerro = preco_bezerro,
+    )
+    # Serviço da dívida para o fluxo GEP (mesma base do DSCR do parecer)
+    _servico_gep = 0.0
+    if data.get('credito_valor') and data.get('prazo_meses') and data.get('juros_aa'):
+        from services.parecer_credito import parcela_price
+        _n = max(int(data.get('prazo_meses', 0)) - int(data.get('carencia_meses', 0) or 0), 0)
+        _parcela = parcela_price(
+            float(data.get('credito_valor', 0)),
+            float(data.get('juros_aa', 0)),
+            _n,
+        )
+        _servico_gep = 12 * (_parcela + float(data.get('dividas_mensais', 0) or 0))
+    fluxo_gep = calcular_fluxo_gep(
+        receita_caixa       = _ano1['receita'],
+        custo_caixa         = _ano1['custo'],
+        valor_rebanho_ini   = _val_ini['valor_total'],
+        valor_rebanho_fim   = _val_fim['valor_total'],
+        servico_divida_anual = _servico_gep,
+    )
+
     credito_inputs = {k: data.get(k) for k in
                       ('credito_valor', 'prazo_meses', 'juros_aa',
                        'carencia_meses', 'dividas_mensais')}
@@ -580,7 +626,8 @@ def api_classificar():
         indicadores=ind, benchmarks=benchmarks,
         consistencia=consistencia, financeiro=breakeven,
         geracao_caixa_anual=geracao_caixa_anual,
-        credito=credito_inputs)
+        credito=credito_inputs,
+        fluxo_gep=fluxo_gep)
 
     # Persiste no histórico da fazenda apenas quando há fazenda e solicitação.
     fazenda_id = data.get('fazenda_id')
@@ -599,6 +646,7 @@ def api_classificar():
         'breakeven_simples': breakeven,
         'consistencia': consistencia,
         'parecer': parecer,
+        'fluxo_gep': fluxo_gep,
         'custo_desembolso': custo_desembolso,
         'valores': v,
         'registro_id': registro_id,

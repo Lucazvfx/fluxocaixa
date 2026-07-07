@@ -713,6 +713,10 @@ def _simular_cria(
             'receita': round(receita, 2),
             'custo': round(custo, 2),
             'resultado': round(resultado, 2),
+            # Composição do rebanho no fim do ano — usada pelo fluxo GEP
+            'bois_fim': 0,
+            'jovens_f_fim': int(bezerras_ret),
+            'jovens_m_fim': 0,
         })
         matrizes   = matrizes_prox
         fem_recria = bezerras_ret
@@ -783,6 +787,9 @@ def _simular_recria(
             'receita': round(receita, 2),
             'custo': round(custo, 2),
             'resultado': round(resultado, 2),
+            'bois_fim': 0,
+            'jovens_f_fim': 0,
+            'jovens_m_fim': int(animais_prox),
         })
         animais = animais_prox
 
@@ -862,6 +869,9 @@ def _simular_engorda(
             'receita': round(receita, 2),
             'custo': round(custo, 2),
             'resultado': round(resultado, 2),
+            'bois_fim': int(bois_prox),
+            'jovens_f_fim': 0,
+            'jovens_m_fim': 0,
         })
         bois = bois_prox
 
@@ -995,6 +1005,9 @@ def simular_cenario(
             'receita':   r['receita'],
             'custo':     r['custo'],
             'resultado': r['resultado'],
+            'bois_fim':      r['bois_prox'],
+            'jovens_f_fim':  r['femeas_024_prox'],
+            'jovens_m_fim':  r['machos_024_prox'],
         })
         matrizes   = float(r['matrizes_prox'])
         bois       = float(r['bois_prox'])

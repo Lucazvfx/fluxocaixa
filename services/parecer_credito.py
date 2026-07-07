@@ -55,7 +55,8 @@ def avaliar_capacidade_pagamento(
 
 
 def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
-                   consistencia, financeiro, geracao_caixa_anual, credito) -> dict:
+                   consistencia, financeiro, geracao_caixa_anual, credito,
+                   fluxo_gep=None) -> dict:
     conclusao = avaliar_capacidade_pagamento(
         geracao_caixa_anual=geracao_caixa_anual,
         credito_valor=float(credito.get('credito_valor') or 0),
@@ -72,11 +73,12 @@ def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
 
     return {
         'secoes': ['identificacao', 'composicao', 'indicadores',
-                   'consistencia', 'financeiro', 'conclusao'],
+                   'consistencia', 'financeiro', 'fluxo_gep', 'conclusao'],
         'identificacao': identificacao,
         'composicao': composicao,
         'indicadores': {'valores': indicadores, 'benchmarks': benchmarks},
         'consistencia': consistencia,
         'financeiro': financeiro,
+        'fluxo_gep': fluxo_gep,
         'conclusao': conclusao,
     }

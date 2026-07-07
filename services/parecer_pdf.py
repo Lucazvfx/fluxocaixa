@@ -132,6 +132,39 @@ def gerar_pdf_parecer(parecer: dict, branding: dict | None = None) -> bytes:
                 f"Preço de equilíbrio (breakeven): {_fmt_moeda(be)} "
                 f"{financeiro.get('unidade', '')}", ss['Corpo']))
 
+    fluxo_gep = parecer.get('fluxo_gep')
+    if fluxo_gep and fluxo_gep.get('receita_vendas', 0) > 0:
+        story.append(Paragraph('Fluxo de Caixa — Método GEP', ss['SecaoTitulo']))
+        linhas_fc = [['Componente', 'R$ (Ano 1)']]
+        linhas_fc.append(['(+) Receita de vendas', _fmt_moeda(fluxo_gep.get('receita_vendas'))])
+        linhas_fc.append(['(−) Custo operacional', _fmt_moeda(fluxo_gep.get('custo_operacional'))])
+        linhas_fc.append(['(=) Resultado operacional (caixa)', _fmt_moeda(fluxo_gep.get('resultado_operacional'))])
+        linhas_fc.append(['(±) Variação de estoque do rebanho', _fmt_moeda(fluxo_gep.get('variacao_estoque'))])
+        linhas_fc.append(['(=) Resultado econômico total', _fmt_moeda(fluxo_gep.get('resultado_economico'))])
+        if fluxo_gep.get('servico_divida_anual', 0) > 0:
+            linhas_fc.append(['(−) Serviço da dívida (anual)', _fmt_moeda(fluxo_gep.get('servico_divida_anual'))])
+            linhas_fc.append(['(=) Fluxo livre', _fmt_moeda(fluxo_gep.get('fluxo_livre'))])
+        linhas_fc.append(['Valor do rebanho — início do período', _fmt_moeda(fluxo_gep.get('valor_rebanho_ini'))])
+        linhas_fc.append(['Valor do rebanho — fim do período', _fmt_moeda(fluxo_gep.get('valor_rebanho_fim'))])
+        tf = Table(linhas_fc, colWidths=[10*cm, 6*cm])
+        _destaques = {3, 5}  # linhas de resultado (índice 0 = header)
+        _estilo_fc = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EEEEEE')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ]
+        for i in _destaques:
+            if i < len(linhas_fc):
+                _estilo_fc.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor('#E8F5E9')))
+                _estilo_fc.append(('FONTNAME', (0, i), (-1, i), 'Helvetica-Bold'))
+        tf.setStyle(TableStyle(_estilo_fc))
+        story.append(tf)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(
+            '<i>Variação de estoque: riqueza criada pelo crescimento do rebanho — '
+            'não é caixa, mas é valor real do ativo.</i>', ss['Subtitulo']))
+
     conclusao = parecer.get('conclusao') or {}
     story.append(Paragraph('Conclusão — Capacidade de Pagamento', ss['SecaoTitulo']))
     rec = conclusao.get('recomendacao')

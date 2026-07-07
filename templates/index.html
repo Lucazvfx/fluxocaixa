@@ -1083,10 +1083,41 @@ function renderParecer(data){
          <div style="margin-top:8px;font-size:.85rem">${c.justificativa||''}</div>
        </div>`
     : `<div style="padding:14px;border-radius:10px;border:1px dashed var(--b);color:var(--mu);font-size:.8rem">Informe a Solicitação de Crédito na aba de entrada para gerar a conclusão de capacidade de pagamento.</div>`;
+
+  // Fluxo de caixa completo — metodologia GEP
+  const gep = data.fluxo_gep || {};
+  const varE = gep.variacao_estoque || 0;
+  const varECor = varE >= 0 ? 'var(--g)' : 'var(--rd)';
+  const varESinal = varE >= 0 ? '+' : '';
+  const fluxoGep = gep.receita_vendas ? `
+    <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--b);background:var(--bg2)">
+      <div style="font-family:var(--fn);font-size:.7rem;font-weight:700;color:var(--mu);letter-spacing:.08em;margin-bottom:10px">FLUXO DE CAIXA COMPLETO — MÉTODO GEP</div>
+      <div style="display:grid;gap:5px;font-size:.82rem">
+        ${mr2('(+) Receita de vendas', fR(gep.receita_vendas), 'g')}
+        ${mr2('(−) Custo operacional', fR(gep.custo_operacional), 'r')}
+        ${mr2('(=) Resultado operacional (caixa)', fR(gep.resultado_operacional), gep.resultado_operacional>=0?'g':'r', true)}
+        ${mr2('(±) Variação de estoque do rebanho', varESinal+fR(Math.abs(varE)), varE>=0?'g':'r')}
+        ${mr2('(=) Resultado econômico total', fR(gep.resultado_economico), gep.resultado_economico>=0?'g':'r', true)}
+        ${gep.servico_divida_anual > 0 ? mr2('(−) Serviço da dívida (anual)', fR(gep.servico_divida_anual), 'r') : ''}
+        ${gep.fluxo_livre != null ? mr2('(=) Fluxo livre', fR(gep.fluxo_livre), gep.fluxo_livre>=0?'g':'r', true) : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;border-top:1px solid var(--b);padding-top:10px">
+        <div>
+          <div style="font-size:.68rem;color:var(--mu)">Estoque início</div>
+          <div style="font-size:.9rem;font-weight:600">${fR(gep.valor_rebanho_ini)}</div>
+        </div>
+        <div>
+          <div style="font-size:.68rem;color:var(--mu)">Estoque fim</div>
+          <div style="font-size:.9rem;font-weight:600;color:${varECor}">${fR(gep.valor_rebanho_fim)}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:.72rem;color:var(--mu)">Variação de estoque = riqueza criada pelo crescimento do rebanho. Não é caixa, mas é valor real do ativo.</div>
+    </div>` : '';
+
   return `<div class="card" style="margin-bottom:24px">
     <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div>
       <button class="btn-sm" onclick="baixarPdfParecer(window._lastParecer)">⬇ Baixar PDF</button></div>
-    <div class="cb">${concl}</div>
+    <div class="cb">${concl}${fluxoGep}</div>
   </div>`;
 }
 
@@ -1229,6 +1260,7 @@ function renderResult(data){
 }
 
 function mr(k,v,c){return`<div class="mrow"><span class="mk">${k}</span><span class="mv ${c}">${v}</span></div>`}
+function mr2(k,v,c,bold){const w=bold?'font-weight:700;':'';return`<div class="mrow" style="${w}"><span class="mk">${k}</span><span class="mv ${c||''}">${v}</span></div>`}
 const BENCH_COR={excelente:'g',bom:'g',medio:'a',abaixo:'r'};
 // ===== Benchmarks unificado (regional RO + nacional multi-fonte) =====
 // Sem repetir indicadores: natalidade e desfrute aparecem uma vez,
