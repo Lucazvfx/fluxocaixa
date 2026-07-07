@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fluxo de caixa</title>
+<title>BoviCrédito</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Barlow:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="/static/favicon-cow.png">
 <style>
 :root{
 --bg:#060810;
+  --bg2:#0C0F18;
   --s:#0C0F18;
   --c:#111520;
   --c2:#161B2A;
@@ -238,7 +239,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <div class="toast" id="toast"></div>
 
 <header>
-  <div class="logo"><div class=""></div>Fluxo de caixa feito por Lucas<em></em></div>
+  <div class="logo"><div class="logo-mk">🐄</div>Bovi<em>Crédito</em></div>
   <div class="hdr-r">
     <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
     <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
@@ -1077,19 +1078,38 @@ function renderParecer(data){
   const LBL={aprovar:'APROVAR',ressalva:'APROVAR COM RESSALVA',negar:'NEGAR'};
   const cor={aprovar:'#4ADE80',ressalva:'#FBBF24',negar:'#F87171'}[c.recomendacao]||'#8891A5';
   const capMax = c.capacidade_maxima;
-  const capMaxHtml = capMax > 0
-    ? `<div style="margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--bg2);border:1px solid var(--b);display:flex;align-items:center;gap:12px">
-         <div style="font-size:.7rem;color:var(--mu);white-space:nowrap">CRÉDITO MÁXIMO<br>(DSCR ≥ 1,30)</div>
-         <div style="font-size:1.2rem;font-weight:800;color:var(--g)">${fR(capMax)}</div>
-       </div>` : '';
-  const concl=c.recomendacao
-    ? `<div style="padding:16px;border-radius:10px;border:1px solid ${cor}55;background:${cor}12">
-         <div style="font-family:var(--fn);font-weight:800;font-size:1.1rem;letter-spacing:1px;color:${cor}">${LBL[c.recomendacao]||c.recomendacao}</div>
-         <div style="font-family:var(--fm);font-size:.72rem;color:var(--mu);margin-top:4px">DSCR ${c.dscr} · parcela ${fR(c.parcela_mensal)}/mês · geração de caixa ${fR(c.geracao_caixa_anual)}/ano</div>
-         <div style="margin-top:8px;font-size:.85rem">${c.justificativa||''}</div>
-         ${capMaxHtml}
-       </div>`
-    : `<div style="padding:14px;border-radius:10px;border:1px dashed var(--b);color:var(--mu);font-size:.8rem">Informe a Solicitação de Crédito na aba de entrada para gerar a conclusão de capacidade de pagamento.</div>`;
+
+  // Veredicto em banner grande com faixa KPI
+  const concl = c.recomendacao ? (() => {
+    const ncols = capMax > 0 ? 4 : 3;
+    return `<div style="border-radius:12px;overflow:hidden;border:1px solid ${cor}33;margin-bottom:16px">
+      <div style="background:${cor}15;padding:26px 24px 20px;text-align:center">
+        <div style="font-family:var(--fn);font-weight:900;font-size:3.2rem;letter-spacing:-1px;line-height:1;color:${cor}">${LBL[c.recomendacao]||c.recomendacao}</div>
+        <div style="font-family:var(--fm);font-size:.58rem;color:var(--mu);margin-top:6px;letter-spacing:2px;text-transform:uppercase">Parecer de Capacidade de Pagamento</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(${ncols},1fr);gap:1px;background:${cor}22">
+        <div style="background:var(--c);padding:13px 14px;text-align:center">
+          <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">DSCR</div>
+          <div style="font-family:var(--fn);font-weight:900;font-size:1.8rem;letter-spacing:-.5px;color:${cor}">${c.dscr}</div>
+        </div>
+        <div style="background:var(--c);padding:13px 14px;text-align:center">
+          <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Parcela/Mês</div>
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.15rem;letter-spacing:-.5px">${fR(c.parcela_mensal)}</div>
+        </div>
+        <div style="background:var(--c);padding:13px 14px;text-align:center">
+          <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Geração de Caixa/Ano</div>
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.15rem;letter-spacing:-.5px">${fR(c.geracao_caixa_anual)}</div>
+        </div>
+        ${capMax > 0 ? `<div style="background:var(--c);padding:13px 14px;text-align:center">
+          <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Crédito Máximo</div>
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.15rem;letter-spacing:-.5px;color:var(--g)">${fR(capMax)}</div>
+        </div>` : ''}
+      </div>
+      <div style="padding:12px 18px;background:var(--c);border-top:1px solid var(--b)">
+        <div style="font-size:.84rem;color:var(--sb)">${c.justificativa||''}</div>
+      </div>
+    </div>`;
+  })() : `<div style="padding:14px;border-radius:10px;border:1px dashed var(--b);color:var(--mu);font-size:.8rem;margin-bottom:16px">Informe a Solicitação de Crédito na aba de entrada para gerar a conclusão de capacidade de pagamento.</div>`;
 
   // Fluxo de caixa completo — metodologia GEP
   const gep = data.fluxo_gep || {};
@@ -1097,71 +1117,72 @@ function renderParecer(data){
   const varECor = varE >= 0 ? 'var(--g)' : 'var(--rd)';
   const varESinal = varE >= 0 ? '+' : '';
   const fluxoGep = gep.receita_vendas ? `
-    <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--b);background:var(--bg2)">
-      <div style="font-family:var(--fn);font-size:.7rem;font-weight:700;color:var(--mu);letter-spacing:.08em;margin-bottom:10px">FLUXO DE CAIXA COMPLETO — MÉTODO GEP</div>
-      <div style="display:grid;gap:5px;font-size:.82rem">
+    <div style="margin-top:0;padding:16px;border-radius:10px;border:1px solid var(--b);background:var(--bg2);margin-bottom:12px">
+      <div style="font-family:var(--fn);font-size:.68rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Fluxo de Caixa Completo — Método GEP</div>
+      <div style="display:grid;gap:4px;font-size:.82rem">
         ${mr2('(+) Receita de vendas', fR(gep.receita_vendas), 'g')}
         ${mr2('(−) Custo operacional', fR(gep.custo_operacional), 'r')}
         ${mr2('(=) Resultado operacional (caixa)', fR(gep.resultado_operacional), gep.resultado_operacional>=0?'g':'r', true)}
         ${mr2('(±) Variação de estoque do rebanho', varESinal+fR(Math.abs(varE)), varE>=0?'g':'r')}
         ${mr2('(=) Resultado econômico total', fR(gep.resultado_economico), gep.resultado_economico>=0?'g':'r', true)}
         ${gep.servico_divida_anual > 0 ? mr2('(−) Serviço da dívida (anual)', fR(gep.servico_divida_anual), 'r') : ''}
-        ${gep.fluxo_livre != null ? mr2('(=) Fluxo livre', fR(gep.fluxo_livre), gep.fluxo_livre>=0?'g':'r', true) : ''}
+        ${gep.fluxo_livre != null ? mr2('(=) Fluxo livre após dívida', fR(gep.fluxo_livre), gep.fluxo_livre>=0?'g':'r', true) : ''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;border-top:1px solid var(--b);padding-top:10px">
-        <div>
-          <div style="font-size:.68rem;color:var(--mu)">Estoque início</div>
-          <div style="font-size:.9rem;font-weight:600">${fR(gep.valor_rebanho_ini)}</div>
+        <div style="background:var(--c);border-radius:8px;padding:10px 12px">
+          <div style="font-family:var(--fm);font-size:.58rem;color:var(--mu);margin-bottom:3px">Estoque início do período</div>
+          <div style="font-family:var(--fn);font-weight:700;font-size:1rem">${fR(gep.valor_rebanho_ini)}</div>
         </div>
-        <div>
-          <div style="font-size:.68rem;color:var(--mu)">Estoque fim</div>
-          <div style="font-size:.9rem;font-weight:600;color:${varECor}">${fR(gep.valor_rebanho_fim)}</div>
+        <div style="background:var(--c);border-radius:8px;padding:10px 12px">
+          <div style="font-family:var(--fm);font-size:.58rem;color:var(--mu);margin-bottom:3px">Estoque fim do período</div>
+          <div style="font-family:var(--fn);font-weight:700;font-size:1rem;color:${varECor}">${fR(gep.valor_rebanho_fim)}</div>
         </div>
       </div>
-      <div style="margin-top:8px;font-size:.72rem;color:var(--mu)">Variação de estoque = riqueza criada pelo crescimento do rebanho. Não é caixa, mas é valor real do ativo.</div>
+      <div style="margin-top:8px;font-size:.7rem;color:var(--mu)">Variação de estoque = riqueza criada pelo crescimento do rebanho — não é caixa, mas é valor real do ativo.</div>
     </div>` : '';
 
-  // Tabela de sensibilidade de preço
+  // Sensibilidade de preço — 3 cards lado a lado
   const sens = data.sensibilidade || [];
   const SREC = {aprovar:'#4ADE80', ressalva:'#FBBF24', negar:'#F87171'};
-  const SLBL = {aprovar:'Aprovar', ressalva:'Ressalva', negar:'Negar'};
+  const SLBL = {aprovar:'APROVAR', ressalva:'RESSALVA', negar:'NEGAR'};
   const sensHtml = sens.length ? `
-    <div style="margin-top:16px;padding:14px;border-radius:10px;border:1px solid var(--b);background:var(--bg2)">
-      <div style="font-family:var(--fn);font-size:.7rem;font-weight:700;color:var(--mu);letter-spacing:.08em;margin-bottom:10px">SENSIBILIDADE DE PREÇO — CENÁRIO CONSERVADOR</div>
-      <table style="width:100%;border-collapse:collapse;font-size:.82rem">
-        <thead><tr style="border-bottom:1px solid var(--b)">
-          <th style="text-align:left;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Cenário</th>
-          <th style="text-align:right;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Preço @/boi</th>
-          <th style="text-align:right;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Geração de caixa</th>
-          <th style="text-align:center;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">DSCR</th>
-          <th style="text-align:center;padding:4px 6px;font-weight:600;color:var(--mu);font-size:.72rem">Resultado</th>
-        </tr></thead>
-        <tbody>${sens.map(s=>{
-          const sc = s.variacao_pct < 0 ? '#F87171' : s.variacao_pct > 0 ? '#4ADE80' : 'var(--t)';
+    <div>
+      <div style="font-family:var(--fn);font-size:.68rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Sensibilidade de Preço — Cenário Conservador</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${sens.map(s=>{
+          const isDown = s.variacao_pct < 0, isUp = s.variacao_pct > 0, isBase = s.variacao_pct === 0;
+          const sc = isDown ? '#F87171' : isUp ? '#4ADE80' : 'var(--sb)';
           const rc = SREC[s.recomendacao] || 'var(--mu)';
           const rl = SLBL[s.recomendacao] || '—';
-          const isBase = s.variacao_pct === 0;
-          return `<tr style="${isBase?'background:var(--b)22;':''}border-bottom:1px solid var(--b)22">
-            <td style="padding:5px 6px;font-weight:${isBase?700:400}">
-              ${s.variacao_pct > 0 ? '▲' : s.variacao_pct < 0 ? '▼' : '●'}
-              ${s.variacao_pct > 0 ? '+' : ''}${s.variacao_pct}% preço
-            </td>
-            <td style="text-align:right;padding:5px 6px;color:${sc}">${fR(s.preco_boi)}</td>
-            <td style="text-align:right;padding:5px 6px">${fR(s.geracao_caixa)}</td>
-            <td style="text-align:center;padding:5px 6px;font-weight:700;color:${rc}">${s.dscr ?? '—'}</td>
-            <td style="text-align:center;padding:5px 6px">
-              ${s.recomendacao ? `<span style="color:${rc};font-size:.72rem;font-weight:700">${rl}</span>` : '—'}
-            </td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table>
-      <div style="margin-top:6px;font-size:.7rem;color:var(--mu)">DSCR mínimo para aprovação: 1,30 · Ressalva: 1,00–1,30 · Negar: &lt;1,00</div>
+          const icon = isUp ? '▲' : isDown ? '▼' : '●';
+          return `<div style="border-radius:10px;border:1px solid ${isBase?'var(--b2)':'var(--b)'};background:var(--c2);padding:16px;position:relative;overflow:hidden">
+            ${isBase ? `<div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--b2)"></div>` : ''}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-family:var(--fm);font-size:.58rem;letter-spacing:1px;text-transform:uppercase;color:${sc}">${icon} ${s.variacao_pct > 0 ? '+' : ''}${s.variacao_pct}% preço</span>
+              ${isBase ? `<span style="font-family:var(--fm);font-size:.48rem;padding:2px 6px;border-radius:3px;background:var(--b);color:var(--mu);letter-spacing:1px">BASE</span>` : ''}
+            </div>
+            <div style="font-family:var(--fn);font-weight:900;font-size:1.5rem;letter-spacing:-.5px;color:${rc};line-height:1;margin-bottom:2px">${rl}</div>
+            <div style="font-family:var(--fm);font-size:.62rem;color:var(--mu);margin-bottom:12px">DSCR <strong style="color:${rc};font-size:.78rem">${s.dscr ?? '—'}</strong></div>
+            <div style="border-top:1px solid var(--b);padding-top:10px;display:grid;gap:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-family:var(--fm);font-size:.58rem;color:var(--mu)">Preço/@</span>
+                <span style="font-family:var(--fm);font-size:.78rem;color:${sc};font-weight:500">${fR(s.preco_boi)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-family:var(--fm);font-size:.58rem;color:var(--mu)">Caixa/ano</span>
+                <span style="font-family:var(--fm);font-size:.78rem">${fR(s.geracao_caixa)}</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:8px;font-size:.68rem;color:var(--mu)">DSCR ≥ 1,30 → Aprovar · 1,00–1,30 → Ressalva · &lt; 1,00 → Negar</div>
     </div>` : '';
 
   return `<div class="card" style="margin-bottom:24px">
     <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div>
       <button class="btn-sm" onclick="baixarPdfParecer(window._lastParecer)">⬇ Baixar PDF</button></div>
-    <div class="cb">${concl}${fluxoGep}${sensHtml}</div>
+    <div class="cb" style="display:grid;gap:0">${concl}${fluxoGep}${sensHtml}</div>
   </div>`;
 }
 
