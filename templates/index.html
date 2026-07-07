@@ -534,9 +534,9 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
               <div class="field"><label>Pastagem</label><input type="number" id="cd-engorda-pastagem" min="0" step="0.5" oninput="recalcCiclo()"></div>
               <div class="field"><label>Infraestrutura</label><input type="number" id="cd-engorda-infraestrutura" min="0" step="0.5" oninput="recalcCiclo()"></div>
               <div class="field"><label>Taxas e impostos</label><input type="number" id="cd-engorda-taxas_impostos" min="0" step="0.5" oninput="recalcCiclo()"></div>
-              <div class="field"><label>Outros</label><input type="number" id="cd-outros-engorda" min="0" step="0.5" oninput="recalcCiclo()"></div>
+              <div class="field"><label>Outros</label><input type="number" id="cd-engorda-outros" min="0" step="0.5" oninput="recalcCiclo()"></div>
             </div>
-            <div style="margin-top:8px"><button class="btn-sm" onclick="aplicarPresetFase('engorda','media')">Média GEP</button> <button class="btn-sm" onclick="aplicarPresetFase('engorda','top')">Top GEP</button> <button class="btn-sm" onclick="limparFaseCusto('engorda')">Limpar (usar Geral)</button></div>
+            <div style="margin-top:8px"><button class="btn-sm" onclick="aplicarPresetFase('engorda','media')">Média GEP</button> <button class="btn-sm" onclick="aplicarPresetFase('engorda','top')">Top GEP</button> <button class="btn-sm" onclick="aplicarPresetConfinamento()">Confinamento</button> <button class="btn-sm" onclick="limparFaseCusto('engorda')">Limpar (usar Geral)</button></div>
             </div>
             <div id="s-desemb-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)"><span style="font-family:var(--fm);font-size:.6rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Custo Total do Rebanho</span><span id="s-custo-total" style="font-family:var(--fn);font-weight:800;font-size:1.6rem;color:var(--rd)">—</span></div>
@@ -1459,10 +1459,14 @@ function gS(id){return parseFloat(document.getElementById(id)?.value)||0;}
 
 // Presets de desembolso (R$/cab/mês) — fonte GEP Araguaia / Inttegra, safra 24/25.
 // [media, top_rentaveis] por componente e modalidade.
+// RECRIA e ENGORDA agora separados; ENGORDA_CONFINAMENTO adicionado.
 const PERFIL_DESEMBOLSO={
   CRIA:{insumos:[25.53,22.17],mao_obra:[18.20,14.66],administracao:[7.97,5.30],maquinas:[11.79,7.63],pastagem:[11.97,9.09],infraestrutura:[11.59,7.30],taxas_impostos:[2.66,2.26],outros:[1.17,1.22]},
-  RECRIA_ENGORDA:{insumos:[77.46,96.53],mao_obra:[19.62,17.04],administracao:[14.04,7.92],maquinas:[19.37,15.49],pastagem:[15.38,11.44],infraestrutura:[18.79,12.35],taxas_impostos:[5.05,5.77],outros:[1.03,0.74]},
+  RECRIA:{insumos:[30.50,25.20],mao_obra:[18.30,14.80],administracao:[7.80,5.20],maquinas:[10.90,7.80],pastagem:[18.40,14.10],infraestrutura:[10.80,7.10],taxas_impostos:[2.60,2.20],outros:[1.20,1.00]},
+  ENGORDA:{insumos:[85.20,102.80],mao_obra:[20.30,17.60],administracao:[14.80,8.20],maquinas:[20.40,16.70],pastagem:[15.80,11.90],infraestrutura:[19.50,13.20],taxas_impostos:[5.40,6.00],outros:[1.20,0.90]},
+  ENGORDA_CONFINAMENTO:{insumos:[385.00,342.00],mao_obra:[28.00,24.50],administracao:[16.00,10.00],maquinas:[28.00,22.00],pastagem:[0.00,0.00],infraestrutura:[18.00,14.00],taxas_impostos:[6.50,6.80],outros:[2.50,2.20]},
   CICLO_COMPLETO:{insumos:[44.92,42.18],mao_obra:[18.10,14.39],administracao:[8.49,5.89],maquinas:[15.23,10.71],pastagem:[14.29,10.79],infraestrutura:[13.69,8.40],taxas_impostos:[3.66,3.10],outros:[0.76,0.62]},
+  RECRIA_ENGORDA:{insumos:[77.46,96.53],mao_obra:[19.62,17.04],administracao:[14.04,7.92],maquinas:[19.37,15.49],pastagem:[15.38,11.44],infraestrutura:[18.79,12.35],taxas_impostos:[5.05,5.77],outros:[1.03,0.74]},
 };
 const COMP_DESEMB=['insumos','mao_obra','administracao','maquinas','pastagem','infraestrutura','taxas_impostos','outros'];
 const COMP_LABEL={insumos:'Insumos',mao_obra:'Mão de obra',administracao:'Administração',maquinas:'Máquinas',pastagem:'Pastagem',infraestrutura:'Infraestrutura',taxas_impostos:'Taxas e impostos',outros:'Outros'};
@@ -1476,9 +1480,15 @@ function mostrarFaseCusto(fase, btn){
   });
 }
 function aplicarPresetFase(fase, perfil){
-  const mod=fase==='cria'?'CRIA':(fase==='recria'||fase==='engorda'?'RECRIA_ENGORDA':'CICLO_COMPLETO');
+  const modMap={cria:'CRIA',recria:'RECRIA',engorda:'ENGORDA'};
+  const mod=modMap[fase]||'CICLO_COMPLETO';
   const idx=perfil==='media'?0:1; const p=PERFIL_DESEMBOLSO[mod];
   COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+fase+'-'+k); if(el) el.value=p[k][idx];});
+  recalcCiclo();
+}
+function aplicarPresetConfinamento(){
+  const p=PERFIL_DESEMBOLSO['ENGORDA_CONFINAMENTO'];
+  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-engorda-'+k); if(el) el.value=p[k][0];});
   recalcCiclo();
 }
 function limparFaseCusto(fase){
@@ -1494,8 +1504,7 @@ function pesoMedioArrobaRebanho(){
 function custoArrobaDerivado(){const pm=pesoMedioArrobaRebanho(); if(pm<=0) return 0; return desembolsoTotalMensal()*12/pm;}
 function aplicarPresetDesembolso(perfil){
   let tipo=window.lastTipo||'CICLO_COMPLETO';
-  let mod=(tipo==='RECRIA'||tipo==='ENGORDA')?'RECRIA_ENGORDA':tipo;
-  if(!PERFIL_DESEMBOLSO[mod]) mod='CICLO_COMPLETO';
+  let mod=PERFIL_DESEMBOLSO[tipo]?tipo:'CICLO_COMPLETO';
   const idx=perfil==='media'?0:1; const p=PERFIL_DESEMBOLSO[mod];
   COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+k); if(el) el.value=p[k][idx];});
   recalcCiclo();
