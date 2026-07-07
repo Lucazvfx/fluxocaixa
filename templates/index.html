@@ -1136,6 +1136,28 @@ function renderParecer(data){
         ${gep.servico_divida_anual > 0 ? mr2('(−) Serviço da dívida (anual)', fR(gep.servico_divida_anual), 'r') : ''}
         ${gep.fluxo_livre != null ? mr2('(=) Fluxo livre após dívida', fR(gep.fluxo_livre), gep.fluxo_livre>=0?'g':'r', true) : ''}
       </div>
+      ${(() => {
+        const cb = gep.coe_benchmark;
+        if(!cb) return '';
+        const NCOR = {excelente:'var(--g)',bom:'var(--cy)',atencao:'var(--am)',alto:'var(--rd)'};
+        const NLBL = {excelente:'Excelente',bom:'Bom',atencao:'Atenção',alto:'Acima'};
+        const cor = NCOR[cb.nivel] || 'var(--mu)';
+        const sinal = cb.delta_pct >= 0 ? '+' : '';
+        return `<div style="margin-top:8px;background:var(--c);border-radius:8px;border:1px solid var(--b);padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <div style="font-family:var(--fm);font-size:.57rem;letter-spacing:1px;text-transform:uppercase;color:var(--mu);margin-bottom:2px">COE calculado (R$/@·vendida)</div>
+            <div style="font-family:var(--fn);font-weight:800;font-size:1.3rem;color:${cor}">${fR(cb.coe_calculado)}</div>
+          </div>
+          <div style="flex:1;min-width:160px">
+            <div style="font-family:var(--fm);font-size:.57rem;letter-spacing:1px;text-transform:uppercase;color:var(--mu);margin-bottom:2px">Referência Campo Futuro 2025</div>
+            <div style="font-family:var(--fn);font-weight:700;font-size:1rem;color:var(--sb)">${fR(cb.coe_referencia)}<span style="font-family:var(--fm);font-size:.65rem;color:var(--mu);font-weight:400;margin-left:6px">${cb.local_ref}</span></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:var(--fn);font-weight:800;font-size:1rem;color:${cor}">${NLBL[cb.nivel]||''} <span style="font-size:.8rem">${sinal}${cb.delta_pct}% vs ref</span></div>
+            <div style="font-family:var(--fm);font-size:.57rem;color:var(--mu)">${cb.fonte}</div>
+          </div>
+        </div>`;
+      })()}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;border-top:1px solid var(--b);padding-top:10px">
         <div style="background:var(--c);border-radius:8px;padding:10px 12px">
           <div style="font-family:var(--fm);font-size:.58rem;color:var(--mu);margin-bottom:3px">Estoque início do período</div>

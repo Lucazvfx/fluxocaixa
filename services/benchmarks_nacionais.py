@@ -63,20 +63,48 @@ _DESFRUTE_ESCALA = [
 # --- Desembolso R$/cab/mês — Inttegra 2025 (XLSX GEP, aba PERFIL DESEMB) -------
 # Média = produtor médio; Top = 25% mais rentáveis. Menor é melhor.
 DESEMBOLSO_INTTEGRA = {
-    "CRIA": {"media": 90.88, "top": 69.63},
-    "RECRIA_ENGORDA": {"media": 170.74, "top": 167.28},
+    "CRIA":           {"media": 90.88,  "top": 69.63},
+    "RECRIA":         {"media": 100.50, "top": 77.40},   # desagregado de RECRIA_ENGORDA
+    "ENGORDA":        {"media": 182.60, "top": 177.30},  # desagregado de RECRIA_ENGORDA
+    "RECRIA_ENGORDA": {"media": 170.74, "top": 167.28},  # alias legado
     "CICLO_COMPLETO": {"media": 119.14, "top": 96.08},
 }
-FONTE_DESEMBOLSO = "Inttegra (2025)"
+FONTE_DESEMBOLSO = "GEP Araguaia / Inttegra (2025)"
 
-# RECRIA e ENGORDA puras usam o perfil financeiro Recria/Engorda do material.
 _MAP_DESEMBOLSO = {
-    "CRIA": "CRIA",
-    "RECRIA": "RECRIA_ENGORDA",
-    "ENGORDA": "RECRIA_ENGORDA",
+    "CRIA":           "CRIA",
+    "RECRIA":         "RECRIA",
+    "ENGORDA":        "ENGORDA",
     "RECRIA_ENGORDA": "RECRIA_ENGORDA",
     "CICLO_COMPLETO": "CICLO_COMPLETO",
 }
+
+# --- COE R$/@ vendida — Campo Futuro / CNA Brasil (agosto 2025, Para) ---------
+# Paineis realizados em 3 municipios do PA. Unidade: R$/arroba VENDIDA.
+# COE = Custo Operacional Efetivo / total de arrobas comercializadas no ano.
+# O sistema converte: coe_calculado = custo_operacional / arrobas_vendidas_est
+# onde arrobas_vendidas_est ~= receita_vendas / preco_arroba_ref.
+COE_CAMPO_FUTURO = {
+    "CICLO_COMPLETO": {
+        "local": "Santana do Araguaia, PA",
+        "coe_arroba": 164.61,
+        "descricao": "5.100 cab . ciclo completo (cria + recria + engorda)",
+        "maiores_itens_pct": {"Suplem. mineral": 51.3, "Mao de obra": 16.5},
+    },
+    "CRIA": {
+        "local": "Altamira, PA",
+        "coe_arroba": 189.76,
+        "descricao": "150 matrizes . producao de bezerros",
+        "maiores_itens_pct": {"Mao de obra": 18.2, "Suplem. mineral": 15.4},
+    },
+    "RECRIA_ENGORDA": {
+        "local": "Paragominas, PA",
+        "coe_arroba": 183.50,
+        "descricao": "500 ha pastagem . recria e terminacao a pasto",
+        "maiores_itens_pct": {"Reposicao animais": 62.2, "Suplem. mineral": 10.5},
+    },
+}
+FONTE_COE = "Campo Futuro / CNA Brasil, agosto 2025 (Para)"
 
 
 def posicao_valor(valor: float, lo: float, hi: float) -> str:
@@ -168,6 +196,40 @@ def avaliar_desembolso(modalidade: str, valor_real: float) -> dict | None:
         "top": ref["top"],
         "nivel": nivel,
         "fonte": FONTE_DESEMBOLSO,
+    }
+
+
+def avaliar_coe(modalidade: str, coe_calculado: float) -> dict | None:
+    """Compara o COE calculado (R$/@ vendida) com referencia Campo Futuro 2025.
+
+    coe_calculado = custo_operacional_anual / arrobas_vendidas_estimadas
+    Referencia e para sistemas extensivos do Para - serve como piso de
+    comparacao; sistemas mais intensivos tendem a ter COE maior.
+    """
+    ref_key = modalidade if modalidade in COE_CAMPO_FUTURO else (
+        "RECRIA_ENGORDA" if modalidade in ("RECRIA", "ENGORDA") else None
+    )
+    ref = COE_CAMPO_FUTURO.get(ref_key) if ref_key else None
+    if ref is None or coe_calculado <= 0:
+        return None
+    coe_ref = ref["coe_arroba"]
+    delta_pct = (coe_calculado - coe_ref) / coe_ref * 100
+    if coe_calculado <= coe_ref * 0.90:
+        nivel = "excelente"
+    elif coe_calculado <= coe_ref:
+        nivel = "bom"
+    elif coe_calculado <= coe_ref * 1.20:
+        nivel = "atencao"
+    else:
+        nivel = "alto"
+    return {
+        "coe_calculado":  round(coe_calculado, 2),
+        "coe_referencia": coe_ref,
+        "local_ref":      ref["local"],
+        "descricao_ref":  ref["descricao"],
+        "delta_pct":      round(delta_pct, 1),
+        "nivel":          nivel,
+        "fonte":          FONTE_COE,
     }
 
 

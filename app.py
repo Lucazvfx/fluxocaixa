@@ -44,6 +44,7 @@ from services.pesos_rebanho import arrobas_categorias
 from services.custos_desembolso import custo_arroba_de_desembolso, COMPONENTES
 from services.reconciliacao import reconciliar
 from services.fluxo_caixa_gep import valor_rebanho_gep, calcular_fluxo_gep
+from services.benchmarks_nacionais import avaliar_coe as _avaliar_coe
 
 # Configuração de logging
 logging.basicConfig(
@@ -616,6 +617,17 @@ def api_classificar():
         valor_rebanho_fim   = _val_fim['valor_total'],
         servico_divida_anual = _servico_gep,
     )
+
+    # COE (R$/@ vendida) = custo_operacional / arrobas_vendidas_estimadas
+    # arrobas_vendidas_est = receita / preco_boi (aproximação: toda receita em @)
+    if _preco_boi_ref > 0 and _ano1.get('receita', 0) > 0:
+        _arrobas_vend_est = _ano1['receita'] / _preco_boi_ref
+        _coe_calc = fluxo_gep['custo_operacional'] / _arrobas_vend_est
+        fluxo_gep['coe_por_arroba'] = round(_coe_calc, 2)
+        fluxo_gep['coe_benchmark']  = _avaliar_coe(result.get('tipo', 'CICLO_COMPLETO'), _coe_calc)
+    else:
+        fluxo_gep['coe_por_arroba'] = None
+        fluxo_gep['coe_benchmark']  = None
 
     credito_inputs = {k: data.get(k) for k in
                       ('credito_valor', 'prazo_meses', 'juros_aa',
