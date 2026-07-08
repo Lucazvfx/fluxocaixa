@@ -29,7 +29,7 @@ _FATOR_VACA     = 0.85   # preço vaca ≈ 85% do boi
 _FATOR_BEZERRA  = 0.90   # bezerra ≈ 90% da vaca
 _FATOR_BEZERRO  = 1.05   # bezerro ≈ 105% da bezerra (macho premium)
 
-# Arrobas-equivalentes médias para jovens sem split etário detalhado
+# Arrobas-equivalentes médias para jovens agregados (val_fim do simulador)
 _ARR_JOVEM_F = (CATEGORIAS_GEP['bezerra']['arroba_eq'] + CATEGORIAS_GEP['novilha']['arroba_eq']) / 2  # 7.67@
 _ARR_JOVEM_M = (CATEGORIAS_GEP['bezerro']['arroba_eq'] + CATEGORIAS_GEP['garrote']['arroba_eq']) / 2  # 8.67@
 
@@ -37,41 +37,65 @@ _ARR_JOVEM_M = (CATEGORIAS_GEP['bezerro']['arroba_eq'] + CATEGORIAS_GEP['garrote
 def valor_rebanho_gep(
     matrizes: float,
     bois: float,
-    jovens_f: float,
-    jovens_m: float,
     preco_boi: float,
     preco_vaca: float = None,
-    preco_bezerra: float = None,
-    preco_bezerro: float = None,
+    # Modo granular — val_ini (composição declarada pelo usuário)
+    novilhas: float = 0,            # f13F → 9.33@ × preco_vaca
+    garrotes: float = 0,            # f13M → 10.67@ × preco_boi
+    bezerras: float = 0,            # f00F+f05F → R$/cab direto
+    bezerros: float = 0,            # f00M+f05M → R$/cab direto
+    preco_bezerra_cab: float = None, # R$/cab (cotação bezerra)
+    preco_bezerro_cab: float = None, # R$/cab (cotação bezerro)
+    # Modo legado — val_fim (simulador retorna jovens agregados 0–24m)
+    jovens_f: float = 0,
+    jovens_m: float = 0,
 ) -> dict:
     """
     Avalia o estoque do rebanho em R$ pelo método GEP.
 
-    Mapeamento do vetor do simulador:
-    - matrizes (f25F + facF) → vaca, 15.33@
-    - bois (f25M + facM)     → boi,  20.53@
-    - jovens_f (f00F+f05F+f13F) → média bezerra+novilha, 7.67@
-    - jovens_m (f00M+f05M+f13M) → média bezerro+garrote, 8.67@
+    Modo granular (val_ini): split correto por categoria.
+      - matrizes / bois (25m+): precificados por @ (R$/@)
+      - novilhas / garrotes (13–24m): precificados por @ (R$/@)
+      - bezerras / bezerros (0–12m): precificados por cabeça (R$/cab)
+
+    Modo legado (val_fim): simulador não separa cria/recria,
+      jovens_f/m usam @ médio (7.67 / 8.67) × preco_vaca/boi — unidades consistentes.
     """
     _pb = float(preco_boi)
     _pv = float(preco_vaca) if preco_vaca else _pb * _FATOR_VACA
-    _pz = float(preco_bezerra) if preco_bezerra else _pv * _FATOR_BEZERRA
-    _pm = float(preco_bezerro) if preco_bezerro else _pb * _FATOR_BEZERRO
 
-    preco_jovem_f = (_pz + _pv) / 2
-    preco_jovem_m = (_pm + _pb) / 2
+    # Adultos (25m+) — R$/@
+    val_matrizes = matrizes * CATEGORIAS_GEP['vaca']['arroba_eq'] * _pv   # 15.33@ × pv
+    val_bois     = bois     * CATEGORIAS_GEP['boi']['arroba_eq']  * _pb   # 20.53@ × pb
 
-    val_matrizes = matrizes * CATEGORIAS_GEP['vaca']['arroba_eq'] * _pv
-    val_bois     = bois     * CATEGORIAS_GEP['boi']['arroba_eq']  * _pb
-    val_jovens_f = jovens_f * _ARR_JOVEM_F * preco_jovem_f
-    val_jovens_m = jovens_m * _ARR_JOVEM_M * preco_jovem_m
+    # Recria (13–24m) — R$/@
+    val_novilhas = novilhas * CATEGORIAS_GEP['novilha']['arroba_eq'] * _pv  # 9.33@ × pv
+    val_garrotes = garrotes * CATEGORIAS_GEP['garrote']['arroba_eq'] * _pb  # 10.67@ × pb
 
-    total    = val_matrizes + val_bois + val_jovens_f + val_jovens_m
-    cabecas  = int(matrizes + bois + jovens_f + jovens_m)
+    # Cria (0–12m) — R$/cab direto (bezerros são negociados por cabeça no mercado)
+    _default_bezerra = _pv * CATEGORIAS_GEP['bezerra']['arroba_eq'] * _FATOR_BEZERRA
+    _default_bezerro = _pb * CATEGORIAS_GEP['bezerro']['arroba_eq'] * _FATOR_BEZERRO
+    _pzc = float(preco_bezerra_cab) if preco_bezerra_cab else _default_bezerra
+    _pmc = float(preco_bezerro_cab) if preco_bezerro_cab else _default_bezerro
+    val_bezerras = bezerras * _pzc
+    val_bezerros = bezerros * _pmc
+
+    # Legado — jovens 0–24m agregados (val_fim): usa @ médio × preco_vaca/boi
+    val_jovens_f = jovens_f * _ARR_JOVEM_F * _pv
+    val_jovens_m = jovens_m * _ARR_JOVEM_M * _pb
+
+    total   = (val_matrizes + val_bois + val_novilhas + val_garrotes
+               + val_bezerras + val_bezerros + val_jovens_f + val_jovens_m)
+    cabecas = int(matrizes + bois + novilhas + garrotes
+                  + bezerras + bezerros + jovens_f + jovens_m)
 
     return {
         'valor_matrizes': round(val_matrizes, 2),
         'valor_bois':     round(val_bois, 2),
+        'valor_novilhas': round(val_novilhas, 2),
+        'valor_garrotes': round(val_garrotes, 2),
+        'valor_bezerras': round(val_bezerras, 2),
+        'valor_bezerros': round(val_bezerros, 2),
         'valor_jovens_f': round(val_jovens_f, 2),
         'valor_jovens_m': round(val_jovens_m, 2),
         'valor_total':    round(total, 2),

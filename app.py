@@ -579,25 +579,25 @@ def api_classificar():
     _va = [float(x) for x in v]
     _preco_boi_ref = preco_boi or float(data.get('preco', 320))
     _val_ini = valor_rebanho_gep(
-        matrizes  = _va[6] + _va[8],
-        bois      = _va[7] + _va[9],
-        jovens_f  = _va[0] + _va[2] + _va[4],
-        jovens_m  = _va[1] + _va[3] + _va[5],
-        preco_boi = _preco_boi_ref,
-        preco_vaca    = preco_vaca,
-        preco_bezerra = preco_bezerra,
-        preco_bezerro = preco_bezerro,
+        matrizes = _va[6] + _va[8],   # f25F + facF
+        bois     = _va[7] + _va[9],   # f25M + facM
+        novilhas = _va[4],             # f13F  (9.33@ × pv)
+        garrotes = _va[5],             # f13M  (10.67@ × pb)
+        bezerras = _va[0] + _va[2],   # f00F + f05F (R$/cab)
+        bezerros = _va[1] + _va[3],   # f00M + f05M (R$/cab)
+        preco_boi        = _preco_boi_ref,
+        preco_vaca       = preco_vaca,
+        preco_bezerra_cab = preco_bezerra,
+        preco_bezerro_cab = preco_bezerro,
     )
     _ano1 = _cx['anos'][0]
     _val_fim = valor_rebanho_gep(
-        matrizes  = float(_ano1['matrizes']),
-        bois      = _ano1.get('bois_fim', _va[7] + _va[9]),
-        jovens_f  = float(_ano1.get('jovens_f_fim', 0)),
-        jovens_m  = float(_ano1.get('jovens_m_fim', 0)),
-        preco_boi = _preco_boi_ref,
-        preco_vaca    = preco_vaca,
-        preco_bezerra = preco_bezerra,
-        preco_bezerro = preco_bezerro,
+        matrizes = float(_ano1['matrizes']),
+        bois     = _ano1.get('bois_fim', _va[7] + _va[9]),
+        jovens_f = float(_ano1.get('jovens_f_fim', 0)),
+        jovens_m = float(_ano1.get('jovens_m_fim', 0)),
+        preco_boi  = _preco_boi_ref,
+        preco_vaca = preco_vaca,
     )
     # Serviço da dívida para o fluxo GEP (mesma base do DSCR do parecer)
     _servico_gep = 0.0
