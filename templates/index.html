@@ -83,7 +83,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 .tdc{text-align:center}
 .tdtot{font-family:var(--fm);font-size:.8rem;color:var(--tx);text-align:center;font-weight:600}
 
-.tstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--b);border-radius:var(--rs);overflow:hidden;border:1px solid var(--b);margin-top:18px}
+.tstrip{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--b);border-radius:var(--rs);overflow:hidden;border:1px solid var(--b);margin-top:18px}
 .tsc{background:var(--c2);padding:14px 16px}
 .tsc-l{font-family:var(--fm);font-size:.52rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:5px}
 .tsc-v{font-family:var(--fn);font-weight:800;font-size:1.5rem;letter-spacing:-.5px;line-height:1}
@@ -342,6 +342,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="tsc"><div class="tsc-l">Machos</div><div class="tsc-v ca" id="t-m">0</div></div>
           <div class="tsc"><div class="tsc-l">Cria 0–12m</div><div class="tsc-v cc" id="t-c">0</div></div>
           <div class="tsc"><div class="tsc-l">Recria 13–24m</div><div class="tsc-v ca" id="t-r">0</div></div>
+          <div class="tsc" style="border-left:1px solid var(--g)22"><div class="tsc-l" style="color:var(--g)">Valor do Rebanho</div><div class="tsc-v" style="color:var(--g);font-size:1.1rem" id="t-val">—</div></div>
         </div>
         <div id="consist-panel" style="display:none;margin-top:16px"></div>
         <div style="margin-top:14px">
@@ -789,6 +790,13 @@ function upd(){
   document.getElementById('t-m').textContent=fN(FAIXAS.reduce((a,f,i)=>a+v[i*2+1],0));
   document.getElementById('t-c').textContent=fN(v[0]+v[1]+v[2]+v[3]);
   document.getElementById('t-r').textContent=fN(v[4]+v[5]);
+  // Valor do rebanho — mesma fórmula GEP Araguaia do backend
+  const pb=parseFloat(document.getElementById('cot-boi')?.value)||327;
+  const pv=parseFloat(document.getElementById('cot-vaca')?.value)||pb*0.85;
+  const pjf=(pv*0.90+pv)/2, pjm=(pb*1.05+pb)/2;
+  const val=(v[6]+v[8])*15.33*pv+(v[7]+v[9])*20.53*pb+(v[0]+v[2]+v[4])*7.67*pjf+(v[1]+v[3]+v[5])*8.67*pjm;
+  const tval=document.getElementById('t-val');
+  if(tval) tval.textContent=val>0?fR(val):'—';
 }
 
 // ================== EXEMPLOS ==================
@@ -2043,6 +2051,7 @@ async function carregarCotacaoDia(){
     const f=document.getElementById('cot-fonte');
     if(f) f.textContent = d.origem==='banco' ? 'CEPEA/ESALQ (boi) · Scot (vaca)' : 'referência (sem cotação salva ainda)';
     usarCotacaoDia();
+    upd();
   }catch(e){}
 }
 function onBezerroChange(){
