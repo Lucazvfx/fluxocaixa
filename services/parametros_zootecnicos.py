@@ -25,7 +25,9 @@ PRENHEZ_PCT = midpoint(50.0, 75.0)             # 62.5
 
 # Sem benchmark nacional para estas — banda "médio" do benchmark regional
 # (ml_engine.BENCHMARKS_RO), documentada como tal.
-MORTALIDADE_PCT = 3.0          # BENCHMARKS_RO.mortalidade médio
+MORTALIDADE_PCT = 3.0          # BENCHMARKS_RO.mortalidade médio (taxa geral)
+MORTALIDADE_ADULTO_PCT  = 2.0  # EMBRAPA: adultos 1.5–2.5%; médio 2%
+MORTALIDADE_BEZERRA_PCT = 7.0  # EMBRAPA: bezerros pré-desmame 5–10%; médio 7%
 DESMAME_PCT = 82.0             # BENCHMARKS_RO.desmama médio
 RENDIMENTO_CARCACA_PCT = 52.0  # BENCHMARKS_RO.rend_carcaca médio (engorda)
 GANHO_ARROBA_MES = 0.7         # BENCHMARKS_RO.ganho_peso_arr médio

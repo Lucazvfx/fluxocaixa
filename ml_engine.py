@@ -17,7 +17,11 @@ from services.pesos_rebanho import arrobas_categorias
 from services.parametros_zootecnicos import (
     NATALIDADE_PCT, DESMAME_PCT,
     PESO_BOI_ARR, PESO_VACA_ARR, PESO_BEZERRA_ARR, PESO_GARROTE_ARR,
+    MORTALIDADE_ADULTO_PCT, MORTALIDADE_BEZERRA_PCT,
 )
+
+# Razão bezerra/adulto para derivar mort_bezerra quando só mort_adulto é informada
+_RAZAO_MORT_BEZERRA = MORTALIDADE_BEZERRA_PCT / MORTALIDADE_ADULTO_PCT  # 3.5
 
 # ==================================================================
 # CONSTANTES GLOBAIS
@@ -545,6 +549,8 @@ def calcular_ano(
     peso_bezerra: float = PESO_BEZERRA_ARR, peso_garrote: float = None,
     preco_boi_arr: float = None, preco_vaca_arr: float = None,
     preco_bezerra_cab: float = None, preco_bezerro_cab: float = None,
+    mort_adulto_pct: float = None,   # fração; default = mort_pct
+    mort_bezerra_pct: float = None,  # fração; default = mort_pct × 3.5 (EMBRAPA)
 ) -> dict:
     """
     Pesos diferenciados na faixa jovem (0-25 meses):
@@ -568,12 +574,20 @@ def calcular_ano(
     fem_repor = femeas_024 - bez_vend
     aumento  = fem_repor - desc_mat
     vendidos = bois_vendidos + desc_mat + bez_vend + machos_024_vend
-    total_atual = matrizes + femeas_024 + machos_024 + bois
-    mortes      = round(total_atual * mort_pct)
-    mat_prox       = max(matrizes + aumento - round(mortes * 0.5), 0)
+    # Mortalidade diferenciada por categoria (EMBRAPA: bezerros 5–10%, adultos 1.5–2.5%)
+    _mort_adulto  = mort_adulto_pct  if mort_adulto_pct  is not None else mort_pct
+    _mort_bezerra = mort_bezerra_pct if mort_bezerra_pct is not None else min(mort_pct * _RAZAO_MORT_BEZERRA, 0.25)
+
+    mortes_mat      = round(matrizes * _mort_adulto)
+    mortes_bois_tot = round(bois * _mort_adulto)
+    mortes_jovens   = round((femeas_024 + machos_024) * _mort_adulto)
+    mortes_bezerros = round(bezerros * _mort_bezerra)
+    mortes          = mortes_mat + mortes_bois_tot + mortes_jovens + mortes_bezerros
+
+    mat_prox       = max(matrizes + aumento - mortes_mat, 0)
     bois_prox      = max(bois_nec, 1)
-    femeas_024_prx = round(bezerros * 0.5)
-    machos_024_prx = round(bezerros * 0.5)
+    femeas_024_prx = round(bezerros * 0.5 * (1 - _mort_bezerra))
+    machos_024_prx = round(bezerros * 0.5 * (1 - _mort_bezerra))
     total_prox     = mat_prox + femeas_024_prx + machos_024_prx + bois_prox
     # Receita por categoria: boi/vaca em R$/@ (× peso), bezerra/bezerro em
     # R$/cabeça (direto). Sem preço da categoria → cai no preço da arroba único.
@@ -669,6 +683,8 @@ def _simular_cria(
 
     nat      = min((nat_pct / 100) * m['nat'], 0.95)
     mort     = (mort_pct / 100) * m['mort']
+    # Taxa de bezerra pré-desmame é maior que a adulta (EMBRAPA: ~3.5× a adulta)
+    mort_bez = min(mort * _RAZAO_MORT_BEZERRA, 0.25)
     desmama  = (desmama_pct / 100)
     venda_bz = (venda_bez_pct / 100)
     preco_bz = (preco_arroba_bezerro * m['preco']) * peso_bezerra   # R$/cabeça derivado de R$/@
@@ -683,7 +699,7 @@ def _simular_cria(
     anos_proj = []
     for yr in range(1, anos + 1):
         nascidos      = matrizes * nat
-        desmamados    = nascidos * desmama * (1 - mort)
+        desmamados    = nascidos * desmama * (1 - mort_bez)  # mortalidade pré-desmame de bezerros
         vez_vendidos  = desmamados * venda_bz
         machos_vend   = vez_vendidos * 0.5
         femeas_vend   = vez_vendidos * 0.5
@@ -692,7 +708,7 @@ def _simular_cria(
         descarte_mat  = round(matrizes * 0.15)
         matrizes_prox = max(matrizes + bezerras_ret - descarte_mat, matrizes * 0.7)
         total_prox    = int(matrizes_prox + bezerras_ret)
-        mortes        = round((matrizes + fem_recria) * mort)
+        mortes        = round((matrizes + fem_recria) * mort)  # adultos: taxa adulta
 
         # Receita: bezerros vendidos + descarte de matrizes (ambos geram caixa na cria)
         receita   = vez_vendidos * preco_bz + descarte_mat * _preco_vaca_cab
