@@ -35,7 +35,7 @@ body::before{content:'';position:fixed;inset:0;background:
   pointer-events:none;z-index:0}
 
 header{position:sticky;top:0;z-index:200;background:rgba(6,8,16,.93);backdrop-filter:blur(24px);border-bottom:1px solid var(--b);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 36px}
-.logo{font-family:var(--fn);font-weight:800;font-size:1.4rem;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+.logo{font-family:var(--fn);font-weight:800;font-size:1.4rem;letter-spacing:-.5px;display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden}
 .logo-mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#4ADE80,#4ADE80);display:flex;align-items:center;justify-content:center;font-size:.9rem}
 .logo em{font-style:normal;background:linear-gradient(90deg,#4ADE80,#4ADE80);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hdr-r{display:flex;align-items:center;gap:12px}
@@ -240,7 +240,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <div class="toast" id="toast"></div>
 
 <header>
-  <div class="logo"><div class=""></div>Fluxo de caixa feito por Lucas<em></em></div>
+  <div class="logo"><div class=""></div>Fluxo de Caixa<em></em></div>
   <div class="hdr-r">
     <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
     <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
@@ -1226,12 +1226,11 @@ function renderResult(data){
   const _vr = (data.fluxo_gep||{}).valor_rebanho_ini || 0;
 
   const probs=data.probabilidades;
-  const confBars=Object.entries(probs).map(([t,p])=>`
-    <div class="cbar">
-      <div class="cbar-l" style="color:${TC[t]}">${TE[t]} ${TL[t]}</div>
-      <div class="cbar-t"><div class="cbar-f" style="width:0%;background:${TC[t]}" data-w="${p}"></div></div>
-      <div class="cbar-p" style="color:${TC[t]}">${p}%</div>
-    </div>`).join('');
+  const confBars=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:18px">${
+    Object.entries(probs).filter(([,p])=>p>0).map(([t,p])=>
+      `<span style="font-family:var(--fm);font-size:.58rem;letter-spacing:.8px;background:${TC[t]}18;border:1px solid ${TC[t]}40;color:${TC[t]};border-radius:20px;padding:3px 10px">${TL[t]} ${p}%</span>`
+    ).join('')
+  }</div>`;
 
   const maxAn=Math.max(...FAIXAS.map((f,i)=>v[i*2]+v[i*2+1]),1);
   const pyramid=[...FAIXAS].reverse().map((f,ri)=>{
