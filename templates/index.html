@@ -790,10 +790,12 @@ function upd(){
   document.getElementById('t-m').textContent=fN(FAIXAS.reduce((a,f,i)=>a+v[i*2+1],0));
   document.getElementById('t-c').textContent=fN(v[0]+v[1]+v[2]+v[3]);
   document.getElementById('t-r').textContent=fN(v[4]+v[5]);
-  // Valor do rebanho — mesma fórmula GEP Araguaia do backend
+  // Valor do rebanho — espelho exato do valor_rebanho_gep() do backend
   const pb=parseFloat(document.getElementById('cot-boi')?.value)||327;
   const pv=parseFloat(document.getElementById('cot-vaca')?.value)||pb*0.85;
-  const pjf=(pv*0.90+pv)/2, pjm=(pb*1.05+pb)/2;
+  const pz=parseFloat(document.getElementById('cot-bezerra')?.value)||pv*0.90;
+  const pm=parseFloat(document.getElementById('cot-bezerro')?.value)||pb*1.05;
+  const pjf=(pz+pv)/2, pjm=(pm+pb)/2;
   const val=(v[6]+v[8])*15.33*pv+(v[7]+v[9])*20.53*pb+(v[0]+v[2]+v[4])*7.67*pjf+(v[1]+v[3]+v[5])*8.67*pjm;
   const tval=document.getElementById('t-val');
   if(tval) tval.textContent=val>0?fR(val):'—';
