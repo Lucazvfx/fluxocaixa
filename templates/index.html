@@ -1144,7 +1144,7 @@ function renderParecer(data){
       <div style="font-family:var(--fn);font-size:.68rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Fluxo de Caixa Completo — Método GEP</div>
       <div style="display:grid;gap:4px;font-size:.82rem">
         ${mr2('(+) Receita de vendas', fR(gep.receita_vendas), 'g')}
-        ${mr2('(−) Custo operacional', fR(gep.custo_operacional), 'r')}
+        ${mr2('(−) Custo caixa (desembolso)', fR(gep.custo_operacional), 'r')}
         ${gep.reposicao_reprodutores > 0 ? mr2('(−) Reposição de reprodutores', fR(gep.reposicao_reprodutores), 'r') : ''}
         ${mr2('(=) Resultado operacional (caixa)', fR(gep.resultado_operacional), gep.resultado_operacional>=0?'g':'r', true)}
         ${mr2('(±) Variação de estoque do rebanho', varESinal+fR(Math.abs(varE)), varE>=0?'g':'r')}
