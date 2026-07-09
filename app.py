@@ -599,6 +599,18 @@ def api_classificar():
         preco_boi  = _preco_boi_ref,
         preco_vaca = preco_vaca,
     )
+    # Reposição de reprodutores: touros renovados × preço por cabeça
+    # Touro reprodutor ≈ 1.5× valor do boi comercial (benchmark mercado RO/MT)
+    _matrizes_ini   = _va[6] + _va[8]
+    _prop_boi       = float(data.get('propboi', 30))
+    _renov_boi_pct  = float(data.get('renovboi', 20)) / 100
+    _touros_nec     = max(_matrizes_ini / max(_prop_boi, 1), 0)
+    _touros_renovados = _touros_nec * _renov_boi_pct
+    _fator_touro    = float(data.get('fator_touro', 1.5))  # multiplier s/ boi comercial
+    _peso_touro_arr = 20.53  # arrobas — mesmo do CATEGORIAS_GEP['boi']
+    _preco_touro_cab = _preco_boi_ref * _peso_touro_arr * _fator_touro
+    _reposicao_reprodutores = round(_touros_renovados * _preco_touro_cab, 2)
+
     # Serviço da dívida para o fluxo GEP (mesma base do DSCR do parecer)
     _servico_gep = 0.0
     if data.get('credito_valor') and data.get('prazo_meses') and data.get('juros_aa'):
@@ -611,11 +623,12 @@ def api_classificar():
         )
         _servico_gep = 12 * (_parcela + float(data.get('dividas_mensais', 0) or 0))
     fluxo_gep = calcular_fluxo_gep(
-        receita_caixa       = _ano1['receita'],
-        custo_caixa         = _ano1['custo'],
-        valor_rebanho_ini   = _val_ini['valor_total'],
-        valor_rebanho_fim   = _val_fim['valor_total'],
-        servico_divida_anual = _servico_gep,
+        receita_caixa            = _ano1['receita'],
+        custo_caixa              = _ano1['custo'],
+        valor_rebanho_ini        = _val_ini['valor_total'],
+        valor_rebanho_fim        = _val_fim['valor_total'],
+        servico_divida_anual     = _servico_gep,
+        reposicao_reprodutores   = _reposicao_reprodutores,
     )
 
     # COE (R$/@ vendida) = custo_operacional / arrobas_vendidas_estimadas
