@@ -639,16 +639,28 @@ def api_classificar():
         reposicao_reprodutores   = _reposicao_reprodutores,
     )
 
-    # COE (R$/@ vendida) = custo_operacional / arrobas_vendidas_estimadas
-    # arrobas_vendidas_est = receita / preco_boi (aproximação: toda receita em @)
-    if _preco_boi_ref > 0 and _ano1.get('receita', 0) > 0:
-        _arrobas_vend_est = _ano1['receita'] / _preco_boi_ref
-        _coe_calc = fluxo_gep['custo_operacional'] / _arrobas_vend_est
-        fluxo_gep['coe_por_arroba'] = round(_coe_calc, 2)
-        fluxo_gep['coe_benchmark']  = _avaliar_coe(result.get('tipo', 'CICLO_COMPLETO'), _coe_calc)
+    # COE (R$/@ vendida) = custo_operacional / arrobas_vendidas
+    # Arrobas reais por categoria — pesos GEP Araguaia (CATEGORIAS_GEP)
+    # Fallback para RECRIA/ENGORDA onde _ano1 não tem split por categoria.
+    _arr_bois   = float(_ano1.get('bois_vendidos', 0)) * 20.53
+    _arr_vacas  = float(_ano1.get('descarte_matrizes',
+                        _ano1.get('matrizes_descartadas', 0))) * 15.33
+    _arr_bezv   = float(_ano1.get('bezerras_vendidas', 0)) * 6.00
+    _arr_machos = float(_ano1.get('machos_024_vendidos',
+                        _ano1.get('machos_vendidos', 0))) * 10.67
+    _arrobas_reais = _arr_bois + _arr_vacas + _arr_bezv + _arr_machos
+    if _arrobas_reais <= 0 and _preco_boi_ref > 0 and _ano1.get('receita', 0) > 0:
+        _arrobas_reais = _ano1['receita'] / _preco_boi_ref  # fallback RECRIA/ENGORDA
+
+    if _arrobas_reais > 0:
+        _coe_calc = fluxo_gep['custo_operacional'] / _arrobas_reais
+        fluxo_gep['coe_por_arroba']    = round(_coe_calc, 2)
+        fluxo_gep['coe_benchmark']     = _avaliar_coe(result.get('tipo', 'CICLO_COMPLETO'), _coe_calc)
+        fluxo_gep['arrobas_vendidas']  = round(_arrobas_reais, 1)
     else:
-        fluxo_gep['coe_por_arroba'] = None
-        fluxo_gep['coe_benchmark']  = None
+        fluxo_gep['coe_por_arroba']   = None
+        fluxo_gep['coe_benchmark']    = None
+        fluxo_gep['arrobas_vendidas'] = None
 
     credito_inputs = {k: data.get(k) for k in
                       ('credito_valor', 'prazo_meses', 'juros_aa',
