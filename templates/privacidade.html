@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — Fluxo de Caixa Pecuário</title>
+  <style>
+    body { font-family: sans-serif; background: #f4f7f6; color: #333; margin: 0; padding: 0; }
+    .container { max-width: 760px; margin: 0 auto; padding: 48px 24px; }
+    h1 { color: #2c3e50; font-size: 1.6rem; margin-bottom: 4px; }
+    .subtitle { color: #888; font-size: .85rem; margin-bottom: 36px; }
+    h2 { color: #27ae60; font-size: 1rem; margin-top: 32px; margin-bottom: 8px; }
+    p, li { font-size: .9rem; line-height: 1.7; color: #444; }
+    ul { padding-left: 20px; }
+    a { color: #27ae60; }
+    .back { display: inline-block; margin-bottom: 24px; color: #888; font-size: .85rem; text-decoration: none; }
+    .back:hover { color: #27ae60; }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 8px; }
+    th { background: #f0f7f0; text-align: left; padding: 8px 12px; border: 1px solid #ddd; }
+    td { padding: 8px 12px; border: 1px solid #ddd; vertical-align: top; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="/">← Voltar ao sistema</a>
+  <h1>Política de Privacidade</h1>
+  <p class="subtitle">Última atualização: julho de 2026 &nbsp;·&nbsp; Versão 1.0</p>
+
+  <h2>1. Quem somos</h2>
+  <p>O <strong>Fluxo de Caixa Pecuário</strong> é uma plataforma de análise de crédito rural desenvolvida por <strong>Lucas Vinícius</strong> (doravante "nós", "nosso" ou "Controlador"), com sede no Brasil. Para fins da Lei nº 13.709/2018 (LGPD), somos o Controlador dos dados pessoais tratados neste serviço.</p>
+  <p>Contato do encarregado (DPO): <a href="mailto:viniciuslukas353@gmail.com">viniciuslukas353@gmail.com</a></p>
+
+  <h2>2. Dados coletados</h2>
+  <table>
+    <tr><th>Categoria</th><th>Dados</th><th>Origem</th></tr>
+    <tr><td>Identificação</td><td>Nome, endereço de e-mail</td><td>Cadastro pelo administrador</td></tr>
+    <tr><td>Dados da fazenda</td><td>Nome da propriedade, município, proprietário</td><td>Inseridos pelo usuário</td></tr>
+    <tr><td>Dados do rebanho</td><td>Composição por categoria (fêmeas e machos por faixa etária), volume total</td><td>Inseridos pelo usuário</td></tr>
+    <tr><td>Dados financeiros</td><td>Cotação de arroba, custo operacional, preço de categorias, crédito solicitado, prazo, juros, dívidas existentes</td><td>Inseridos pelo usuário</td></tr>
+    <tr><td>Dados de sessão</td><td>Cookie de sessão (identificador anônimo, sem rastreamento cross-site)</td><td>Gerado automaticamente</td></tr>
+    <tr><td>Logs de acesso</td><td>IP de origem, data/hora, rota acessada</td><td>Servidor web (Flask)</td></tr>
+  </table>
+  <p>Não coletamos dados sensíveis (Art. 5º, II, LGPD), dados de menores de 18 anos, nem realizamos perfilamento automatizado para decisões com efeitos jurídicos fora do contexto da análise de crédito rural.</p>
+
+  <h2>3. Finalidade e base legal</h2>
+  <table>
+    <tr><th>Finalidade</th><th>Base legal (Art. 7º, LGPD)</th></tr>
+    <tr><td>Classificar o tipo de exploração bovina e calcular indicadores de crédito (DSCR, GEP, COE)</td><td>Execução de contrato ou de procedimentos preliminares — inciso V</td></tr>
+    <tr><td>Armazenar histórico de pareceres por fazenda</td><td>Legítimo interesse do controlador — inciso IX</td></tr>
+    <tr><td>Manter segurança e integridade do sistema (logs)</td><td>Legítimo interesse do controlador — inciso IX</td></tr>
+    <tr><td>Comunicar atualizações críticas do serviço</td><td>Legítimo interesse — inciso IX</td></tr>
+  </table>
+
+  <h2>4. Compartilhamento</h2>
+  <p>Não vendemos, alugamos nem comercializamos seus dados. Os dados podem ser compartilhados com:</p>
+  <ul>
+    <li><strong>Railway (infraestrutura)</strong>: hospedagem da aplicação e banco de dados SQLite, com criptografia em repouso e em trânsito (TLS 1.2+). Railway está sujeito a GDPR e adota medidas técnicas compatíveis com a LGPD.</li>
+    <li><strong>Autoridades competentes</strong>: quando exigido por lei ou ordem judicial.</li>
+  </ul>
+  <p>Nenhum dado de rebanho ou financeiro é compartilhado com terceiros para fins comerciais.</p>
+
+  <h2>5. Retenção</h2>
+  <ul>
+    <li>Dados de conta: mantidos enquanto a conta estiver ativa. Após encerramento, excluídos em até 30 dias, salvo obrigação legal de retenção.</li>
+    <li>Pareceres e histórico: 5 anos, compatível com o prazo de prescrição de operações de crédito rural (CC, Art. 206).</li>
+    <li>Logs de acesso: 6 meses.</li>
+  </ul>
+
+  <h2>6. Seus direitos (Art. 18, LGPD)</h2>
+  <p>Você pode, a qualquer momento, solicitar:</p>
+  <ul>
+    <li><strong>Acesso</strong> aos dados que temos sobre você;</li>
+    <li><strong>Correção</strong> de dados incompletos, inexatos ou desatualizados;</li>
+    <li><strong>Anonimização, bloqueio ou eliminação</strong> de dados desnecessários ou tratados em desconformidade;</li>
+    <li><strong>Portabilidade</strong> dos seus dados em formato estruturado;</li>
+    <li><strong>Eliminação</strong> dos dados tratados com base em consentimento;</li>
+    <li><strong>Revogação do consentimento</strong>, quando aplicável;</li>
+    <li><strong>Informação</strong> sobre com quem compartilhamos seus dados.</li>
+  </ul>
+  <p>Para exercer qualquer direito, envie um e-mail para <a href="mailto:viniciuslukas353@gmail.com">viniciuslukas353@gmail.com</a> com o assunto <em>"LGPD — [tipo de solicitação]"</em>. Responderemos em até 15 dias úteis.</p>
+
+  <h2>7. Cookies</h2>
+  <p>Utilizamos apenas um cookie de sessão estritamente necessário ao funcionamento do login. Ele não contém dados pessoais identificáveis, não é compartilhado com terceiros e expira ao fechar o navegador (ou após 24 horas de inatividade). Não utilizamos cookies de rastreamento, analytics ou publicidade.</p>
+
+  <h2>8. Segurança</h2>
+  <p>Adotamos medidas técnicas e organizacionais adequadas: comunicação via HTTPS/TLS, senhas armazenadas com hash bcrypt, banco de dados em ambiente isolado, e controle de acesso por função (usuário / administrador).</p>
+
+  <h2>9. Alterações nesta política</h2>
+  <p>Podemos atualizar esta política periodicamente. Alterações materiais serão comunicadas por e-mail ou aviso no sistema com no mínimo 15 dias de antecedência. A versão sempre atualizada estará disponível em <strong>/privacidade</strong>.</p>
+
+  <h2>10. Contato e reclamações</h2>
+  <p>Para dúvidas, solicitações ou reclamações: <a href="mailto:viniciuslukas353@gmail.com">viniciuslukas353@gmail.com</a>.</p>
+  <p>Se considerar que seu tratamento de dados viola a LGPD, você pode registrar reclamação junto à <strong>ANPD</strong> (Autoridade Nacional de Proteção de Dados): <a href="https://www.gov.br/anpd" target="_blank" rel="noopener">www.gov.br/anpd</a>.</p>
+</div>
+</body>
+</html>

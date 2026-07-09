@@ -241,6 +241,14 @@ def login():
 def esqueci_senha():
     return render_template('esqueci_senha.html')
 
+@app.route('/privacidade')
+def privacidade():
+    return render_template('privacidade.html')
+
+@app.route('/termos')
+def termos():
+    return render_template('termos.html')
+
 @app.route('/cadastro', methods=['GET', 'POST'])
 def cadastro():
     # Cadastro público desativado: apenas administradores criam contas em /admin.
