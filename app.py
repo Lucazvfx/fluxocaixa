@@ -1,5 +1,5 @@
 """
-BoviML — Servidor Flask (CORRIGIDO)
+Plataforma de Análise de Crédito Pecuário — Servidor Flask
 """
 import logging
 import os
@@ -7,7 +7,6 @@ import re
 import io
 import tempfile
 import subprocess
-import threading
 from functools import wraps
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file, session
@@ -16,7 +15,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from ml_engine import (
     treinar_modelo, classificar, calcular_indicadores,
-    simular_cenario, retrain_com_dados, carregar_modelo, CENARIOS,
+    simular_cenario, carregar_modelo, CENARIOS,
     avaliar_benchmarks, extrair_indicadores_benchmark, calcular_breakeven_simples,
 )
 import database as db
@@ -33,7 +32,7 @@ try:
 except ImportError:
     parsear_generico = None
 
-from scraper import obter_precos_arroba, obter_precos_agrobr_strict
+from scraper import obter_precos_arroba
 
 from parsers.composicao_rebanho import ler_template
 from services.consistencia_rebanho import analisar_consistencia, analisar_consistencia_historica
@@ -167,10 +166,6 @@ db.init_db()
 logger.info("🗃️  Banco SQLite inicializado.")
 garantir_admins()
 
-# ── Estado de re-treino com proteção de concorrência ──────────────────────
-_retraining = False
-_retrain_lock = threading.Lock()
-
 # ── Automação: Cotações Diárias (Scraper) ────────────────────────────────────
 def rotina_diaria_cotacoes():
     """Função executada em background para atualizar preços da arroba."""
@@ -192,34 +187,6 @@ scheduler.start()
 
 # Opcional: Roda uma vez assim que o servidor liga para garantir que a tabela não fica vazia
 rotina_diaria_cotacoes()
-
-# ── Auto-retreino em background ──────────────────────────────────────────────
-def _auto_retrain():
-    """Executa o re-treino em background com proteção de concorrência."""
-    global stats, _retraining
-    with _retrain_lock:
-        if _retraining:
-            logger.info("⚠️ Re-treino já em andamento, ignorando nova solicitação.")
-            return
-        _retraining = True
-
-    try:
-        logger.info("🔄 Iniciando auto-retreino em background...")
-        X_extra, y_extra = db.exportar_treino()
-        new_stats = retrain_com_dados(X_extra, y_extra)
-        with _retrain_lock:
-            stats = new_stats
-        logger.info(f"✅ Auto-retreino concluído | Acurácia: {stats['accuracy_mean']*100:.1f}% | {stats.get('n_confirmados', 0)} confirmados")
-    except Exception as e:
-        logger.error(f"❌ Erro no auto-retreino: {e}", exc_info=True)
-    finally:
-        with _retrain_lock:
-            _retraining = False
-
-def is_retraining() -> bool:
-    """Retorna True se um re-treino estiver em andamento (thread-safe)."""
-    with _retrain_lock:
-        return _retraining
 
 # ── Auth routes ─────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
@@ -732,89 +699,6 @@ def api_classificar():
         'valores': v,
         'registro_id': registro_id,
     })
-
-@app.route('/api/confirmar', methods=['POST'])
-@login_required
-def api_confirmar():
-    """Confirma ou corrige a classificação e dispara auto-retreino em background.
-       Apenas o dono do registro pode confirmar (verifica pela fazenda).
-    """
-    data = request.json
-    rid  = data.get('registro_id')
-    cls  = data.get('classificacao', '').strip().upper()
-    if not rid or not cls:
-        return jsonify({'erro': 'Campos registro_id e classificacao são obrigatórios'}), 400
-
-    # Buscar o registro e verificar se a fazenda pertence à empresa ativa.
-    registro = db.buscar_registro_por_id(int(rid))
-    if not registro:
-        return jsonify({'erro': 'Registro não encontrado'}), 404
-    fazenda_nome = registro['fazenda']
-    empresa_id = _resolver_empresa_ativa()
-    fazendas_do_user = db.listar_fazendas(empresa_id) if empresa_id else []
-    if not any(f['nome'] == fazenda_nome for f in fazendas_do_user):
-        return jsonify({'erro': 'Você não tem permissão para confirmar este registro'}), 403
-
-    try:
-        db.confirmar(int(rid), cls)
-        s = db.stats()
-        # Dispara retreino em background se não houver um em andamento
-        if not is_retraining():
-            threading.Thread(target=_auto_retrain, daemon=True).start()
-        return jsonify({'ok': True, 'stats': s, 'retraining': True})
-    except ValueError as e:
-        return jsonify({'erro': str(e)}), 400
-
-@app.route('/api/retrain', methods=['POST'])
-@login_required
-def api_retrain():
-    """Dispara o re-treino do modelo em background (não bloqueia)."""
-    if is_retraining():
-        return jsonify({'ok': False, 'mensagem': 'Re-treino já em andamento'}), 409
-    threading.Thread(target=_auto_retrain, daemon=True).start()
-    return jsonify({'ok': True, 'mensagem': 'Re-treino iniciado em background'})
-
-@app.route('/api/retrain/status', methods=['GET'])
-@login_required
-def api_retrain_status():
-    """Retorna o status atual do re-treino."""
-    return jsonify({'retraining': is_retraining(), 'stats': stats})
-
-@app.route('/api/historico', methods=['GET'])
-@login_required
-def api_historico():
-    """Retorna o histórico de classificações da empresa ativa (registros de suas fazendas)."""
-    # Busca todas as fazendas da empresa ativa
-    empresa_id = _resolver_empresa_ativa()
-    fazendas = db.listar_fazendas(empresa_id) if empresa_id else []
-    nomes_fazendas = [f['nome'] for f in fazendas]
-    if not nomes_fazendas:
-        return jsonify({'registros': [], 'stats': db.stats()})
-
-    limit = min(int(request.args.get('limit', 60)), 200)
-    rows = db.listar_registros_por_fazendas(nomes_fazendas, limit=limit)
-    registros = []
-    for row in rows:
-        registros.append({
-            'id': row['id'],
-            'valores': row['valores'],
-            'classificacao_ml': row.get('class_ml'),
-            'confianca': row.get('confianca'),
-            'classificacao_confirmada': row.get('class_conf'),
-            'fazenda': row.get('fazenda'),
-            'municipio': row.get('municipio'),
-            'data_criacao': row.get('created_at'),
-            'natalidade_pct': row.get('nat_pct'),
-        })
-    return jsonify({'registros': registros, 'stats': db.stats()})
-
-@app.route('/api/db-stats', methods=['GET'])
-@login_required
-def api_db_stats():
-    s = db.stats()
-    s['accuracy'] = stats.get('accuracy_mean', 0)
-    s['retraining'] = is_retraining()
-    return jsonify(s)
 
 @app.route('/api/precos/live', methods=['GET'])
 def api_precos_live():

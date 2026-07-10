@@ -41,13 +41,3 @@ def test_resposta_json_inclui_progresso():
     assert faltam == 6
     assert _confirmacoes_desde_retrain == 4
 
-def test_constantes_app_py_existem():
-    """Verifica que RETRAIN_A_CADA e o contador (agora persistido) existem em app.py."""
-    import app
-    assert hasattr(app, 'RETRAIN_A_CADA'), "RETRAIN_A_CADA não definido em app.py"
-    assert app.RETRAIN_A_CADA == 10, f"Esperado 10, obtido {app.RETRAIN_A_CADA}"
-    # Agora o contador é persistido no DB; expomos um getter
-    assert hasattr(app, '_get_confirmacoes_desde_retrain'), \
-        "Helper _get_confirmacoes_desde_retrain não definido em app.py"
-    valor = app._get_confirmacoes_desde_retrain()
-    assert isinstance(valor, int)
