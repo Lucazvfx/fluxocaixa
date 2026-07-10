@@ -242,11 +242,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <header>
   <div class="logo"><div class=""></div>Fluxo de Caixa<em></em></div>
   <div class="hdr-r">
-    <span id="hdr-acc" class="ml-acc" style="cursor:default" title="Acurácia atual do modelo ML">-- %</span>
-    <span id="hdr-db" class="ml-acc" style="cursor:default" title="Registros salvos / confirmados para treino">0 / 0</span>
     <span id="hdr-boi" class="ml-acc" style="cursor:default" title="Cotação Boi (R$/arroba)">Boi: --</span>
     <span id="hdr-vaca" class="ml-acc" style="cursor:default" title="Cotação Vaca (R$/arroba)">Vaca: --</span>
-    <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(74,222,128,.07);color:var(--g);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(74,222,128,.2)" onclick="retreinarModelo()" id="btn-retrain">↺ Retreinar</button>
     {% if eh_admin %}<a class="ml-acc" href="{{ url_for('admin') }}" style="cursor:pointer;text-decoration:none;background:rgba(96,165,250,.1);color:var(--cy);font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(96,165,250,.3)" title="Gerenciar acessos">⚙ Acessos</a>{% endif %}
     <select id="empresa-ativa-select" class="ml-acc" style="cursor:pointer;background:rgba(96,165,250,.07);color:var(--cy);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:4px 8px;font-family:var(--fm);font-size:.58rem" onchange="trocarEmpresaAtiva()" title="Empresa ativa"></select>
     <button class="ml-acc" style="cursor:pointer;border:none;background:rgba(167,139,250,.1);color:#A78BFA;font-family:var(--fm);font-size:.58rem;padding:4px 10px;border-radius:8px;border:1px solid rgba(167,139,250,.3)" onclick="abrirMarcaModal()" title="Marca da consultoria no PDF">⚙ Marca</button>
@@ -403,15 +400,6 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 <!-- ═══ RESULTADO ═══ -->
 <div class="panel" id="panel-resultado">
   <div id="result-wrap"></div>
-  <div class="card" id="card-confirmar" style="display:none;margin-top:16px">
-    <div class="ch"><div class="ct"><div class="cd" style="background:var(--g)"></div>Confirmar para Treino do Modelo</div><span id="conf-saved" style="font-family:var(--fm);font-size:.65rem;color:var(--g);display:none">✓ Salvo!</span></div>
-    <div class="cb" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-      <div class="field" style="flex:1;min-width:140px"><label>Classificação ML</label><input type="text" id="conf-ml-tipo" readonly style="background:var(--c2);color:var(--mu)"></div>
-      <div class="field" style="flex:1;min-width:160px"><label>Classificação Correta</label><select id="conf-tipo"><option value="CRIA">CRIA</option><option value="RECRIA">RECRIA</option><option value="ENGORDA">ENGORDA</option><option value="CICLO_COMPLETO">CICLO COMPLETO</option></select></div>
-      <button class="btn-p" onclick="confirmarClassificacao()" style="flex-shrink:0"><span>✓ Confirmar</span></button>
-    </div>
-    <div style="padding:0 22px 16px;font-family:var(--fm);font-size:.65rem;color:var(--mu)">Cada confirmação melhora o modelo. Após acumular dados, clique em <strong style="color:var(--tx)">Retreinar</strong> no cabeçalho.</div>
-  </div>
 </div>
 
 <!-- ═══ CENÁRIOS ═══ -->
@@ -883,15 +871,6 @@ async function classificar(){
     document.getElementById('tab-res').classList.remove('tab-locked');
     document.getElementById('tab-cen').classList.remove('tab-locked');
     window.scrollTo({top:0,behavior:'smooth'});
-    const cc=document.getElementById('card-confirmar');
-    const mlTipo=document.getElementById('conf-ml-tipo');
-    const selTipo=document.getElementById('conf-tipo');
-    if(cc&&lastRegistroId){
-      mlTipo.value=data.classificacao||'';
-      selTipo.value=data.classificacao||'CRIA';
-      document.getElementById('conf-saved').style.display='none';
-      cc.style.display='block';
-    }
     document.getElementById('s-mat').value=v[6]+v[8];
     document.getElementById('s-fem').value=v[0]+v[2]+v[4];
     document.getElementById('s-mac').value=v[1]+v[3]+v[5];
@@ -899,7 +878,6 @@ async function classificar(){
     if (data.classificacao) afterClassificationSync(data.classificacao);
     recalcCiclo();
     runSc();
-    atualizarDbStats();
   }finally{hideLoading()}
 }
 
@@ -1842,53 +1820,6 @@ function showLoading(msgs){
 function hideLoading(){document.getElementById('loading-ov').classList.remove('show');if(_loadTimer){clearInterval(_loadTimer);_loadTimer=null;}}
 function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(err?' err':'')+' show';setTimeout(()=>t.classList.remove('show'),3500)}
 
-// ================== CONFIRMAR E RETREINAR ==================
-async function confirmarClassificacao(){
-  if(!lastRegistroId){showToast('Nenhum registro para confirmar.',true);return}
-  const cls=document.getElementById('conf-tipo').value;
-  try{
-    const res=await fetch('/api/confirmar',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({registro_id:lastRegistroId,classificacao:cls})});
-    const data=await res.json();
-    if(data.erro){showToast(data.erro,true);return}
-    const sv=document.getElementById('conf-saved');
-    if(sv){sv.style.display='inline';setTimeout(()=>sv.style.display='none',3000)}
-    showToast('✓ Confirmado! Modelo atualizando em segundo plano...');
-    atualizarDbStats(data.stats);
-    setTimeout(()=>atualizarDbStats(),35000);
-  }catch(e){showToast('Erro ao confirmar: '+e.message,true)}
-}
-
-async function retreinarModelo(){
-  const btn=document.getElementById('btn-retrain');
-  if(btn){btn.textContent='⏳ Treinando...';btn.disabled=true}
-  showLoading('Retreinando modelo com dados confirmados...');
-  try{
-    const res=await fetch('/api/retrain',{method:'POST'});
-    const data=await res.json();
-    if(data.erro){showToast(data.erro,true);return}
-    showToast(`Modelo atualizado! Acurácia: ${(data.accuracy_mean*100).toFixed(1)}% (${data.n_confirmados} confirmados)`);
-    atualizarDbStats();
-  }catch(e){showToast('Erro ao retreinar: '+e.message,true)}
-  finally{
-    if(btn){btn.textContent='↺ Retreinar';btn.disabled=false}
-    hideLoading()
-  }
-}
-
-async function atualizarDbStats(s=null){
-  try{
-    if(!s){const r=await fetch('/api/db-stats');s=await r.json()}
-    const elDb=document.getElementById('hdr-db');
-    if(elDb) elDb.textContent=(s.total||0)+' / '+(s.confirmados||0);
-    const elAcc=document.getElementById('hdr-acc');
-    if(elAcc&&s.accuracy){
-      elAcc.textContent=(s.accuracy*100).toFixed(1)+'%';
-      elAcc.title='Acurácia ML: '+(s.accuracy*100).toFixed(1)+'%'+(s.retraining?' · atualizando...':'');
-      elAcc.style.opacity=s.retraining?'0.6':'1';
-    }
-  }catch{}
-}
 
 function logout() {
   window.location.href = '/logout';
@@ -2078,7 +2009,6 @@ atualizarTituloCiclo();
 buildTable();
 recalcCiclo();
 runSc();
-atualizarDbStats();
 carregarCotacaoDia();
 carregarEmpresaAtiva();
 carregarFazendasSelect();
