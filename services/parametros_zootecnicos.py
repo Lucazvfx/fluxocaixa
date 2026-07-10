@@ -42,12 +42,15 @@ DESFRUTE_PCT = {
     'CICLO_COMPLETO': midpoint(20.0, 40.0),  # 30.0
 }
 
-# ── Pesos por categoria: referência de mercado ───────────────────────────────
-# Rendimento de carcaça de referência de abate (CEPEA/mercado ≈ 50%). Distinto do
-# rendimento de engorda (RENDIMENTO_CARCACA_PCT), usado no cálculo da terminação.
-RENDIMENTO_ABATE = 0.50
-# Pesos vivos de referência (kg) — boi ~540 dá 18@ (padrão CEPEA 16–21@).
-PESO_VIVO_KG = {'boi': 540.0, 'vaca': 420.0, 'garrote': 330.0, 'bezerra': 210.0}
+# ── Pesos por categoria: GEP Araguaia safra 24/25 (fonte primária) ───────────
+# Derivados de: peso_kg × rendimento ÷ 15. Boi tem rendimento 55%; demais 50%.
+# Fonte: MODELAGEM RESULTADO CC 2 (GEP Araguaia / Fazenda Alvorada).
+# Estes valores são idênticos aos de CATEGORIAS_GEP em fluxo_caixa_gep.py —
+# manter sincronizados manualmente caso a fonte mude.
+RENDIMENTO_ABATE     = 0.50   # padrão (vaca, novilha, garrote, bezerra)
+RENDIMENTO_ABATE_BOI = 0.55   # boi terminado (maior musculatura e acabamento)
+
+PESO_VIVO_KG = {'boi': 560.0, 'vaca': 460.0, 'garrote': 320.0, 'bezerra': 180.0}
 
 
 def peso_arroba_carcaca(kg_vivo: float, rendimento: float = RENDIMENTO_ABATE) -> float:
@@ -55,7 +58,13 @@ def peso_arroba_carcaca(kg_vivo: float, rendimento: float = RENDIMENTO_ABATE) ->
     return kg_vivo * rendimento / 15.0
 
 
-PESO_BOI_ARR = peso_arroba_carcaca(PESO_VIVO_KG['boi'])          # 18.0
-PESO_VACA_ARR = peso_arroba_carcaca(PESO_VIVO_KG['vaca'])        # 14.0
-PESO_GARROTE_ARR = peso_arroba_carcaca(PESO_VIVO_KG['garrote'])  # 11.0
-PESO_BEZERRA_ARR = peso_arroba_carcaca(PESO_VIVO_KG['bezerra'])  # 7.0
+PESO_BOI_ARR     = peso_arroba_carcaca(PESO_VIVO_KG['boi'],     RENDIMENTO_ABATE_BOI)  # 20.53
+PESO_VACA_ARR    = peso_arroba_carcaca(PESO_VIVO_KG['vaca'])                            # 15.33
+PESO_GARROTE_ARR = peso_arroba_carcaca(PESO_VIVO_KG['garrote'])                         # 10.67
+PESO_BEZERRA_ARR = peso_arroba_carcaca(PESO_VIVO_KG['bezerra'])                         # 6.00
+
+# Jovens 0–24m agregados (usados em arrobas_categorias e val_fim legado):
+# média simples das duas sub-faixas etárias dentro do grupo.
+# novilha (13-24m F): 280 kg × 50% / 15 = 9.33@ ; bezerro (0-12m M): 200 kg × 50% / 15 = 6.67@
+PESO_JOVEM_F_ARR = (PESO_BEZERRA_ARR + peso_arroba_carcaca(280.0)) / 2  # (6.00 + 9.33) / 2 = 7.67
+PESO_JOVEM_M_ARR = (peso_arroba_carcaca(200.0) + PESO_GARROTE_ARR) / 2  # (6.67 + 10.67) / 2 = 8.67

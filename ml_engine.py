@@ -546,7 +546,7 @@ def calcular_ano(
     nat_pct, desc_mat_pct, prop_boi, renov_boi_pct,
     venda_bez_pct, mort_pct, preco_arroba, custo_arroba,
     peso_boi: float = PESO_BOI_ARR, peso_vaca: float = PESO_VACA_ARR,
-    peso_bezerra: float = PESO_BEZERRA_ARR, peso_garrote: float = None,
+    peso_bezerra: float = PESO_BEZERRA_ARR, peso_garrote: float = PESO_GARROTE_ARR,
     preco_boi_arr: float = None, preco_vaca_arr: float = None,
     preco_bezerra_cab: float = None, preco_bezerro_cab: float = None,
     mort_adulto_pct: float = None,   # fração; default = mort_pct
@@ -555,13 +555,11 @@ def calcular_ano(
     """
     Pesos diferenciados na faixa jovem (0-25 meses):
     'femeas_024'/'machos_024' agrupam 3 sub-faixas etárias. Bezerras
-    vendidas (bez_vend) tendem a ser do desmame, mais leves (peso_bezerra).
+    vendidas (bez_vend) tendem a ser do desmame, mais leves (peso_bezerra=6.0@).
     Machos jovens excedentes (machos_024_vend) são predominantemente
-    garrotes próximos dos 25 meses — mais pesados. peso_garrote
-    (padrão: 1.5× peso_bezerra) corrige essa subestimação de receita.
+    garrotes próximos dos 25 meses — mais pesados (peso_garrote=10.67@).
+    Todos os pesos seguem GEP Araguaia safra 24/25 via parametros_zootecnicos.
     """
-    if peso_garrote is None:
-        peso_garrote = peso_bezerra * 1.5
 
     bezerros = matrizes * nat_pct
     bois_nec   = max(round(matrizes / max(prop_boi, 1)), 1)
@@ -675,7 +673,7 @@ def _montar_resultado(cenario, sc, anos_proj, total_ini, ciclo):
 def _simular_cria(
     v, cenario, nat_pct, mort_pct, desmama_pct, venda_bez_pct,
     preco_arroba_bezerro, custo_arroba, anos,
-    peso_matriz=17.0, peso_bezerra=8.0, preco_vaca_arr=None,
+    peso_matriz=PESO_VACA_ARR, peso_bezerra=PESO_BEZERRA_ARR, preco_vaca_arr=None,
 ):
     va  = np.array(v, dtype=float)
     sc  = CENARIOS.get(cenario, CENARIOS['crescimento'])
@@ -917,8 +915,8 @@ def simular_cenario(
     custo_arroba_cria:    float = None,  # se informado, substitui custo_arroba p/ cria
     custo_arroba_recria:  float = None,  # se informado, substitui custo_arroba p/ recria
     custo_arroba_engorda: float = None,  # se informado, substitui custo_arroba p/ engorda
-    peso_arroba:    float = PESO_BEZERRA_ARR,  # bezerra (ref. mercado, 7@)
-    peso_garrote:   float = PESO_GARROTE_ARR,  # garrote macho jovem (ref. 11@)
+    peso_arroba:    float = PESO_BEZERRA_ARR,  # bezerra desmame GEP (6.00@)
+    peso_garrote:   float = PESO_GARROTE_ARR,  # garrote macho jovem GEP (10.67@)
     prop_boi:       float = None,
     renov_boi_pct:  float = None,
     venda_bez_pct:  float = None,
@@ -934,8 +932,8 @@ def simular_cenario(
     peso_saida_kg:      float = 520.0,  # memorial §16: 520kg
     rendimento_carcaca: float = 52.0,
     dias_engorda:       int   = 90,
-    peso_boi:           float = PESO_BOI_ARR,   # ref. mercado (18@)
-    peso_vaca:          float = PESO_VACA_ARR,  # ref. mercado (14@)
+    peso_boi:           float = PESO_BOI_ARR,   # GEP Araguaia (20.53@)
+    peso_vaca:          float = PESO_VACA_ARR,  # GEP Araguaia (15.33@)
     preco_boi_arr:      float = None,   # R$/@ boi do dia (senão usa preco_arroba)
     preco_vaca_arr:     float = None,   # R$/@ vaca do dia
     preco_bezerra_cab:  float = None,   # R$/cabeça bezerra do dia
