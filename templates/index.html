@@ -324,6 +324,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <button class="btn-sm" onclick="window.location='/api/template/download'">⬇ Template</button>
         <button class="btn-sm" onclick="document.getElementById('insr-xlsx-inp').click()">📊 Ler Planilha</button>
         <input type="file" id="insr-xlsx-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerPlanilha(this.files[0]);this.value=''">
+        <button class="btn-sm" onclick="document.getElementById('insr-ficha-inp').click()">📋 Ler Ficha</button>
+        <input type="file" id="insr-ficha-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerFichaExcel(this.files[0]);this.value=''">
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
       </div>
     </div>
@@ -974,6 +976,38 @@ async function lerPlanilha(file){
     showToast(`Planilha lida: ${fN(data.total)} animais`);
   }catch(e){ showToast('Erro ao processar planilha: '+e.message,true); }
   finally{ hideLoading(); }
+}
+
+async function lerFichaExcel(file){
+  if(!file) return;
+  showLoading('Lendo ficha de rebanho...');
+  try{
+    const fd=new FormData(); fd.append('arquivo',file);
+    const res=await fetch('/api/importar-ficha-excel',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler ficha',true); return; }
+    const fazendas=data.fazendas||[];
+    if(!fazendas.length){ showToast('Nenhuma fazenda encontrada na ficha.',true); return; }
+    if(fazendas.length===1){
+      _carregarFichaFazenda(fazendas[0]);
+    } else {
+      // Mostra seletor inline no painel
+      const wrap=document.getElementById('consist-panel');
+      wrap.style.display='block';
+      wrap.innerHTML=`<div style="font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione a fazenda</div>`
+        +fazendas.map((f,i)=>`<button class="btn-sm" style="margin:4px 4px 4px 0;display:inline-flex" onclick="_carregarFichaFazenda(window._fichaFazendas[${i}]);document.getElementById('consist-panel').style.display='none'">
+          ${f.fazenda} <span style="opacity:.6;margin-left:6px">${fN(f.total)} cab.</span>
+        </button>`).join('');
+      window._fichaFazendas=fazendas;
+      showToast(`${fazendas.length} fazendas encontradas — selecione uma.`);
+    }
+  }catch(e){ showToast('Erro ao ler ficha: '+e.message,true); }
+  finally{ hideLoading(); }
+}
+function _carregarFichaFazenda(f){
+  setValsFromApi(f.valores);
+  document.getElementById('f_faz').value=f.fazenda||'';
+  showToast(`Ficha carregada: ${f.fazenda} (${fN(f.total)} animais)`);
 }
 
 function renderConsistencia(c){
