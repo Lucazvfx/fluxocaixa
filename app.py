@@ -24,13 +24,15 @@ import database as db
 # Usaremos as funções locais para extrair texto e detectar origem, pois têm fallback.
 # Mas importamos os parsers específicos.
 from pdf_parsers import (
-    parsear_idaron, parsear_indea, parsear_declaracao_idaron
+    parsear_idaron, parsear_indea, parsear_declaracao_idaron,
+    ORIGENS_GENERICAS, ORIGENS_INDEA,
 )
-# Tenta importar o parsear_generico se existir
 try:
     from pdf_parsers import parsear_generico
 except ImportError:
     parsear_generico = None
+
+from services.importar_excel import parsear_ficha_excel
 
 from scraper import obter_precos_arroba
 
@@ -816,24 +818,9 @@ def extrair_texto_pdf(path: str) -> str:
         raise RuntimeError(f'Não foi possível extrair texto do PDF: {e}')
 
 def detectar_origem(text: str) -> str:
-    """Detecta a origem do documento com base no texto."""
-    up = text.upper()
-    if 'DECLARAÇÃO Nº' in up and 'IDARON' in up:
-        return 'DECLARACAO_IDARON'
-    if ('IDARON' in up
-            or 'AGÊNCIA DE DEFESA SANITÁRIA AGROSILVOPASTORIL' in up
-            or 'AGENCIA DE DEFESA SANITARIA AGROSILVOPASTORIL' in up
-            or 'FORMULÁRIO DE ANOTAÇÕES' in up
-            or 'FORMULARIO DE ANOTACOES' in up
-            or ('RONDÔNIA' in up and ('SALDO' in up or 'REBANHO' in up or 'GTA' in up))):
-        return 'IDARON'
-    if ('INDEA' in up
-            or 'INSTITUTO DE DEFESA AGROPECUÁRIA' in up
-            or 'INSTITUTO DE DEFESA AGROPECUARIA' in up
-            or 'SALDO ATUAL DA EXPLORAÇÃO' in up
-            or 'SALDO ATUAL DA EXPLORACAO' in up):
-        return 'INDEA'
-    return 'GENERICO'
+    """Detecta agência/estado do documento — delega para pdf_parsers."""
+    from pdf_parsers import detectar_origem as _det
+    return _det(text)
 
 @app.route('/api/ler-pdf', methods=['POST'])
 @login_required
@@ -855,10 +842,14 @@ def api_ler_pdf():
                 dados = parsear_declaracao_idaron(text)
             elif orig == 'IDARON':
                 dados = parsear_idaron(text, pdf_path=tmp_path)
-            elif orig == 'INDEA':
+            elif orig in ORIGENS_INDEA:          # MT, GO
                 dados = parsear_indea(text)
+            elif orig in ORIGENS_GENERICAS:      # MS, MA, TO, PA + fallback
+                dados = (parsear_generico(text) if parsear_generico is not None
+                         else parsear_indea(text))
+                if dados['total'] == 0:
+                    dados = parsear_idaron(text, pdf_path=tmp_path)
             else:
-                # Fallback: tenta IDARON, INDEA e genérico se disponível
                 dados = parsear_idaron(text, pdf_path=tmp_path)
                 if dados['total'] == 0:
                     dados = parsear_indea(text)
@@ -879,6 +870,36 @@ def api_template_download():
         'modelo_composicao_rebanho.xlsx',
         as_attachment=True,
     )
+
+
+@app.route('/api/importar-ficha-excel', methods=['POST'])
+@login_required
+def api_importar_ficha_excel():
+    """Importa a planilha 'Classificação de Rebanho - Fichas' (CONSOLIDADO).
+
+    Aceita .xlsx ou .xlsm. Devolve lista de fazendas com seus rebanhos já
+    mapeados para o formato v[] de 10 posições usado no classificador.
+
+    Resposta JSON:
+      { "fazendas": [{"fazenda": str, "valores": [10 ints], "total": int}, ...] }
+    """
+    if 'arquivo' not in request.files:
+        return jsonify({'erro': 'Envie o arquivo no campo "arquivo"'}), 400
+    f = request.files['arquivo']
+    if not f.filename.lower().endswith(('.xlsx', '.xlsm')):
+        return jsonify({'erro': 'Apenas .xlsx ou .xlsm são aceitos'}), 400
+
+    try:
+        conteudo = f.read()
+        fazendas = parsear_ficha_excel(conteudo)
+        if not fazendas:
+            return jsonify({'erro': 'Nenhuma fazenda com animais encontrada na aba CONSOLIDADO'}), 400
+        return jsonify({'fazendas': fazendas, 'total_fazendas': len(fazendas)})
+    except KeyError:
+        return jsonify({'erro': 'Aba CONSOLIDADO não encontrada — verifique o formato do arquivo'}), 400
+    except Exception as e:
+        logger.error(f'Erro ao importar ficha Excel: {e}', exc_info=True)
+        return jsonify({'erro': str(e)}), 500
 
 
 @app.route('/api/ler-planilha', methods=['POST'])
@@ -937,10 +958,17 @@ def api_parse_text():
     origem = data.get('origem')
     try:
         orig = origem or detectar_origem(text)
-        if orig == 'IDARON':
+        if orig == 'DECLARACAO_IDARON':
+            dados = parsear_declaracao_idaron(text)
+        elif orig == 'IDARON':
             dados = parsear_idaron(text)
-        elif orig == 'INDEA':
+        elif orig in ORIGENS_INDEA:
             dados = parsear_indea(text)
+        elif orig in ORIGENS_GENERICAS:
+            dados = (parsear_generico(text) if parsear_generico is not None
+                     else parsear_indea(text))
+            if dados['total'] == 0:
+                dados = parsear_idaron(text)
         else:
             dados = parsear_idaron(text)
             if dados['total'] == 0:

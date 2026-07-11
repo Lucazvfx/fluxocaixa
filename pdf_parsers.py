@@ -1,13 +1,23 @@
 """
-Parsers de PDF de saldo de rebanho — IDARON-RO, INDEA-MT, DECLARAÇÃO IDARON e GENÉRICO.
+Parsers de PDF de saldo de rebanho — multi-estado.
 
 Expõe:
   extrair_texto_pdf(path) -> str
-  detectar_origem(text)   -> 'IDARON' | 'INDEA' | 'DECLARACAO_IDARON' | 'GENERICO'
-  parsear_idaron(text, pdf_path=None) -> dict
-  parsear_indea(text)                 -> dict
-  parsear_declaracao_idaron(text)     -> dict
-  parsear_generico(text)              -> dict
+  detectar_origem(text)   -> origem (str)  — ver _ORIGENS abaixo
+  parsear_idaron(text, pdf_path=None) -> dict   RO
+  parsear_indea(text)                 -> dict   MT / GO_DECLARACAO
+  parsear_declaracao_idaron(text)     -> dict   RO declaração eletrônica
+  parsear_generico(text)              -> dict   MS / MA / TO / PA + fallback
+
+Estados suportados via MAPEAMENTO (Classificação de Rebanho - Fichas.xlsm):
+  MT_DECLARACAO  → INDEA    (5 faixas: 0-4m / 5-12m / 13-24m / 25-36m / 36m+)
+  GO_DECLARACAO  → INDEA    (mesmo padrão MT)
+  GO_IR          → INDEA
+  RO_DECLARACAO  → IDARON   (4 faixas: 0-12m / 13-24m / 25-36m / 36m+)
+  MS             → GENERICO (4 faixas)
+  MA             → GENERICO (4 faixas)
+  TO_DECLARACAO  → GENERICO (4 faixas)
+  PA_DECLARACAO  → GENERICO (4 faixas)
 """
 import re
 import subprocess
@@ -40,7 +50,21 @@ def extrair_texto_pdf(path: str) -> str:
 # DETECÇÃO DE ORIGEM
 # ─────────────────────────────────────────────
 def detectar_origem(text: str) -> str:
+    """Detecta agência/estado do documento.
+
+    Retorna um dos valores:
+      'DECLARACAO_IDARON' — declaração eletrônica IDARON (RO)
+      'IDARON'            — formulário de anotações IDARON (RO)
+      'INDEA'             — INDEA-MT ou AGRODEFESA-GO (5 faixas etárias)
+      'IAGRO_MS'          — IAGRO Mato Grosso do Sul (4 faixas)
+      'ADAPEC_TO'         — ADAPEC Tocantins (4 faixas)
+      'AGED_MA'           — AGED Maranhão (4 faixas)
+      'ADEPARA_PA'        — ADEPARÁ Pará (4 faixas)
+      'GENERICO'          — fallback
+    """
     up = text.upper()
+
+    # — RO (IDARON) — prioridade máxima pois 'IDARON' é inequívoco
     if 'DECLARAÇÃO Nº' in up and 'IDARON' in up:
         return 'DECLARACAO_IDARON'
     if ('IDARON' in up
@@ -50,13 +74,52 @@ def detectar_origem(text: str) -> str:
             or 'FORMULARIO DE ANOTACOES' in up
             or ('RONDÔNIA' in up and ('SALDO' in up or 'REBANHO' in up or 'GTA' in up))):
         return 'IDARON'
+
+    # — MT / GO (formato 5 faixas) —
     if ('INDEA' in up
             or 'INSTITUTO DE DEFESA AGROPECUÁRIA' in up
             or 'INSTITUTO DE DEFESA AGROPECUARIA' in up
             or 'SALDO ATUAL DA EXPLORAÇÃO' in up
-            or 'SALDO ATUAL DA EXPLORACAO' in up):
+            or 'SALDO ATUAL DA EXPLORACAO' in up
+            or 'AGRODEFESA' in up                   # GO
+            or 'AGÊNCIA GOIANA DE DEFESA' in up
+            or 'AGENCIA GOIANA DE DEFESA' in up):
         return 'INDEA'
+
+    # — MS (IAGRO — 4 faixas) —
+    if ('IAGRO' in up
+            or 'AGÊNCIA ESTADUAL DE DEFESA SANITÁRIA ANIMAL E VEGETAL' in up
+            or 'AGENCIA ESTADUAL DE DEFESA SANITARIA ANIMAL E VEGETAL' in up
+            or ('MATO GROSSO DO SUL' in up and ('REBANHO' in up or 'SALDO' in up))):
+        return 'IAGRO_MS'
+
+    # — TO (ADAPEC — 4 faixas) —
+    if ('ADAPEC' in up
+            or 'AGÊNCIA DE DEFESA AGROPECUÁRIA DO TOCANTINS' in up
+            or 'AGENCIA DE DEFESA AGROPECUARIA DO TOCANTINS' in up):
+        return 'ADAPEC_TO'
+
+    # — MA (AGED — 4 faixas) —
+    if ('AGED' in up
+            or 'AGÊNCIA ESTADUAL DE DEFESA AGROPECUÁRIA' in up
+            or 'AGENCIA ESTADUAL DE DEFESA AGROPECUARIA' in up
+            or ('MARANHÃO' in up and ('REBANHO' in up or 'SALDO' in up))):
+        return 'AGED_MA'
+
+    # — PA (ADEPARÁ — 4 faixas) —
+    if ('ADEPAR' in up
+            or 'AGÊNCIA DE DEFESA AGROPECUÁRIA DO ESTADO DO PARÁ' in up
+            or 'AGENCIA DE DEFESA AGROPECUARIA DO ESTADO DO PARA' in up):
+        return 'ADEPARA_PA'
+
     return 'GENERICO'
+
+
+# Origens que usam parser GENERICO (4 faixas: 0-12m / 13-24m / 25-36m / 36m+)
+ORIGENS_GENERICAS = {'IAGRO_MS', 'ADAPEC_TO', 'AGED_MA', 'ADEPARA_PA', 'GENERICO'}
+
+# Origens que usam parser INDEA (5 faixas: 0-4m / 5-12m / 13-24m / 25-36m / 36m+)
+ORIGENS_INDEA = {'INDEA'}
 
 # ─────────────────────────────────────────────
 # HELPERS COMUNS
