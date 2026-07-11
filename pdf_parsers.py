@@ -153,7 +153,94 @@ def _sexo_da_linha(up: str):
 # ─────────────────────────────────────────────
 # PARSER INDEA-MT
 # ─────────────────────────────────────────────
-def parsear_indea(text: str) -> dict:
+def _indea_faixa(up: str):
+    if   '00 A 04' in up or '0 A 04' in up or '0 A 4' in up: return 'f00'
+    elif '05 A 12' in up or '5 A 12' in up:                  return 'f05'
+    elif '13 A 24' in up:                                    return 'f13'
+    elif '25 A 36' in up:                                    return 'f25'
+    elif 'ACIMA'   in up:                                    return 'fac'
+    return None
+
+def _parse_indea_tabelas(pdf_path: str) -> dict:
+    """Lê a tabela INDEA por célula via pdfplumber — evita desalinhamento do pdftotext."""
+    try:
+        import pdfplumber
+        animais = _animais_vazios()
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                for settings in [
+                    {'vertical_strategy': 'lines', 'horizontal_strategy': 'lines'},
+                    {'vertical_strategy': 'lines_strict', 'horizontal_strategy': 'lines_strict'},
+                    {'vertical_strategy': 'text', 'horizontal_strategy': 'text',
+                     'min_words_vertical': 2, 'min_words_horizontal': 1},
+                ]:
+                    tables = page.extract_tables(settings) or []
+                    for tbl in tables:
+                        for row in tbl:
+                            if not row or len(row) < 3:
+                                continue
+                            cells = [str(c or '').upper().strip() for c in row]
+                            # espera colunas: ..., ESTRATIFICAÇÃO, SEXO, QUANTIDADE
+                            # procura a coluna que tem faixa e sexo
+                            especie = cells[0] if cells else ''
+                            if 'BOVINO' not in especie and not any('BOVINO' in c for c in cells):
+                                continue
+                            # tenta as 3 últimas colunas como (estratificação, sexo, qtd)
+                            for offset in range(len(cells) - 2):
+                                faixa = _indea_faixa(cells[offset])
+                                sexo  = _sexo_da_linha(cells[offset + 1])
+                                if not faixa or not sexo:
+                                    continue
+                                m_q = re.search(r'(\d+)', cells[offset + 2] if offset + 2 < len(cells) else '')
+                                if not m_q:
+                                    continue
+                                qtd = int(m_q.group(1))
+                                if 0 < qtd <= 500_000:
+                                    animais[f'{faixa}_{sexo}'] = qtd
+                                break
+                    if sum(animais.values()) > 0:
+                        return animais
+        return animais
+    except Exception:
+        return _animais_vazios()
+
+def _parse_indea_words(pdf_path: str) -> dict:
+    """Extração palavra-a-palavra por coordenada Y — fallback robusto quando tabela não extrai."""
+    try:
+        import pdfplumber
+        animais = _animais_vazios()
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                words = page.extract_words(x_tolerance=4, y_tolerance=4)
+                if not words:
+                    continue
+                # Agrupa palavras por linha (Y arredondado)
+                linhas: dict = {}
+                for w in words:
+                    y = round(w['top'] / 3) * 3
+                    linhas.setdefault(y, []).append(w)
+                # Cada linha: ordena por X e analisa
+                for y in sorted(linhas):
+                    ws = sorted(linhas[y], key=lambda w: w['x0'])
+                    texto_linha = ' '.join(w['text'].upper() for w in ws)
+                    if 'BOVINO' not in texto_linha:
+                        continue
+                    faixa = _indea_faixa(texto_linha)
+                    sexo  = _sexo_da_linha(texto_linha)
+                    if not faixa or not sexo:
+                        continue
+                    # Último número na linha
+                    nums = re.findall(r'\b(\d{1,6})\b', texto_linha)
+                    if not nums:
+                        continue
+                    qtd = int(nums[-1])
+                    if 0 < qtd <= 500_000:
+                        animais[f'{faixa}_{sexo}'] = qtd
+        return animais
+    except Exception:
+        return _animais_vazios()
+
+def parsear_indea(text: str, pdf_path: str = None) -> dict:
     animais = _animais_vazios()
     fazenda = municipio = proprietario = cpf = data_saldo = ''
 
@@ -173,27 +260,29 @@ def parsear_indea(text: str) -> dict:
     if m:
         data_saldo = m.group(1)
 
-    for line in text.split('\n'):
-        up = line.upper()
-        if 'BOVINO' not in up:
-            continue
-        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())  # captura 1 a 6 dígitos
-        if not m_qtd:
-            continue
-        qtd = int(m_qtd.group(1))
-        if qtd <= 0 or qtd > 500_000:
-            continue
-        sexo = _sexo_da_linha(up)
-        if not sexo:
-            continue
-        if   '00 A 04' in up or '0 A 04' in up or '0 A 4' in up: faixa = 'f00'
-        elif '05 A 12' in up or '5 A 12' in up:                  faixa = 'f05'
-        elif '13 A 24' in up:                                    faixa = 'f13'
-        elif '25 A 36' in up:                                    faixa = 'f25'
-        elif 'ACIMA'   in up:                                    faixa = 'fac'
-        else:
-            continue
-        animais[f'{faixa}_{sexo}'] = qtd
+    # 1ª tentativa: tabela pdfplumber (evita desalinhamento de colunas do pdftotext)
+    if pdf_path:
+        animais = _parse_indea_tabelas(pdf_path)
+    # 2ª tentativa: palavras por coordenada Y
+    if pdf_path and sum(animais.values()) == 0:
+        animais = _parse_indea_words(pdf_path)
+    # 3ª tentativa: parsing linha a linha do texto (fallback)
+    if sum(animais.values()) == 0:
+        for line in text.split('\n'):
+            up = line.upper()
+            if 'BOVINO' not in up:
+                continue
+            m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
+            if not m_qtd:
+                continue
+            qtd = int(m_qtd.group(1))
+            if qtd <= 0 or qtd > 500_000:
+                continue
+            sexo = _sexo_da_linha(up)
+            faixa = _indea_faixa(up)
+            if not sexo or not faixa:
+                continue
+            animais[f'{faixa}_{sexo}'] = qtd
 
     valores = _para_valores(animais)
     return {

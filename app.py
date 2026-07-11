@@ -848,7 +848,7 @@ def api_ler_pdf():
         elif orig == 'IDARON':
             dados = parsear_idaron(text, pdf_path=tmp_path)
         elif orig in ORIGENS_INDEA:       # MT (5 faixas)
-            dados = parsear_indea(text)
+            dados = parsear_indea(text, pdf_path=tmp_path)
         elif orig == 'IAGRO_MS':          # MS — modLeitorMS.bas
             dados = parsear_iagro_ms(text)
         elif orig == 'AGED_MA':           # MA — modLeitorMA.bas
@@ -864,7 +864,7 @@ def api_ler_pdf():
             if dados['total'] == 0:
                 dados = parsear_idaron(text, pdf_path=tmp_path)
             if dados['total'] == 0:
-                dados = parsear_indea(text)
+                dados = parsear_indea(text, pdf_path=tmp_path)
         dados['origem'] = orig
         return jsonify(dados)
     except Exception as e:
@@ -1033,59 +1033,6 @@ def _sexo_da_linha(up: str):
     if 'MACHO' in up:
         return 'M'
     return None
-
-# ─────────────────────────────────────────────
-# PARSER INDEA-MT (mantido localmente)
-# ─────────────────────────────────────────────
-def parsear_indea(text: str) -> dict:
-    animais = _animais_vazios()
-    fazenda = municipio = proprietario = cpf = data_saldo = ''
-
-    m = re.search(r'PROPRIEDADE[:\s]+[\d\-]+\s*[-–]\s*(.+)', text)
-    if m:
-        fazenda = m.group(1).strip()[:60]
-
-    m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-]+?)(?:\s{3,}|SIT\.)', text, re.I)
-    if m:
-        municipio = m.group(1).strip()
-
-    m = re.search(r'(\d{11})\s+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]+?)(?:\s{3,}|\n)', text, re.I)
-    if m:
-        cpf, proprietario = m.group(1), m.group(2).strip()
-
-    m = re.search(r'(\d{2}/\d{2}/\d{4})', text)
-    if m:
-        data_saldo = m.group(1)
-
-    for line in text.split('\n'):
-        up = line.upper()
-        if 'BOVINO' not in up:
-            continue
-        m_qtd = re.search(r'(\d{1,6})\s*$', line.strip())
-        if not m_qtd:
-            continue
-        qtd = int(m_qtd.group(1))
-        if qtd <= 0 or qtd > 500_000:
-            continue
-        sexo = _sexo_da_linha(up)
-        if not sexo:
-            continue
-        if   '00 A 04' in up or '0 A 04' in up or '0 A 4' in up: faixa = 'f00'
-        elif '05 A 12' in up or '5 A 12' in up:                  faixa = 'f05'
-        elif '13 A 24' in up:                                    faixa = 'f13'
-        elif '25 A 36' in up:                                    faixa = 'f25'
-        elif 'ACIMA'   in up:                                    faixa = 'fac'
-        else:
-            continue
-        animais[f'{faixa}_{sexo}'] = qtd
-
-    valores = _para_valores(animais)
-    return {
-        'fazenda': fazenda, 'municipio': municipio,
-        'proprietario': proprietario, 'cpf': cpf,
-        'data_saldo': data_saldo, 'total': sum(valores),
-        'animais': animais, 'valores': valores,
-    }
 
 # ─────────────────────────────────────────────
 # PARSER IDARON-RO (mantido localmente)
