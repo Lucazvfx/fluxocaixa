@@ -499,9 +499,10 @@ def api_classificar():
                 consistencia['score_consistencia'] = max(0, consistencia['score_consistencia'] - penalidade)
 
     # Custo real por componentes (desembolso R$/cab/mês) → custo_arroba exato.
-    # Se não vierem componentes, usa custo_arroba do campo único (default 95 R$/@·ano
-    # equivalente a ~119 R$/cab/mês ÷ 15@ — CICLO_COMPLETO médio GEP safra 24/25).
-    custo_arroba = float(data.get('custo_arroba', 95) or 95)
+    # Se não vierem componentes, usa custo_arroba do campo único.
+    # Default 119 R$/@·ano = R$119,14/cab/mês (GEP Inttegra 2025 CICLO_COMPLETO média)
+    # × 12 ÷ 11,7@/cab (peso médio real do rebanho CICLO_COMPLETO com jovens).
+    custo_arroba = float(data.get('custo_arroba', 119) or 119)
     custo_desembolso = None
     componentes = data.get('custo_componentes') or {}
     desembolso_cab_mes = sum(float(componentes.get(k, 0) or 0) for k, _ in COMPONENTES)
