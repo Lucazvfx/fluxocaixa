@@ -643,7 +643,27 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 
 <script>
 // ================== VARIAVEIS GLOBAIS ==================
-const FAIXAS=[{key:'f00',l:'00–04 meses',cF:'#FBBF24',cM:'#F59E0B'},{key:'f05',l:'05–12 meses',cF:'#34D399',cM:'#10B981'},{key:'f13',l:'13–24 meses',cF:'#22D3EE',cM:'#0891B2'},{key:'f25',l:'25–36 meses',cF:'#A78BFA',cM:'#7C3AED'},{key:'fac',l:'Acima 36m',  cF:'#4ADE80',cM:'#16A34A'}];
+const FAIXAS=[
+  {key:'bez',lF:'Bezerra',         lM:'Bezerro',          l:'0–12 meses',  cF:'#FBBF24',cM:'#F59E0B'},
+  {key:'dzm',lF:'Bezerra Desmama', lM:'Bezerro Desmama',  l:'13–24 meses', cF:'#22D3EE',cM:'#0891B2'},
+  {key:'nov',lF:'Novilha',         lM:'Garrote',          l:'25–36 meses', cF:'#A78BFA',cM:'#7C3AED'},
+  {key:'vac',lF:'Vaca',            lM:'Boi Gordo',        l:'Acima 36m',   cF:'#4ADE80',cM:'#16A34A'},
+];
+// Converte array v[10] da API → 4 pares [[F,M]] para exibição
+function vApiToDisplay(v10){
+  return [
+    [(v10[0]||0)+(v10[2]||0),(v10[1]||0)+(v10[3]||0)],
+    [v10[4]||0,v10[5]||0],
+    [v10[6]||0,v10[7]||0],
+    [v10[8]||0,v10[9]||0],
+  ];
+}
+// Preenche os 4 inputs do formulário a partir do v[10] da API
+function setValsFromApi(v10){
+  const d=vApiToDisplay(v10);
+  FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=d[i][0];document.getElementById(f.key+'_M').value=d[i][1];});
+  upd();
+}
 const TC={CRIA:'#4ADE80',RECRIA:'#22D3EE',ENGORDA:'#F87171',CICLO_COMPLETO:'#FBBF24'};
 const TE={CRIA:'🐄',RECRIA:'🐂',ENGORDA:'🥩',CICLO_COMPLETO:'🔄'};
 const TL={CRIA:'CRIA',RECRIA:'RECRIA',ENGORDA:'ENGORDA',CICLO_COMPLETO:'CICLO COMPLETO'};
@@ -760,7 +780,13 @@ function buildTable(){
   tb.innerHTML='';
   FAIXAS.forEach(f=>{
     tb.innerHTML+=`<tr>
-      <td><span class="fc" style="color:${f.cF};border-color:${f.cF}25;background:${f.cF}0D">${f.l}</span></td>
+      <td>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+          <span class="fc" style="color:${f.cF};border-color:${f.cF}25;background:${f.cF}0D">♀ ${f.lF}</span>
+          <span class="fc" style="color:${f.cM};border-color:${f.cM}25;background:${f.cM}0D">♂ ${f.lM}</span>
+        </div>
+        <div style="font-size:.57rem;color:var(--mu);margin-top:2px;font-family:var(--fm);letter-spacing:.02em">${f.l}</div>
+      </td>
       <td class="tdc"><input type="number" class="ni nf" id="${f.key}_F" value="0" min="0" oninput="upd()"></td>
       <td class="tdc"><input type="number" class="ni nm" id="${f.key}_M" value="0" min="0" oninput="upd()"></td>
       <td class="tdc tdtot" id="${f.key}_T">0</td>
@@ -769,15 +795,28 @@ function buildTable(){
   });
   upd();
 }
-function getVals(){return FAIXAS.flatMap(f=>[parseFloat(document.getElementById(f.key+'_F').value)||0,parseFloat(document.getElementById(f.key+'_M').value)||0])}
+function getVals(){
+  const bezF=parseFloat(document.getElementById('bez_F').value)||0;
+  const bezM=parseFloat(document.getElementById('bez_M').value)||0;
+  const f00F=Math.floor(bezF/2),f05F=bezF-f00F;
+  const f00M=Math.floor(bezM/2),f05M=bezM-f00M;
+  return [f00F,f00M,f05F,f05M,
+          parseFloat(document.getElementById('dzm_F').value)||0,
+          parseFloat(document.getElementById('dzm_M').value)||0,
+          parseFloat(document.getElementById('nov_F').value)||0,
+          parseFloat(document.getElementById('nov_M').value)||0,
+          parseFloat(document.getElementById('vac_F').value)||0,
+          parseFloat(document.getElementById('vac_M').value)||0];
+}
 function upd(){
   const v=getVals(),tot=v.reduce((a,b)=>a+b,0)||1;
-  FAIXAS.forEach((f,i)=>{const t=v[i*2]+v[i*2+1];document.getElementById(f.key+'_T').textContent=fN(t);document.getElementById(f.key+'_P').textContent=(t/tot*100).toFixed(1)+'%'});
+  const disp=vApiToDisplay(v);
+  FAIXAS.forEach((f,i)=>{const t=disp[i][0]+disp[i][1];document.getElementById(f.key+'_T').textContent=fN(t);document.getElementById(f.key+'_P').textContent=(t/tot*100).toFixed(1)+'%'});
   document.getElementById('t-g').textContent=fN(v.reduce((a,b)=>a+b,0));
-  document.getElementById('t-f').textContent=fN(FAIXAS.reduce((a,f,i)=>a+v[i*2],0));
-  document.getElementById('t-m').textContent=fN(FAIXAS.reduce((a,f,i)=>a+v[i*2+1],0));
-  document.getElementById('t-c').textContent=fN(v[0]+v[1]+v[2]+v[3]);
-  document.getElementById('t-r').textContent=fN(v[4]+v[5]);
+  document.getElementById('t-f').textContent=fN(v[0]+v[2]+v[4]+v[6]+v[8]);
+  document.getElementById('t-m').textContent=fN(v[1]+v[3]+v[5]+v[7]+v[9]);
+  document.getElementById('t-c').textContent=fN(disp[0][0]+disp[0][1]);
+  document.getElementById('t-r').textContent=fN(disp[1][0]+disp[1][1]);
   // Valor do rebanho — espelho de valor_rebanho_gep() modo granular
   // v = [f00F,f00M, f05F,f05M, f13F,f13M, f25F,f25M, facF,facM]
   const pb=parseFloat(document.getElementById('cot-boi')?.value)||327;
@@ -802,7 +841,7 @@ const EX={
   engorda:{v:[10,8,20,18,50,80,20,120,10,400],faz:'Fazenda Confinamento',mun:'Primavera do Leste - MT',prop:'Exemplo'},
   indea: {v:[300,280,563,187,1105,1344,298,80,593,39],faz:'FAZENDA N KARA I/II',mun:'JUARA - MT',prop:'NEWTON KARA JOSE'},
 };
-function fillEx(t){const e=EX[t];FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=e.v[i*2];document.getElementById(f.key+'_M').value=e.v[i*2+1]});document.getElementById('f_faz').value=e.faz;document.getElementById('f_mun').value=e.mun;document.getElementById('f_prop').value=e.prop;upd()}
+function fillEx(t){const e=EX[t];setValsFromApi(e.v);document.getElementById('f_faz').value=e.faz;document.getElementById('f_mun').value=e.mun;document.getElementById('f_prop').value=e.prop;}
 function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value=0;document.getElementById(f.key+'_M').value=0});upd();renderConsistencia(null)}
 
 // ================== CLASSIFICAR ==================
@@ -906,7 +945,7 @@ async function lerPDFsInserir(fileList){
       }
     }
     if(!fazendas.length){showToast('Nenhum PDF pôde ser lido.',true);return}
-    FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=somaV[i*2];document.getElementById(f.key+'_M').value=somaV[i*2+1]});
+    setValsFromApi(somaV);
     document.getElementById('f_faz').value = fazendas.length===1 ? fazendas[0] : `${fazendas.length} fazendas combinadas`;
     document.getElementById('f_mun').value = fazendas.length===1 ? (primeiraMeta.municipio||'') : '';
     document.getElementById('f_prop').value = primeiraMeta?.proprietario||'';
@@ -927,7 +966,7 @@ async function lerPlanilha(file){
     const data=await res.json();
     if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler planilha',true); return; }
     const v=data.valores||[];
-    FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=v[i*2]||0;document.getElementById(f.key+'_M').value=v[i*2+1]||0});
+    setValsFromApi(v);
     if(data.fazenda) document.getElementById('f_faz').value=data.fazenda;
     if(data.uf) document.getElementById('f_mun').value=data.uf;
     upd();
@@ -1002,7 +1041,8 @@ async function lerPDFs(fileList){
 
 function mostrarPDFPreview(data){
   const v=data.valores;
-  const rows=FAIXAS.map((f,i)=>`<tr><td>${f.l}</td><td class="g">${fN(v[i*2])}</td><td class="a">${fN(v[i*2+1])}</td><td class="r">${fN(v[i*2]+v[i*2+1])}</td></tr>`).join('');
+  const _vd=vApiToDisplay(v);
+  const rows=FAIXAS.map((f,i)=>`<tr><td>${f.lF}/${f.lM} <span style="font-size:.6rem;color:var(--mu)">${f.l}</span></td><td class="g">${fN(_vd[i][0])}</td><td class="a">${fN(_vd[i][1])}</td><td class="r">${fN(_vd[i][0]+_vd[i][1])}</td></tr>`).join('');
   const combinadas=data.fazendas_combinadas||[];
   const listaFazendas = combinadas.length>1 ? `
     <div style="margin-bottom:18px">
@@ -1066,8 +1106,7 @@ async function reparsarPDF(){
 
 async function classificarPDF(v,meta){
   if(meta){document.getElementById('f_faz').value=meta.fazenda||'';document.getElementById('f_mun').value=meta.municipio||'';document.getElementById('f_prop').value=meta.proprietario||''}
-  FAIXAS.forEach((f,i)=>{document.getElementById(f.key+'_F').value=v[i*2];document.getElementById(f.key+'_M').value=v[i*2+1]});
-  upd();
+  setValsFromApi(v);
   await classificar();
 }
 
@@ -1226,13 +1265,14 @@ function renderResult(data){
     ).join('')
   }</div>`;
 
-  const maxAn=Math.max(...FAIXAS.map((f,i)=>v[i*2]+v[i*2+1]),1);
+  const _pvd=vApiToDisplay(v);
+  const maxAn=Math.max(..._pvd.map(([fv,mv])=>fv+mv),1);
   const pyramid=[...FAIXAS].reverse().map((f,ri)=>{
     const i=FAIXAS.length-1-ri;
-    const fv=v[i*2],mv=v[i*2+1];
+    const [fv,mv]=_pvd[i];
     const fp=fv/maxAn*100,mp=mv/maxAn*100;
     return`<div class="pyr-row">
-      <div class="pyr-l">${f.l}</div>
+      <div class="pyr-l">${f.lF}/${f.lM}</div>
       <div class="pyr-t">
         ${fv>0?`<div class="pyr-seg" style="width:0%;background:${f.cF}" data-w="${Math.max(fp,3)}"><span>♀${fN(fv)}</span></div>`:''}
         ${mv>0?`<div class="pyr-seg" style="width:0%;background:${f.cM}" data-w="${Math.max(mp,3)}"><span>♂${fN(mv)}</span></div>`:''}
