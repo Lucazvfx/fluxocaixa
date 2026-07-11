@@ -836,7 +836,13 @@ def api_ler_pdf():
     try:
         f.save(tmp_path)
         text = extrair_texto_pdf(tmp_path)
-        orig = detectar_origem(text)
+        estado = request.form.get('estado', '').upper().strip()
+        _ESTADO_ORIGEM = {
+            'MT': 'INDEA', 'RO': 'IDARON', 'MS': 'IAGRO_MS',
+            'GO': 'AGRODEFESA_GO', 'MA': 'AGED_MA',
+            'TO': 'ADAPEC_TO', 'PA': 'ADEPARA_PA',
+        }
+        orig = _ESTADO_ORIGEM.get(estado) or detectar_origem(text)
         if orig == 'DECLARACAO_IDARON':
             dados = parsear_declaracao_idaron(text)
         elif orig == 'IDARON':

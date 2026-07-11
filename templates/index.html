@@ -319,6 +319,16 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <button class="btn-sm" onclick="fillEx('cria')">Cria</button>
         <button class="btn-sm" onclick="fillEx('recria')">Recria</button>
         <button class="btn-sm" onclick="fillEx('engorda')">Engorda</button>
+        <select id="insr-estado" class="btn-sm" style="padding:2px 4px;cursor:pointer;font-size:.75rem">
+          <option value="">🗺 Estado: Auto</option>
+          <option value="MT">MT — INDEA</option>
+          <option value="RO">RO — IDARON</option>
+          <option value="MS">MS — IAGRO</option>
+          <option value="GO">GO — AGRODEFESA</option>
+          <option value="MA">MA — AGED</option>
+          <option value="TO">TO — ADAPEC</option>
+          <option value="PA">PA — ADEPARÁ</option>
+        </select>
         <button class="btn-sm" onclick="document.getElementById('insr-pdf-inp').click()">📂 Ler PDF(s)</button>
         <input type="file" id="insr-pdf-inp" accept=".pdf" multiple style="display:none" onchange="lerPDFsInserir(this.files);this.value=''">
         <button class="btn-sm" onclick="window.location='/api/template/download'">⬇ Template</button>
@@ -930,9 +940,11 @@ async function lerPDFsInserir(fileList){
   const somaV=new Array(10).fill(0);
   const fazendas=[];
   let primeiraMeta=null, falhas=0;
+  const estado=(document.getElementById('insr-estado')?.value||'').trim();
   try{
     for(const file of files){
       const fd=new FormData();fd.append('pdf',file);
+      if(estado)fd.append('estado',estado);
       try{
         const res=await fetch('/api/ler-pdf',{method:'POST',body:fd});
         const data=await res.json();
