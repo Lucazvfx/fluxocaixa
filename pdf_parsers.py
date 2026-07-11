@@ -401,12 +401,15 @@ def _parse_idaron_linhas(text: str) -> dict:
         elif 'ACIMA' in up:
             animais[f'fac_{sexo}'] = qtd
 
+    # Mapeamento conforme Excel MAPEAMENTO: Desmama=13-24m, Bezerra/Bezerro=0-12m,
+    # Garrote=25-36m (não 13-24m!). DESMAMA vem ANTES de BEZERRA/BEZERRO.
     _categorias = [
-        (['BEZERRA', 'BEZERRO'],   'f05', None),
-        (['GARROTA', 'GARROTE'],   'f13', None),
-        (['NOVILHA', 'NOVILHO'],   'f25', None),
-        (['VACA'],                 'fac', 'F'),
-        (['TOURO', 'BOI', 'BOIS'], 'fac', 'M'),
+        (['DESMAMA'],              'f13',    None),  # Bezerra/Bezerro Desmama 13-24m
+        (['BEZERRA', 'BEZERRO'],   'f00_12', None),  # 0-12m → split 50/50 em f00+f05
+        (['GARROTA', 'GARROTE'],   'f25',    None),  # Garrote 25-36m
+        (['NOVILHA', 'NOVILHO'],   'f25',    None),  # Novilha 25-36m
+        (['VACA'],                 'fac',    'F'),
+        (['TOURO', 'BOI', 'BOIS'], 'fac',    'M'),
     ]
     for line in text.split('\n'):
         up = line.upper()
@@ -421,8 +424,14 @@ def _parse_idaron_linhas(text: str) -> dict:
         for palavras, faixa, sexo_fixo in _categorias:
             if any(p in up for p in palavras):
                 sexo = sexo_fixo or _sexo_da_linha(up)
-                if sexo and animais[f'{faixa}_{sexo}'] == 0:
-                    animais[f'{faixa}_{sexo}'] = qtd
+                if sexo:
+                    if faixa == 'f00_12':
+                        if animais[f'f00_{sexo}'] == 0 and animais[f'f05_{sexo}'] == 0:
+                            metade = qtd // 2
+                            animais[f'f00_{sexo}'] += metade
+                            animais[f'f05_{sexo}'] += qtd - metade
+                    elif animais[f'{faixa}_{sexo}'] == 0:
+                        animais[f'{faixa}_{sexo}'] = qtd
                 break
 
     return animais

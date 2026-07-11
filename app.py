@@ -831,35 +831,42 @@ def api_ler_pdf():
     if not f.filename.lower().endswith('.pdf'):
         return jsonify({'erro': 'Apenas arquivos PDF são aceitos'}), 400
 
-    # Usa NamedTemporaryFile com delete=True para garantir remoção automática
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=True) as tmp:
-        f.save(tmp.name)
-        tmp_path = tmp.name  # O arquivo será excluído ao sair do with
-        try:
-            text = extrair_texto_pdf(tmp_path)
-            orig = detectar_origem(text)
-            if orig == 'DECLARACAO_IDARON':
-                dados = parsear_declaracao_idaron(text)
-            elif orig == 'IDARON':
+    # delete=False: necessário no Windows (NamedTemporaryFile bloqueia o arquivo
+    # enquanto aberto, impedindo que werkzeug abra pelo nome novamente)
+    tmp = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+    try:
+        f.save(tmp_path)
+        text = extrair_texto_pdf(tmp_path)
+        orig = detectar_origem(text)
+        if orig == 'DECLARACAO_IDARON':
+            dados = parsear_declaracao_idaron(text)
+        elif orig == 'IDARON':
+            dados = parsear_idaron(text, pdf_path=tmp_path)
+        elif orig in ORIGENS_INDEA:          # MT, GO
+            dados = parsear_indea(text)
+        elif orig in ORIGENS_GENERICAS:      # MS, MA, TO, PA + fallback
+            dados = (parsear_generico(text) if parsear_generico is not None
+                     else parsear_indea(text))
+            if dados['total'] == 0:
                 dados = parsear_idaron(text, pdf_path=tmp_path)
-            elif orig in ORIGENS_INDEA:          # MT, GO
+        else:
+            dados = parsear_idaron(text, pdf_path=tmp_path)
+            if dados['total'] == 0:
                 dados = parsear_indea(text)
-            elif orig in ORIGENS_GENERICAS:      # MS, MA, TO, PA + fallback
-                dados = (parsear_generico(text) if parsear_generico is not None
-                         else parsear_indea(text))
-                if dados['total'] == 0:
-                    dados = parsear_idaron(text, pdf_path=tmp_path)
-            else:
-                dados = parsear_idaron(text, pdf_path=tmp_path)
-                if dados['total'] == 0:
-                    dados = parsear_indea(text)
-                if dados['total'] == 0 and parsear_generico is not None:
-                    dados = parsear_generico(text)
-            dados['origem'] = orig
-            return jsonify(dados)
-        except Exception as e:
-            logger.error(f"Erro ao processar PDF: {e}", exc_info=True)
-            return jsonify({'erro': str(e)}), 500
+            if dados['total'] == 0 and parsear_generico is not None:
+                dados = parsear_generico(text)
+        dados['origem'] = orig
+        return jsonify(dados)
+    except Exception as e:
+        logger.error(f"Erro ao processar PDF: {e}", exc_info=True)
+        return jsonify({'erro': str(e)}), 500
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 @app.route('/api/template/download', methods=['GET'])
 @login_required
@@ -912,17 +919,24 @@ def api_ler_planilha():
     if not f.filename.lower().endswith(('.xlsx', '.xlsm')):
         return jsonify({'erro': 'Apenas planilhas .xlsx são aceitas'}), 400
 
-    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=True) as tmp:
-        f.save(tmp.name)
+    tmp = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+    try:
+        f.save(tmp_path)
+        dados = ler_template(tmp_path)
+        dados['consistencia'] = analisar_consistencia(dados['valores'])
+        return jsonify(dados)
+    except ValueError as e:
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Erro ao processar planilha: {e}", exc_info=True)
+        return jsonify({'erro': str(e)}), 500
+    finally:
         try:
-            dados = ler_template(tmp.name)
-            dados['consistencia'] = analisar_consistencia(dados['valores'])
-            return jsonify(dados)
-        except ValueError as e:
-            return jsonify({'erro': str(e)}), 400
-        except Exception as e:
-            logger.error(f"Erro ao processar planilha: {e}", exc_info=True)
-            return jsonify({'erro': str(e)}), 500
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 
 @app.route('/api/reconciliacao', methods=['POST'])
