@@ -75,16 +75,19 @@ def detectar_origem(text: str) -> str:
             or ('RONDÔNIA' in up and ('SALDO' in up or 'REBANHO' in up or 'GTA' in up))):
         return 'IDARON'
 
-    # — MT / GO (formato 5 faixas) —
+    # — MT (INDEA — 5 faixas: 0-4m / 5-12m / 13-24m / 25-36m / 36m+) —
     if ('INDEA' in up
             or 'INSTITUTO DE DEFESA AGROPECUÁRIA' in up
             or 'INSTITUTO DE DEFESA AGROPECUARIA' in up
             or 'SALDO ATUAL DA EXPLORAÇÃO' in up
-            or 'SALDO ATUAL DA EXPLORACAO' in up
-            or 'AGRODEFESA' in up                   # GO
+            or 'SALDO ATUAL DA EXPLORACAO' in up):
+        return 'INDEA'
+
+    # — GO (AGRODEFESA — 4 faixas, ficha cadastral, igual a MA) —
+    if ('AGRODEFESA' in up
             or 'AGÊNCIA GOIANA DE DEFESA' in up
             or 'AGENCIA GOIANA DE DEFESA' in up):
-        return 'INDEA'
+        return 'AGRODEFESA_GO'
 
     # — MS (IAGRO — 4 faixas) —
     if ('IAGRO' in up
@@ -115,8 +118,8 @@ def detectar_origem(text: str) -> str:
     return 'GENERICO'
 
 
-# Origens que usam parser GENERICO (4 faixas: 0-12m / 13-24m / 25-36m / 36m+)
-ORIGENS_GENERICAS = {'IAGRO_MS', 'ADAPEC_TO', 'AGED_MA', 'ADEPARA_PA', 'GENERICO'}
+# Origens que usam parser GENERICO (fallback)
+ORIGENS_GENERICAS = {'GENERICO'}
 
 # Origens que usam parser INDEA (5 faixas: 0-4m / 5-12m / 13-24m / 25-36m / 36m+)
 ORIGENS_INDEA = {'INDEA'}
@@ -703,3 +706,339 @@ def parsear_generico(text: str) -> dict:
         'data_saldo': data_saldo, 'total': sum(valores),
         'animais': animais, 'valores': valores,
     }
+
+# ─────────────────────────────────────────────────────────────
+# HELPERS COMUNS AOS NOVOS PARSERS
+# ─────────────────────────────────────────────────────────────
+
+def _normalizar(text: str) -> str:
+    """Upper + remove acentos (equivalente ao UCase + Replace do VBA)."""
+    t = text.upper()
+    for src, dst in [
+        ('Ã','A'),('Â','A'),('Á','A'),('À','A'),
+        ('Ê','E'),('É','E'),('È','E'),
+        ('Î','I'),('Í','I'),
+        ('Ô','O'),('Ó','O'),('Õ','O'),
+        ('Û','U'),('Ú','U'),
+        ('Ç','C'),('Ñ','N'),
+    ]:
+        t = t.replace(src, dst)
+    return t
+
+
+def _meta_basica(text: str) -> dict:
+    fazenda = municipio = proprietario = cpf = data_saldo = ''
+    for pat in [r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)']:
+        m = re.search(pat, text, re.I)
+        if m:
+            fazenda = m.group(1).strip().splitlines()[0][:60]
+            break
+    m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+?)(?:\s{2,}|\n|$)', text, re.I)
+    if m:
+        municipio = m.group(1).strip()[:60]
+    m = re.search(r'\b(\d{3}\.?\d{3}\.?\d{3}[\-\.]\d{2}|\d{11})\b', text)
+    if m:
+        cpf = re.sub(r'[^\d]', '', m.group(1))
+    m = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
+    if m:
+        data_saldo = m.group(1)
+    return {'fazenda': fazenda, 'municipio': municipio, 'proprietario': proprietario,
+            'cpf': cpf, 'ie': '', 'data_saldo': data_saldo}
+
+
+def _resultado(meta: dict, animais: dict) -> dict:
+    valores = _para_valores(animais)
+    return {**meta, 'total': sum(valores), 'animais': animais, 'valores': valores}
+
+
+def _numeros_puros(bloco: str, n: int) -> list:
+    """
+    Igual a BuscarNumerosMA / BuscarNumerosBovinosGO:
+    Extrai os primeiros N inteiros de linhas que contêm apenas dígitos.
+    """
+    nums = []
+    for linha in bloco.split('\n'):
+        t = linha.strip()
+        if t and re.match(r'^\d+$', t):
+            nums.append(int(t))
+            if len(nums) >= n:
+                break
+    return nums
+
+
+# Mapeamento 8 valores: M0-12, F0-12, M13-24, F13-24, M25-36, F25-36, M36+, F36+
+_MAP_8 = [
+    ('f00_12', 'M'), ('f00_12', 'F'),
+    ('f13',    'M'), ('f13',    'F'),
+    ('f25',    'M'), ('f25',    'F'),
+    ('fac',    'M'), ('fac',    'F'),
+]
+
+def _aplicar_mapa8(animais: dict, nums: list) -> None:
+    for i, (faixa, sexo) in enumerate(_MAP_8):
+        if i < len(nums) and nums[i] > 0:
+            _adicionar(animais, faixa, sexo, nums[i])
+
+
+# ─────────────────────────────────────────────────────────────
+# PARSER MS — IAGRO (modLeitorMS.bas)
+# ─────────────────────────────────────────────────────────────
+
+def parsear_iagro_ms(text: str) -> dict:
+    """
+    Idêntico ao modLeitorMS.bas:
+    Para FÊMEA e MACHO: localiza bloco, busca cada faixa etária,
+    retorna o 3º número após a faixa (PegarSaldoTotal).
+    """
+    animais = _animais_vazios()
+
+    def _pegar_saldo_total(trecho: str) -> int:
+        """VBA PegarSaldoTotal: retorna o 3º grupo de dígitos consecutivos."""
+        numero = ''
+        contador = 0
+        for c in trecho:
+            if c.isdigit():
+                numero += c
+            else:
+                if numero:
+                    contador += 1
+                    if contador == 3:
+                        return int(numero)
+                    numero = ''
+        return 0
+
+    FAIXAS_MS = [
+        ("0 A 12 MESES",      'f00_12'),
+        ("13 A 24 MESES",     'f13'),
+        ("25 A 36 MESES",     'f25'),
+        ("ACIMA DE 36 MESES", 'fac'),
+    ]
+
+    norm = _normalizar(text)
+
+    for sexo_tag, sexo_key in [('FEMEA', 'F'), ('MACHO', 'M')]:
+        pos = norm.find(sexo_tag)
+        if pos < 0:
+            continue
+        bloco = norm[pos:]
+        for faixa_label, faixa_key in FAIXAS_MS:
+            fp = bloco.find(faixa_label)
+            if fp >= 0:
+                qtd = _pegar_saldo_total(bloco[fp + len(faixa_label):])
+                if qtd > 0:
+                    _adicionar(animais, faixa_key, sexo_key, qtd)
+
+    # Fallback para parsear_generico se vazio
+    if sum(animais.values()) == 0:
+        return parsear_generico(text)
+
+    return _resultado(_meta_basica(text), animais)
+
+
+# ─────────────────────────────────────────────────────────────
+# PARSER MA — AGED Maranhão (modLeitorMA.bas)
+# ─────────────────────────────────────────────────────────────
+
+def parsear_aged_ma(text: str) -> dict:
+    """
+    Idêntico ao modLeitorMA.bas:
+    Nome da Propriedade na linha seguinte ao rótulo.
+    Localiza 'Bovino', extrai 8 números de linhas puras.
+    Ordem: M0-12, F0-12, M13-24, F13-24, M25-36, F25-36, M36+, F36+
+    """
+    animais = _animais_vazios()
+    meta = _meta_basica(text)
+
+    # Nome da Propriedade: linha seguinte (VBA: Split(Fazenda, vbLf)(1))
+    m = re.search(r'Nome\s+da\s+Propriedade[\r\n]+\s*(.+)', text, re.I)
+    if m:
+        meta['fazenda'] = m.group(1).strip()[:60]
+
+    norm = _normalizar(text)
+    pos = norm.find('BOVINO')
+    if pos >= 0:
+        bloco = text[pos:]
+        nums = _numeros_puros(bloco, 8)
+        _aplicar_mapa8(animais, nums)
+
+    if sum(animais.values()) == 0:
+        return parsear_generico(text)
+
+    return _resultado(meta, animais)
+
+
+# ─────────────────────────────────────────────────────────────
+# PARSER GO — AGRODEFESA Goiás ficha (modLeitorGOFicha.bas)
+# ─────────────────────────────────────────────────────────────
+
+def parsear_agrodefesa_go(text: str) -> dict:
+    """
+    Idêntico ao modLeitorGOFicha.bas (ProcessarGO_LOG):
+    Localiza 'Bovídeos', extrai bloco até 'VACINAÇÕES',
+    retira 8 números de linhas puras (BuscarNumerosBovinosGO posições 1-8).
+    Ordem: M0-12, F0-12, M13-24, F13-24, M25-36, F25-36, M36+, F36+
+    """
+    animais = _animais_vazios()
+    meta = _meta_basica(text)
+
+    norm = _normalizar(text)
+    # Localiza "Bovídeos" (VBA: InStr(posicao, texto, "Bovídeos"))
+    pos = norm.find('BOVIDEOS')
+    if pos < 0:
+        pos = norm.find('BOVIDEO')
+    if pos < 0:
+        pos = norm.find('BOVINO')
+
+    if pos >= 0:
+        bloco = text[pos:]
+        fim = _normalizar(bloco).find('VACINACAO')
+        if fim > 0:
+            bloco = bloco[:fim]
+        # BuscarNumerosBovinosGO usa posições 1-8 (9 capturados, 1 descartado)
+        nums = _numeros_puros(bloco, 9)
+        if len(nums) >= 8:
+            nums = nums[:8]
+        _aplicar_mapa8(animais, nums)
+
+    if sum(animais.values()) == 0:
+        return parsear_generico(text)
+
+    return _resultado(meta, animais)
+
+
+# ─────────────────────────────────────────────────────────────
+# PARSER TO — ADAPEC Tocantins (adaptado de modLeitorTO.bas)
+# ─────────────────────────────────────────────────────────────
+
+def parsear_adapec_to(text: str, pdf_path: str = None) -> dict:
+    """
+    Adaptado de modLeitorTO.bas (Power Query → tabela com linha "Saldo").
+    Usa pdfplumber para extrair tabelas; fallback textual.
+    Ordem da linha Saldo: M0-12, F0-12, M13-24, F13-24, M25-36, F25-36, M36+, F36+, total
+    """
+    animais = _animais_vazios()
+    meta = _meta_basica(text)
+
+    # Tenta tabelas via pdfplumber (equivale ao Power Query do VBA)
+    if pdf_path:
+        try:
+            import pdfplumber
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    for settings in [
+                        {'vertical_strategy': 'lines', 'horizontal_strategy': 'lines'},
+                        {'vertical_strategy': 'lines_strict', 'horizontal_strategy': 'lines_strict'},
+                        {'vertical_strategy': 'text', 'horizontal_strategy': 'text'},
+                    ]:
+                        try:
+                            tables = page.extract_tables(settings)
+                        except Exception:
+                            continue
+                        for tbl in (tables or []):
+                            r = _parsear_tabela_bovinos(tbl)
+                            if sum(r.values()) > 0:
+                                for k, v in r.items():
+                                    if v > animais[k]:
+                                        animais[k] = v
+                    if sum(animais.values()) > 0:
+                        break
+        except Exception:
+            pass
+
+    # Fallback textual: busca linhas com "Saldo" + 8 números em sequência
+    if sum(animais.values()) == 0:
+        norm = _normalizar(text)
+        for marcador in ('SALDO', 'BOVIDEO', 'BOVINO'):
+            pos = norm.find(marcador)
+            if pos >= 0:
+                bloco = text[pos:]
+                nums = _numeros_puros(bloco, 8)
+                if nums:
+                    _aplicar_mapa8(animais, nums)
+                    break
+
+    if sum(animais.values()) == 0:
+        return parsear_generico(text)
+
+    return _resultado(meta, animais)
+
+
+# ─────────────────────────────────────────────────────────────
+# PARSER PA — ADEPARÁ Pará (modLeitorPA.bas)
+# ─────────────────────────────────────────────────────────────
+
+def _buscar_qtd_rotulo(norm: str, rotulo: str) -> int:
+    """VBA BuscarQtdRotuloPA: primeiro número após o rótulo."""
+    pos = norm.find(rotulo)
+    if pos < 0:
+        return 0
+    m = re.search(r'(\d+)', norm[pos + len(rotulo):])
+    return int(m.group(1)) if m else 0
+
+
+def parsear_adepara_pa(text: str) -> dict:
+    """
+    Adaptado de modLeitorPA.bas.
+    Identifica modelo (RAC, SIGEAGRO, RESUMIDA) e processa.
+    """
+    animais = _animais_vazios()
+    meta = _meta_basica(text)
+    norm = _normalizar(text)
+
+    # IdentificarModeloPA
+    if 'RAC' in norm or 'REGISTRO PARA ATUALIZACAO' in norm:
+        modelo = 'RAC'
+    elif 'FICHA SANITARIA PROPRIEDADE RURAL' in norm:
+        modelo = 'RESUMIDA'
+    elif ('SIGEAGRO' in norm or 'GERENCIADOR DE ESPECIES' in norm
+          or 'DETALHAMENTO DOS BOVINOS' in norm):
+        modelo = 'SIGEAGRO'
+    else:
+        modelo = 'GENERICO'
+
+    if modelo == 'RAC':
+        # ProcessarPA_RAC: busca rótulos "MACHO/FEMEA X A Y MESES"
+        MAP_RAC = [
+            ("MACHO 0 A 12 MESES",      'f00_12', 'M'),
+            ("FEMEA 0 A 12 MESES",      'f00_12', 'F'),
+            ("MACHO 13 A 24 MESES",     'f13',    'M'),
+            ("FEMEA 13 A 24 MESES",     'f13',    'F'),
+            ("MACHO 25 A 36 MESES",     'f25',    'M'),
+            ("FEMEA 25 A 36 MESES",     'f25',    'F'),
+            ("MACHO ACIMA DE 36 MESES", 'fac',    'M'),
+            ("FEMEA ACIMA DE 36 MESES", 'fac',    'F'),
+        ]
+        for rotulo, faixa, sexo in MAP_RAC:
+            qtd = _buscar_qtd_rotulo(norm, rotulo)
+            if qtd > 0:
+                _adicionar(animais, faixa, sexo, qtd)
+
+    elif modelo == 'SIGEAGRO':
+        # ProcessarPA_SIGEAGRO: blocos "DETALHAMENTO DOS BOVINOS"
+        pos = 0
+        while True:
+            inicio = norm.find('DETALHAMENTO DOS BOVINOS', pos)
+            if inicio < 0:
+                break
+            prox = norm.find('DETALHAMENTO DOS BOVINOS', inicio + 10)
+            fim = norm.find('ADERE', inicio)
+            if fim < 0:
+                fim = norm.find('MOVIMENTACOES', inicio)
+            if fim < 0 or (prox > 0 and prox < fim):
+                fim = prox if prox > 0 else len(norm)
+            bloco = text[inicio:fim]
+            nums = _numeros_puros(bloco, 8)
+            if any(n > 0 for n in nums):
+                _aplicar_mapa8(animais, nums)
+            if prox < 0:
+                break
+            pos = prox
+
+    elif modelo == 'RESUMIDA':
+        # Formato resumido: busca padrão genérico
+        pass  # cai no fallback
+
+    if sum(animais.values()) == 0:
+        return parsear_generico(text)
+
+    return _resultado(meta, animais)

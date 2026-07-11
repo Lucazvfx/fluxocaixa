@@ -21,16 +21,13 @@ from ml_engine import (
 import database as db
 
 # Importações do PDF parsers (evitamos sobrescrever com definições locais)
-# Usaremos as funções locais para extrair texto e detectar origem, pois têm fallback.
-# Mas importamos os parsers específicos.
 from pdf_parsers import (
     parsear_idaron, parsear_indea, parsear_declaracao_idaron,
+    parsear_generico,
+    parsear_iagro_ms, parsear_aged_ma, parsear_agrodefesa_go,
+    parsear_adapec_to, parsear_adepara_pa,
     ORIGENS_GENERICAS, ORIGENS_INDEA,
 )
-try:
-    from pdf_parsers import parsear_generico
-except ImportError:
-    parsear_generico = None
 
 from services.importar_excel import parsear_ficha_excel
 
@@ -844,19 +841,24 @@ def api_ler_pdf():
             dados = parsear_declaracao_idaron(text)
         elif orig == 'IDARON':
             dados = parsear_idaron(text, pdf_path=tmp_path)
-        elif orig in ORIGENS_INDEA:          # MT, GO
+        elif orig in ORIGENS_INDEA:       # MT (5 faixas)
             dados = parsear_indea(text)
-        elif orig in ORIGENS_GENERICAS:      # MS, MA, TO, PA + fallback
-            dados = (parsear_generico(text) if parsear_generico is not None
-                     else parsear_indea(text))
+        elif orig == 'IAGRO_MS':          # MS — modLeitorMS.bas
+            dados = parsear_iagro_ms(text)
+        elif orig == 'AGED_MA':           # MA — modLeitorMA.bas
+            dados = parsear_aged_ma(text)
+        elif orig == 'AGRODEFESA_GO':     # GO ficha — modLeitorGOFicha.bas
+            dados = parsear_agrodefesa_go(text)
+        elif orig == 'ADAPEC_TO':         # TO — modLeitorTO.bas
+            dados = parsear_adapec_to(text, pdf_path=tmp_path)
+        elif orig == 'ADEPARA_PA':        # PA — modLeitorPA.bas
+            dados = parsear_adepara_pa(text)
+        else:
+            dados = parsear_generico(text)
             if dados['total'] == 0:
                 dados = parsear_idaron(text, pdf_path=tmp_path)
-        else:
-            dados = parsear_idaron(text, pdf_path=tmp_path)
             if dados['total'] == 0:
                 dados = parsear_indea(text)
-            if dados['total'] == 0 and parsear_generico is not None:
-                dados = parsear_generico(text)
         dados['origem'] = orig
         return jsonify(dados)
     except Exception as e:
@@ -978,17 +980,22 @@ def api_parse_text():
             dados = parsear_idaron(text)
         elif orig in ORIGENS_INDEA:
             dados = parsear_indea(text)
-        elif orig in ORIGENS_GENERICAS:
-            dados = (parsear_generico(text) if parsear_generico is not None
-                     else parsear_indea(text))
+        elif orig == 'IAGRO_MS':
+            dados = parsear_iagro_ms(text)
+        elif orig == 'AGED_MA':
+            dados = parsear_aged_ma(text)
+        elif orig == 'AGRODEFESA_GO':
+            dados = parsear_agrodefesa_go(text)
+        elif orig == 'ADAPEC_TO':
+            dados = parsear_adapec_to(text)
+        elif orig == 'ADEPARA_PA':
+            dados = parsear_adepara_pa(text)
+        else:
+            dados = parsear_generico(text)
             if dados['total'] == 0:
                 dados = parsear_idaron(text)
-        else:
-            dados = parsear_idaron(text)
             if dados['total'] == 0:
                 dados = parsear_indea(text)
-            if dados['total'] == 0 and parsear_generico is not None:
-                dados = parsear_generico(text)
         dados['origem'] = orig
         return jsonify(dados)
     except Exception as e:
