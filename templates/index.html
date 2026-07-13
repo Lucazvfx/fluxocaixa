@@ -199,7 +199,22 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
 
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 @media(max-width:900px){.g2,.g3,.g13,.fgrid,.sstrip,.tc-grid{grid-template-columns:1fr 1fr}main,header{padding-left:20px;padding-right:20px}.rhero-tipo{font-size:3rem}.rhero-em{display:none}.tstrip{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:600px){.g2,.g3,.sstrip,.tc-grid{grid-template-columns:1fr}}
+@media(max-width:600px){
+  .g2,.g3,.g13,.fgrid,.sstrip,.tc-grid,.proj-strip{grid-template-columns:1fr}
+  .tstrip{grid-template-columns:repeat(2,1fr)}
+  .rhero-grid{grid-template-columns:1fr}.rhero{padding:22px}
+  .ptitle{font-size:1.8rem}.psub{font-size:.8rem}
+  main{padding-top:24px;padding-bottom:72px}
+  .tab-bar{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tab-bar::-webkit-scrollbar{display:none}
+  .tab-btn{padding:8px 13px;font-size:.68rem;letter-spacing:1px}
+  .cbar-l{width:80px;font-size:.54rem}
+  .rhero-tipo{font-size:2rem}
+  #fase-geral>div[style],#fase-cria>div[style],#fase-recria>div[style],#fase-engorda>div[style]{grid-template-columns:1fr!important}
+  .itbl thead th,.itbl td{padding:7px 8px;font-size:.78rem}
+  .ni{width:80px;font-size:.8rem;padding:7px 8px}
+  .cb{padding:14px}
+}
 
 /* ── CICLO COMPLETO ── */
 .sc-sn{font-family:var(--fn);font-weight:700;font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;background:none;border:1px solid var(--b2);border-radius:var(--rs);padding:7px 14px;color:var(--mu);cursor:pointer;transition:all .2s;white-space:nowrap}
@@ -273,6 +288,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
   <button class="tab-btn tab-locked" id="tab-cen" onclick="showTab('cenarios',this)">Simular Cenários</button>
   <button class="tab-btn" id="tab-rec" onclick="showTab('reconciliacao',this)">Reconciliação</button>
   <button class="tab-btn" onclick="showTab('historico',this)">Histórico</button>
+  <button class="tab-btn" onclick="showTab('ajuda',this)">Ajuda</button>
 </div>
 
 <!-- ═══ ENTRADA MANUAL ═══ -->
@@ -651,6 +667,303 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
     </div>
   </div>
 </div>
+
+<!-- ═══ AJUDA ═══ -->
+<div class="panel" id="panel-ajuda">
+  <div class="ptitle">Central de <em>Ajuda</em></div>
+  <p class="psub">Referências técnicas, benchmarks e guia de uso da plataforma.</p>
+
+  <!-- COMO USAR -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Como usar a plataforma</div></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" class="g2-help">
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-size:1.5rem;margin-bottom:8px">📄</div>
+          <div style="font-family:var(--fn);font-weight:700;font-size:.78rem;margin-bottom:6px">1. Leia o PDF</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Faça upload da GTA/Inventário do estado (INDEA, IDARON, IAGRO, AGRODEFESA, ADAPEC, ADEPARA). O sistema extrai o rebanho automaticamente.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-size:1.5rem;margin-bottom:8px">🐄</div>
+          <div style="font-family:var(--fn);font-weight:700;font-size:.78rem;margin-bottom:6px">2. Confirme o rebanho</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Revise as quantidades por faixa etária e sexo. Use o Template para preencher manualmente se necessário.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-size:1.5rem;margin-bottom:8px">💰</div>
+          <div style="font-family:var(--fn);font-weight:700;font-size:.78rem;margin-bottom:6px">3. Informe os custos</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Em "Simular Cenários → Parâmetros", preencha o desembolso mensal por componente ou use os presets GEP. Marque N/A para custos inexistentes.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-size:1.5rem;margin-bottom:8px">📊</div>
+          <div style="font-family:var(--fn);font-weight:700;font-size:.78rem;margin-bottom:6px">4. Classifique</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Clique em "Classificar" para gerar o parecer. O resultado compara o produtor com benchmarks nacionais e regionais.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GTAs POR ESTADO -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>GTAs suportadas por estado</div></div>
+    <div class="cb">
+      <p style="font-size:.8rem;color:var(--sb);margin-bottom:14px;line-height:1.6">A GTA (Guia de Trânsito Animal) é o documento oficial que registra o rebanho bovino declarado ao órgão estadual de defesa agropecuária. Cada estado tem seu formato próprio de PDF.</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" class="g2-help">
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:4px">MT — INDEA</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Instituto de Defesa Agropecuária do Estado de Mato Grosso. Tabela com 5 faixas (0–4m, 5–12m, 13–24m, 25–36m, acima 36m) separadas por sexo.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:4px">RO — IDARON</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Agência de Defesa Sanitária Agrosilvopastoril do Estado de Rondônia. Formato próprio com categorias Bezerro, Novilho, Garrote, Boi, Vaca.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:4px">MS — IAGRO</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Agência Estadual de Defesa Sanitária Animal e Vegetal de MS. Declaração Anual de Existência de Animais (DAEA).</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:4px">GO — AGRODEFESA</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Agência Goiana de Assistência Técnica, Extensão Rural e Pesquisa Agropecuária. Inventário bovino anual.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:4px">TO — ADAPEC</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Agência de Defesa Agropecuária do Tocantins. Registro pecuário com faixas equivalentes ao padrão MAPA.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:4px">PA — ADEPARA</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Agência de Defesa Agropecuária do Pará. Declaração de rebanho bovino com faixas etárias e sexo.</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+        <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--am);margin-bottom:4px">MA — AGED</div>
+        <div style="font-size:.75rem;color:var(--sb);line-height:1.5">Agência Estadual de Defesa Agropecuária do Maranhão. Suporte parcial — verifique o resultado após a leitura.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORIAS DO REBANHO -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Categorias do rebanho bovino</div></div>
+    <div class="cb">
+      <p style="font-size:.8rem;color:var(--sb);margin-bottom:14px;line-height:1.6">O rebanho é classificado por faixa etária e sexo. Cada categoria tem peso médio e valor de mercado distintos, impactando o cálculo do patrimônio e da garantia.</p>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+          <thead>
+            <tr style="border-bottom:1px solid var(--b)">
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Categoria</th>
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Idade</th>
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Peso médio</th>
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">UA equiv.</th>
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.56rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Função no sistema</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 12px;color:var(--am)">Bezerro/a</td><td style="padding:9px 12px;color:var(--sb)">0–4 meses</td><td style="padding:9px 12px;color:var(--sb)">80–120 kg</td><td style="padding:9px 12px;color:var(--sb)">0,2 UA</td><td style="padding:9px 12px;color:var(--sb)">Produto da cria; base do ciclo</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 12px;color:var(--cy)">Bez. Desmamado/a</td><td style="padding:9px 12px;color:var(--sb)">5–12 meses</td><td style="padding:9px 12px;color:var(--sb)">150–220 kg</td><td style="padding:9px 12px;color:var(--sb)">0,4 UA</td><td style="padding:9px 12px;color:var(--sb)">Fase pós-desmame; recria inicial</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 12px;color:var(--g)">Garrote/Novilha</td><td style="padding:9px 12px;color:var(--sb)">13–24 meses</td><td style="padding:9px 12px;color:var(--sb)">250–340 kg</td><td style="padding:9px 12px;color:var(--sb)">0,6 UA</td><td style="padding:9px 12px;color:var(--sb)">Recria plena; novilha entra em reprodução</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 12px;color:var(--g)">Novilho/Novilha 2a</td><td style="padding:9px 12px;color:var(--sb)">25–36 meses</td><td style="padding:9px 12px;color:var(--sb)">340–420 kg</td><td style="padding:9px 12px;color:var(--sb)">0,8 UA</td><td style="padding:9px 12px;color:var(--sb)">Engorda ou cobertura; pré-abate</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:9px 12px;color:var(--g)">Boi Gordo/Vaca</td><td style="padding:9px 12px;color:var(--sb)">> 36 meses</td><td style="padding:9px 12px;color:var(--sb)">450–560 kg</td><td style="padding:9px 12px;color:var(--sb)">1,0 UA</td><td style="padding:9px 12px;color:var(--sb)">Abate; matrizes em reprodução</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:var(--c2);border-radius:var(--rs);border:1px solid var(--b);font-size:.75rem;color:var(--sb);line-height:1.6">
+        <strong style="color:var(--tx)">UA (Unidade Animal)</strong> — equivalência padrão baseada em bovino adulto de 450 kg. Permite comparar diferentes categorias e calcular a carga animal por hectare. Referência: <span style="color:var(--cy)">Embrapa Gado de Corte</span>.
+      </div>
+    </div>
+  </div>
+
+  <!-- SISTEMAS DE PRODUÇÃO -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Sistemas de produção pecuária</div></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.85rem;color:var(--am);margin-bottom:8px">🐮 Cria</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Produção de bezerros do nascimento ao desmame (~7 meses). Foco em matrizes, taxa de natalidade e sobrevivência. <br><strong style="color:var(--tx)">Benchmark GEP 24/25:</strong> R$90,88/cab·mês (média) · R$69,63 (top). <br><strong style="color:var(--tx)">Indicador chave:</strong> Taxa de natalidade (&gt;75% = bom; &gt;85% = excelente).</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.85rem;color:var(--cy);margin-bottom:8px">🐂 Recria</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Do desmame até o ponto de transferência para engorda ou abate (7–24 meses). Foco em GMD e eficiência de pastagem. <br><strong style="color:var(--tx)">Benchmark GEP 24/25:</strong> R$100,50/cab·mês (média) · R$77,40 (top). <br><strong style="color:var(--tx)">GMD referência:</strong> 0,4–0,6 kg/dia (pasto) · 0,8–1,2 kg/dia (suplementado).</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.85rem;color:var(--g);margin-bottom:8px">🥩 Engorda (Pasto)</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Terminação a pasto com suplementação proteico-energética. Ciclo de 90–180 dias até o peso de abate (>450 kg). <br><strong style="color:var(--tx)">Benchmark GEP 24/25:</strong> R$182,60/cab·mês (média) · R$177,30 (top). <br><strong style="color:var(--tx)">Rendimento de carcaça:</strong> 52–56% do peso vivo.</div>
+        </div>
+        <div style="background:var(--c2);border-radius:var(--rs);padding:16px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.85rem;color:var(--pu);margin-bottom:8px">🏗️ Confinamento</div>
+          <div style="font-size:.78rem;color:var(--sb);line-height:1.6">Feedlot com dieta completa (milho + farelo de soja + núcleo mineral). Ração representa ~80% do custo. <br><strong style="color:var(--tx)">Benchmark estimado 24/25:</strong> R$484/cab·mês (média) · R$421 (top). <br><strong style="color:var(--tx)">GMD:</strong> 1,2–1,8 kg/dia · Conversão: 6–8 kg ração/kg ganho.</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);border-radius:var(--rs);padding:14px">
+        <div style="font-family:var(--fn);font-weight:700;font-size:.82rem;color:var(--g);margin-bottom:6px">Ciclo Completo — GEP Araguaia / Inttegra 24/25</div>
+        <div style="font-size:.78rem;color:var(--sb);line-height:1.7">Todas as fases integradas na mesma propriedade. É o sistema mais eficiente do ponto de vista de uso da terra e previsibilidade de receita. <strong style="color:var(--tx)">Desembolso médio: R$119,14/cab·mês · Top rentáveis: R$96,08/cab·mês.</strong> A diferença entre média e top (~20%) vem principalmente de eficiência em insumos e escala de administração. Fonte: Terra Desenvolvimento Agropecuário — GEP Araguaia safra 2024/25.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESTRUTURA DE CUSTOS -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Estrutura de custos (8 componentes GEP)</div></div>
+    <div class="cb">
+      <p style="font-size:.8rem;color:var(--sb);margin-bottom:14px;line-height:1.6">O método GEP (Grupo de Estudo da Pecuária) decompõe o desembolso em 8 categorias. Use esses benchmarks para comparar com os custos declarados pelo produtor.</p>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+          <thead>
+            <tr style="border-bottom:1px solid var(--b)">
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">Componente</th>
+              <th style="text-align:left;padding:8px 12px;font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu)">O que inclui</th>
+              <th style="text-align:right;padding:8px 12px;font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--am)">CC Média</th>
+              <th style="text-align:right;padding:8px 12px;font-family:var(--fm);font-size:.54rem;letter-spacing:2px;text-transform:uppercase;color:var(--g)">CC Top</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Insumos</td><td style="padding:8px 12px;color:var(--sb)">Sal mineral, vacinas, medicamentos, vermífugos, hormônios, sêmen</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$44,92</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$42,18</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Mão de obra</td><td style="padding:8px 12px;color:var(--sb)">Salários, encargos, benefícios de funcionários permanentes</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$18,10</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$14,39</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Administração</td><td style="padding:8px 12px;color:var(--sb)">Contador, escritório, telefone, combustível administrativo, pró-labore</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$8,49</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$5,89</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Máquinas</td><td style="padding:8px 12px;color:var(--sb)">Custeio e investimento em tratores, implementos, pulverizadores, manutenção</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$15,23</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$10,71</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Pastagem</td><td style="padding:8px 12px;color:var(--sb)">Reforma, manutenção, adubação, arrendamento de terra, cercas</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$14,29</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$10,79</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Infraestrutura</td><td style="padding:8px 12px;color:var(--sb)">Curral, brete, aguadas, estradas internas, eletrificação, construções</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$13,69</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$8,40</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,.04)"><td style="padding:8px 12px;font-weight:600">Taxas e impostos</td><td style="padding:8px 12px;color:var(--sb)">ITR, FUNRURAL, taxas sanitárias, GTA, SISBOV</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$3,66</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$3,10</td></tr>
+            <tr><td style="padding:8px 12px;font-weight:600">Outros</td><td style="padding:8px 12px;color:var(--sb)">Despesas eventuais, viagens, hospedagem, treinamentos</td><td style="padding:8px 12px;text-align:right;color:var(--am)">R$0,76</td><td style="padding:8px 12px;text-align:right;color:var(--g)">R$0,62</td></tr>
+          </tbody>
+          <tfoot>
+            <tr style="border-top:1px solid var(--b)">
+              <td colspan="2" style="padding:10px 12px;font-weight:700;font-family:var(--fm)">TOTAL (Ciclo Completo)</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--am)">R$119,14</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--g)">R$96,08</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div style="margin-top:10px;font-size:.7rem;color:var(--mu)">Valores em R$/cab·mês. Fonte: GEP Araguaia / Inttegra (Terra Desenvolvimento Agropecuário), safra 2024/25.</div>
+    </div>
+  </div>
+
+  <!-- INDICADORES-CHAVE -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Indicadores-chave da pecuária de corte</div></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:6px">Taxa de Desfrute</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.6;margin-bottom:8px">Percentual do rebanho comercializado por ano (vendas + mortes / estoque médio). Indica a eficiência produtiva da fazenda.</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--rd)">Crítico</span><span style="color:var(--sb)">&lt; 15%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--am)">Médio Brasil</span><span style="color:var(--sb)">15–22%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--cy)">Bom</span><span style="color:var(--sb)">23–30%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--g)">Excelente</span><span style="color:var(--sb)">&gt; 30%</span></div>
+          </div>
+        </div>
+
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:6px">Taxa de Natalidade</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.6;margin-bottom:8px">Bezerros nascidos vivos / vacas expostas à reprodução × 100. Principal indicador do sistema de cria.</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--rd)">Crítico</span><span style="color:var(--sb)">&lt; 50%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--am)">Médio Brasil</span><span style="color:var(--sb)">55–65%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--cy)">Bom</span><span style="color:var(--sb)">70–80%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--g)">Excelente</span><span style="color:var(--sb)">&gt; 85%</span></div>
+          </div>
+        </div>
+
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:6px">GMD — Ganho Médio Diário</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.6;margin-bottom:8px">Kg de peso ganho por cabeça por dia. Varia conforme sistema (pasto extensivo → suplementado → confinamento).</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Pasto extensivo</span><span style="color:var(--sb)">0,3–0,5 kg/dia</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Pasto + suplemento</span><span style="color:var(--sb)">0,6–0,9 kg/dia</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Confinamento</span><span style="color:var(--sb)">1,2–1,8 kg/dia</span></div>
+          </div>
+        </div>
+
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:6px">Custo da @  (R$/arroba·ano)</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.6;margin-bottom:8px">Custo total de desembolso anual dividido pelas arrobas produzidas. Fórmula: <em>desembolso × 12 / peso médio (@)</em>. Compara diretamente com o preço de venda da arroba.</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--g)">Bom</span><span style="color:var(--sb)">Custo &lt; 70% do preço da @</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--am)">Atenção</span><span style="color:var(--sb)">70–90% do preço</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--rd)">Crítico</span><span style="color:var(--sb)">&gt; 90% do preço da @</span></div>
+          </div>
+        </div>
+
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:6px">Rendimento de Carcaça</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.6;margin-bottom:8px">% do peso vivo que se transforma em carcaça quente. Depende do acabamento de gordura (mínimo 3mm para frigoríficos premium).</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Zebuínos (Nelore)</span><span style="color:var(--sb)">52–55%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Cruzados (F1)</span><span style="color:var(--sb)">54–57%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Taurinos</span><span style="color:var(--sb)">56–60%</span></div>
+          </div>
+        </div>
+
+        <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b)">
+          <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:6px">Arroba do Boi Gordo</div>
+          <div style="font-size:.75rem;color:var(--sb);line-height:1.6;margin-bottom:8px">1 @ = 15 kg de carcaça quente. Um boi gordo de 520 kg produz ~16–17@. Referências de preço: CEPEA/Esalq e Scot Consultoria.</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Referência Jul/26</span><span style="color:var(--g)">~R$326/@ (boi gordo)</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.72rem"><span style="color:var(--sb)">Vaca gorda</span><span style="color:var(--g)">~R$290–310/@</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CRÉDITO RURAL -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><div class="ct"><div class="cd"></div>Crédito rural — como a análise funciona</div></div>
+    <div class="cb">
+      <p style="font-size:.8rem;color:var(--sb);margin-bottom:14px;line-height:1.6">A classificação de crédito avalia a capacidade de pagamento do produtor com base no fluxo de caixa da atividade, valor do patrimônio e relação prestação/receita.</p>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" class="g2-help">
+        <div style="background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);border-radius:var(--rs);padding:14px;text-align:center">
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.4rem;color:var(--g)">A</div>
+          <div style="font-size:.7rem;color:var(--sb);margin-top:4px;line-height:1.4">Fluxo positivo · Prestação &lt; 30% da receita · Patrimônio &gt; 200% da dívida</div>
+        </div>
+        <div style="background:rgba(34,211,238,.07);border:1px solid rgba(34,211,238,.25);border-radius:var(--rs);padding:14px;text-align:center">
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.4rem;color:var(--cy)">B</div>
+          <div style="font-size:.7rem;color:var(--sb);margin-top:4px;line-height:1.4">Fluxo positivo · Prestação 30–50% · Patrimônio 150–200% da dívida</div>
+        </div>
+        <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:var(--rs);padding:14px;text-align:center">
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.4rem;color:var(--am)">C</div>
+          <div style="font-size:.7rem;color:var(--sb);margin-top:4px;line-height:1.4">Fluxo marginal · Prestação 50–70% · Patrimônio 100–150% da dívida</div>
+        </div>
+        <div style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.25);border-radius:var(--rs);padding:14px;text-align:center">
+          <div style="font-family:var(--fn);font-weight:800;font-size:1.4rem;color:var(--rd)">D</div>
+          <div style="font-size:.7rem;color:var(--sb);margin-top:4px;line-height:1.4">Fluxo negativo ou Prestação &gt;70% · Patrimônio insuficiente para cobertura</div>
+        </div>
+      </div>
+      <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b);margin-bottom:10px">
+        <div style="font-family:var(--fn);font-weight:700;font-size:.8rem;margin-bottom:8px">Principais linhas de crédito rural (2025/26)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.75rem">
+          <div><span style="color:var(--g);font-weight:600">PRONAMP</span> <span style="color:var(--sb)">— Médio produtor, taxa ~8% a.a., limite R$1,5M</span></div>
+          <div><span style="color:var(--g);font-weight:600">FCO Rural</span> <span style="color:var(--sb)">— Centro-Oeste, taxa ~6–8% a.a., prazo 8–12 anos</span></div>
+          <div><span style="color:var(--g);font-weight:600">FNO</span> <span style="color:var(--sb)">— Norte/AM/PA/RO/TO, taxa 6–8% a.a.</span></div>
+          <div><span style="color:var(--g);font-weight:600">BCB MCR</span> <span style="color:var(--sb)">— Manual de Crédito Rural; base regulatória de todas as operações</span></div>
+        </div>
+      </div>
+      <div style="background:var(--c2);border-radius:var(--rs);padding:14px;border:1px solid var(--b);font-size:.75rem;color:var(--sb);line-height:1.6">
+        <strong style="color:var(--tx)">Garantias típicas em crédito pecuário:</strong> penhor cedular do rebanho (CDCA/CRA), hipoteca rural, alienação fiduciária de imóvel rural, aval. O rebanho declarado na GTA é a base de cálculo do penhor. Por isso a consistência entre GTA e rebanho declarado ao banco é crítica.
+      </div>
+    </div>
+  </div>
+
+  <!-- FONTES -->
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="cd"></div>Fontes e referências</div></div>
+    <div class="cb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+        <div><span style="color:var(--g);font-weight:600">GEP Araguaia / Inttegra</span><br><span style="color:var(--sb)">Perfil de Desembolso safra 24/25 — benchmarks de custo por modalidade</span></div>
+        <div><span style="color:var(--g);font-weight:600">CEPEA/Esalq–USP</span><br><span style="color:var(--sb)">Indicadores de preço do boi gordo, bezerro e insumos agropecuários</span></div>
+        <div><span style="color:var(--g);font-weight:600">Embrapa Gado de Corte</span><br><span style="color:var(--sb)">Sistema de produção, categorias animal (UA), índices zootécnicos</span></div>
+        <div><span style="color:var(--g);font-weight:600">Scot Consultoria</span><br><span style="color:var(--sb)">Custo do boi gordo, análise de mercado semanal</span></div>
+        <div><span style="color:var(--g);font-weight:600">Banco Central — MCR</span><br><span style="color:var(--sb)">Manual de Crédito Rural — regras operacionais e taxas</span></div>
+        <div><span style="color:var(--g);font-weight:600">ABCZ / ASBIA</span><br><span style="color:var(--sb)">Índices reprodutivos, genética e inseminação artificial</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
 </main>
 
 <script>
@@ -1580,22 +1893,68 @@ function mostrarFaseCusto(fase, btn){
     const b=document.getElementById('fase-btn-'+f); if(b) b.style.fontWeight=f===fase?'800':'';
   });
 }
+function _ativarCampo(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.disabled=false; el.style.opacity=''; el.style.background='';
+  const na=document.getElementById('na-'+id); if(na) na.checked=false;
+}
+function toggleNA(cb, id){
+  const inp=document.getElementById(id); if(!inp) return;
+  if(cb.checked){
+    inp.dataset.prevVal=inp.value;
+    inp.value='0'; inp.disabled=true;
+    inp.style.opacity='0.35'; inp.style.background='var(--c2)';
+  } else {
+    inp.disabled=false; inp.style.opacity=''; inp.style.background='';
+    inp.value=inp.dataset.prevVal||'';
+  }
+  recalcCiclo();
+}
 function aplicarPresetFase(fase, perfil){
   const modMap={cria:'CRIA',recria:'RECRIA',engorda:'ENGORDA'};
   const mod=modMap[fase]||'CICLO_COMPLETO';
   const idx=perfil==='media'?0:1; const p=PERFIL_DESEMBOLSO[mod];
-  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+fase+'-'+k); if(el) el.value=p[k][idx];});
+  COMP_DESEMB.forEach(k=>{
+    const id='cd-'+fase+'-'+k; _ativarCampo(id);
+    const el=document.getElementById(id); if(el) el.value=p[k][idx];
+  });
   recalcCiclo();
 }
 function aplicarPresetConfinamento(){
   const p=PERFIL_DESEMBOLSO['ENGORDA_CONFINAMENTO'];
-  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-engorda-'+k); if(el) el.value=p[k][0];});
+  COMP_DESEMB.forEach(k=>{
+    const id='cd-engorda-'+k; _ativarCampo(id);
+    const el=document.getElementById(id); if(el) el.value=p[k][0];
+  });
   recalcCiclo();
 }
 function limparFaseCusto(fase){
   COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+fase+'-'+k); if(el) el.value='';});
   recalcCiclo();
 }
+// Injeta toggle "N/A" em todos os campos de custo das fases
+(function injetarNA(){
+  ['fase-geral','fase-cria','fase-recria','fase-engorda'].forEach(pid=>{
+    const phDiv=document.getElementById(pid); if(!phDiv) return;
+    phDiv.querySelectorAll('.field').forEach(fd=>{
+      const inp=fd.querySelector('input[type=number]');
+      if(!inp||!inp.id.startsWith('cd-')) return;
+      const lbl=fd.querySelector('label');
+      if(!lbl||lbl.querySelector('.na-toggle')) return;
+      lbl.style.cssText+=(lbl.style.cssText?';':'')+'display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:nowrap';
+      const tog=document.createElement('span');
+      tog.className='na-toggle';
+      tog.style.cssText='font-size:.58rem;color:var(--mu);display:flex;align-items:center;gap:3px;white-space:nowrap;flex-shrink:0;cursor:pointer';
+      const cb=document.createElement('input');
+      cb.type='checkbox'; cb.id='na-'+inp.id;
+      cb.style.cssText='width:11px;height:11px;cursor:pointer';
+      cb.addEventListener('change',function(){toggleNA(this,inp.id);});
+      const span=document.createElement('span'); span.textContent='N/A';
+      tog.appendChild(cb); tog.appendChild(span);
+      lbl.appendChild(tog);
+    });
+  });
+}());
 function pesoMedioArrobaRebanho(){
   const v=getVals(); const tot=v.reduce((a,b)=>a+b,0); if(tot<=0) return 0;
   const fj=v[0]+v[2]+v[4], mj=v[1]+v[3]+v[5], mat=v[6]+v[8], boi=v[7]+v[9];
