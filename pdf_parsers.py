@@ -765,13 +765,21 @@ def parsear_generico(text: str) -> dict:
     animais = _animais_vazios()
     fazenda = municipio = proprietario = cpf = data_saldo = ''
 
+    # 1. Etiqueta explícita com ":" — "Propriedade: FAZENDA X" / "FAZENDA: X"
     for pat in [
-        r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)',
+        r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO):\s*(.+)',
     ]:
         m = re.search(pat, text, re.I)
         if m:
             fazenda = m.group(1).strip().splitlines()[0][:60]
             break
+
+    # 2. Fallback: "FAZENDA NOME" em linha isolada (sem rótulo)
+    if not fazenda:
+        m = re.search(r'(?m)^\s*(FAZENDA\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s]+?)\s*$',
+                      text, re.I)
+        if m:
+            fazenda = m.group(1).strip()[:60]
 
     m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+?)(?:\s{2,}|\n|$)', text, re.I)
     if m:
@@ -846,7 +854,12 @@ def _normalizar(text: str) -> str:
 
 def _meta_basica(text: str) -> dict:
     fazenda = municipio = proprietario = cpf = data_saldo = ''
-    for pat in [r'(?:NOME\s+DA\s+)?(?:PROPRIEDADE|FAZENDA|ESTABELECIMENTO)[:\s]+(.+)']:
+    # Prioriza "FAZENDA:" e "ESTABELECIMENTO:" antes de "PROPRIEDADE:" para
+    # evitar capturar "RURAL" de "FICHA SANITARIA PROPRIEDADE RURAL"
+    for pat in [
+        r'(?:NOME\s+DA\s+)?(?:FAZENDA|ESTABELECIMENTO)[:\s]+(.+)',
+        r'PROPRIEDADE:\s*(.+)',   # requer ":" para não casar "PROPRIEDADE RURAL"
+    ]:
         m = re.search(pat, text, re.I)
         if m:
             fazenda = m.group(1).strip().splitlines()[0][:60]
@@ -854,14 +867,30 @@ def _meta_basica(text: str) -> dict:
     m = re.search(r'MUNIC[IÍ]PIO[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-/]+?)(?:\s{2,}|\n|$)', text, re.I)
     if m:
         municipio = m.group(1).strip()[:60]
+    # Proprietario: NOME - CPF  (padrão RAC / SIGEAGRO)
+    m = re.search(r'Propriet[aá]rio[:\s]+([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s]+?)\s*[-–]\s*[\d]',
+                  text, re.I)
+    if m:
+        proprietario = m.group(1).strip()[:80]
     m = re.search(r'\b(\d{3}\.?\d{3}\.?\d{3}[\-\.]\d{2}|\d{11})\b', text)
     if m:
         cpf = re.sub(r'[^\d]', '', m.group(1))
     m = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
     if m:
         data_saldo = m.group(1)
-    return {'fazenda': fazenda, 'municipio': municipio, 'proprietario': proprietario,
+    meta = {'fazenda': fazenda, 'municipio': municipio, 'proprietario': proprietario,
             'cpf': cpf, 'ie': '', 'data_saldo': data_saldo}
+    # Fase e sistema são comuns a todos os modelos PA
+    up = text.upper()
+    for fase in ('CICLO COMPLETO', 'ENGORDA', 'RECRIA', 'CRIA'):
+        if fase in up:
+            meta['fase'] = fase
+            break
+    for sist in ('CONFINAMENTO', 'PASTO'):
+        if sist in up:
+            meta['sistema'] = sist
+            break
+    return meta
 
 
 def _resultado(meta: dict, animais: dict) -> dict:
