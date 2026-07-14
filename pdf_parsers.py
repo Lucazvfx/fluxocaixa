@@ -893,9 +893,24 @@ def _meta_basica(text: str) -> dict:
     return meta
 
 
+def _categorias_comerciais(animais: dict) -> dict:
+    """Converte faixas etárias → categorias comerciais (nomenclatura do mercado)."""
+    return {
+        'bezerra':         animais['f00_F'] + animais['f05_F'],
+        'bezerra_desmama': animais['f13_F'],
+        'novilha':         animais['f25_F'],
+        'vaca':            animais['fac_F'],
+        'bezerro':         animais['f00_M'] + animais['f05_M'],
+        'bezerro_desmama': animais['f13_M'],
+        'garrote':         animais['f25_M'],
+        'boi_gordo':       animais['fac_M'],
+    }
+
+
 def _resultado(meta: dict, animais: dict) -> dict:
     valores = _para_valores(animais)
-    return {**meta, 'total': sum(valores), 'animais': animais, 'valores': valores}
+    return {**meta, 'total': sum(valores), 'animais': animais, 'valores': valores,
+            'categorias': _categorias_comerciais(animais)}
 
 
 def _numeros_puros(bloco: str, n: int) -> list:

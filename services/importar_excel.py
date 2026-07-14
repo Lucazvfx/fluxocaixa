@@ -72,11 +72,25 @@ def _safe_int(v) -> int:
         return 0
 
 
+_TOTAL_REBANHO_MAP: dict[str, tuple] = {
+    'bezerra':         ('f00_F', 'f05_F'),
+    'bezerra desmama': ('f13_F',),
+    'novilha':         ('f25_F',),
+    'vaca':            ('fac_F',),
+    'bezerro':         ('f00_M', 'f05_M'),
+    'bezerro desmama': ('f13_M',),
+    'garrote':         ('f25_M',),
+    'boi gordo':       ('fac_M',),
+}
+
+
 def parsear_ficha_excel(source) -> list[dict]:
     """Lê a aba CONSOLIDADO e devolve lista de fazendas com seus v[].
 
     source: caminho (str/Path), bytes ou file-like aberto em modo binário.
     Retorna: [{'fazenda': str, 'valores': list[10], 'animais': dict, 'total': int}]
+    O primeiro item pode ser {'fazenda': 'Total Rebanho', ...} quando a coluna J/K
+    do CONSOLIDADO tiver dados (totais agregados preenchidos pelo Excel).
     """
     import openpyxl
 
@@ -92,16 +106,20 @@ def parsear_ficha_excel(source) -> list[dict]:
     fazendas: list[dict] = []
     current_fazenda: str | None = None
     current_animais: dict | None = None
+    total_rebanho_animais = _animais_vazios()
 
     for row in ws.iter_rows(values_only=True):
-        # índices 0-based: A=0, B=1, C=2, D=3, E=4, F=5
+        # índices 0-based: A=0, B=1, C=2, D=3, E=4, F=5, J=9, K=10
         col_b = str(row[1] or '').strip() if len(row) > 1 else ''
         col_c = row[2]                      if len(row) > 2 else None
         col_e = str(row[4] or '').strip()  if len(row) > 4 else ''
         col_f = row[5]                      if len(row) > 5 else None
+        col_j = str(row[9]  or '').strip() if len(row) > 9  else ''
+        col_k = row[10]                     if len(row) > 10 else None
 
         b_lower = col_b.lower()
         e_lower = col_e.lower()
+        j_lower = col_j.lower()
 
         if b_lower == 'fazenda':
             _flush(fazendas, current_fazenda, current_animais)
@@ -122,7 +140,25 @@ def parsear_ficha_excel(source) -> list[dict]:
             if qtd > 0:
                 _add(current_animais, _MALE_MAP[e_lower], qtd)
 
+        # Coluna J/K: "Total Rebanho" — totais agregados pelo Excel (fórmulas)
+        if j_lower in _TOTAL_REBANHO_MAP and col_k is not None:
+            qtd = _safe_int(col_k)
+            if qtd > 0:
+                _add(total_rebanho_animais, _TOTAL_REBANHO_MAP[j_lower], qtd)
+
     _flush(fazendas, current_fazenda, current_animais)
+
+    # Prefixa "Total Rebanho" (da coluna J/K) se tiver dados — aparece primeiro
+    if sum(total_rebanho_animais.values()) > 0:
+        valores_tr = _para_valores(total_rebanho_animais)
+        fazendas.insert(0, {
+            'fazenda': 'Total Rebanho',
+            'animais': total_rebanho_animais,
+            'valores': valores_tr,
+            'total':   sum(valores_tr),
+            'is_total_rebanho': True,
+        })
+
     return fazendas
 
 

@@ -1276,11 +1276,44 @@ async function lerPDFsInserir(fileList){
     document.getElementById('f_faz').value = fazendas.length===1 ? fazendas[0] : `${fazendas.length} fazendas combinadas`;
     document.getElementById('f_mun').value = fazendas.length===1 ? (primeiraMeta.municipio||'') : '';
     document.getElementById('f_prop').value = primeiraMeta?.proprietario||'';
+    // Preenche fase/sistema se existirem nos metadados
+    if(primeiraMeta?.fase){const el=document.getElementById('f_fase');if(el)el.value=primeiraMeta.fase;}
+    if(primeiraMeta?.sistema){const el=document.getElementById('f_sistema');if(el)el.value=primeiraMeta.sistema;}
     upd();
+    // Mostra painel de categorias comerciais se disponíveis
+    if(primeiraMeta?.categorias) _renderCategorias(primeiraMeta.categorias, primeiraMeta.total_bovideos);
     const totalGeral=somaV.reduce((a,b)=>a+b,0);
     const okMsg=fazendas.length>1 ? `${fazendas.length} PDFs combinados (${fN(totalGeral)} animais no total)` : `PDF carregado: ${fazendas[0]} (${fN(totalGeral)} animais)`;
     showToast(falhas?`${okMsg} · ${falhas} arquivo(s) falharam`:okMsg);
   }finally{hideLoading()}
+}
+
+function _renderCategorias(cat, totalBovideos){
+  const el=document.getElementById('consist-panel');
+  if(!el||!cat) return;
+  const LABELS={bezerra:'Bezerra',bezerra_desmama:'Bezerra Desmama',novilha:'Novilha',vaca:'Vaca',
+                bezerro:'Bezerro',bezerro_desmama:'Bezerro Desmama',garrote:'Garrote',boi_gordo:'Boi Gordo'};
+  const totalCat=Object.values(cat).reduce((a,b)=>a+b,0);
+  const aviso=totalBovideos&&totalBovideos>totalCat
+    ?`<div style="margin-top:8px;padding:6px 10px;border-radius:6px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);font-size:.68rem;color:#FBBF24">
+        Total bovídeos na ficha: ${fN(totalBovideos)} cab. · Composição parcial lida via OCR: ${fN(totalCat)} cab. — complete as faixas 25–36m e 36m+ manualmente.
+      </div>` : '';
+  const rows=[
+    ['Bezerra','Bezerro'],['Bezerra Desmama','Bezerro Desmama'],['Novilha','Garrote'],['Vaca','Boi Gordo']
+  ].map(([f,m])=>{
+    const fk=f.toLowerCase().replace(/ /g,'_'), mk=m.toLowerCase().replace(/ /g,'_');
+    return `<tr>
+      <td style="padding:5px 10px;color:var(--tx)">${f}</td>
+      <td style="padding:5px 10px;text-align:right;color:var(--cy);font-family:var(--fn)">${fN(cat[fk]||0)}</td>
+      <td style="padding:5px 10px;color:var(--tx)">${m}</td>
+      <td style="padding:5px 10px;text-align:right;color:var(--am);font-family:var(--fn)">${fN(cat[mk]||0)}</td>
+    </tr>`;
+  }).join('');
+  el.style.display='block';
+  el.innerHTML=`<div style="font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Total Rebanho por Categoria</div>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">${rows}</table>
+    <div style="padding:6px 10px;font-size:.72rem;color:var(--sb)">Total categorizado: <strong style="color:var(--tx)">${fN(totalCat)}</strong> cab.</div>
+    ${aviso}`;
 }
 
 // ================== PLANILHA (TEMPLATE PADRÃO) ==================
@@ -1313,25 +1346,52 @@ async function lerFichaExcel(file){
     if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler ficha',true); return; }
     const fazendas=data.fazendas||[];
     if(!fazendas.length){ showToast('Nenhuma fazenda encontrada na ficha.',true); return; }
-    if(fazendas.length===1){
-      _carregarFichaFazenda(fazendas[0]);
-    } else {
-      // Mostra seletor inline no painel
-      const wrap=document.getElementById('consist-panel');
-      wrap.style.display='block';
-      wrap.innerHTML=`<div style="font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione a fazenda</div>`
-        +fazendas.map((f,i)=>`<button class="btn-sm" style="margin:4px 4px 4px 0;display:inline-flex" onclick="_carregarFichaFazenda(window._fichaFazendas[${i}]);document.getElementById('consist-panel').style.display='none'">
-          ${f.fazenda} <span style="opacity:.6;margin-left:6px">${fN(f.total)} cab.</span>
-        </button>`).join('');
-      window._fichaFazendas=fazendas;
-      showToast(`${fazendas.length} fazendas encontradas — selecione uma.`);
+
+    // Se tem Total Rebanho (col J/K) e só uma fazenda individual, carrega direto
+    const totalReb=fazendas.find(f=>f.is_total_rebanho);
+    const porFazenda=fazendas.filter(f=>!f.is_total_rebanho);
+
+    if(porFazenda.length===0 && totalReb){
+      _carregarFichaFazenda(totalReb);
+      return;
     }
+    if(porFazenda.length===1 && !totalReb){
+      _carregarFichaFazenda(porFazenda[0]);
+      return;
+    }
+
+    // Múltiplas fazendas ou Total Rebanho + individuais → seletor
+    const wrap=document.getElementById('consist-panel');
+    wrap.style.display='block';
+    const botoes=fazendas.map((f,i)=>{
+      const destaque=f.is_total_rebanho
+        ?'background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);'
+        :'';
+      return `<button class="btn-sm" style="margin:4px 4px 4px 0;display:inline-flex;${destaque}"
+          onclick="_carregarFichaFazenda(window._fichaFazendas[${i}]);document.getElementById('consist-panel').style.display='none'">
+          ${f.is_total_rebanho?'∑ ':''}${f.fazenda}
+          <span style="opacity:.6;margin-left:6px">${fN(f.total)} cab.</span>
+        </button>`;
+    }).join('');
+    wrap.innerHTML=`<div style="font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione a fazenda</div>${botoes}`;
+    window._fichaFazendas=fazendas;
+    showToast(`${fazendas.length} opções encontradas${totalReb?' (inclui Total Rebanho agregado)':''} — selecione uma.`);
   }catch(e){ showToast('Erro ao ler ficha: '+e.message,true); }
   finally{ hideLoading(); }
 }
 function _carregarFichaFazenda(f){
   setValsFromApi(f.valores);
-  document.getElementById('f_faz').value=f.fazenda||'';
+  document.getElementById('f_faz').value=(f.is_total_rebanho?'':f.fazenda)||'';
+  // Computa e mostra categorias comerciais a partir dos animais carregados
+  if(f.animais){
+    const a=f.animais;
+    _renderCategorias({
+      bezerra:    (a.f00_F||0)+(a.f05_F||0), bezerra_desmama: a.f13_F||0,
+      novilha:    a.f25_F||0,                 vaca:            a.fac_F||0,
+      bezerro:    (a.f00_M||0)+(a.f05_M||0), bezerro_desmama: a.f13_M||0,
+      garrote:    a.f25_M||0,                 boi_gordo:       a.fac_M||0,
+    });
+  }
   showToast(`Ficha carregada: ${f.fazenda} (${fN(f.total)} animais)`);
 }
 
