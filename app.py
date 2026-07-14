@@ -793,7 +793,8 @@ def api_estimativa_valor():
 
 # ── Leitura de PDF ──────────────────────────────────────────────────────────
 def extrair_texto_pdf(path: str) -> str:
-    """Extrai texto de um PDF usando pdftotext (preferencial) ou pdfplumber."""
+    """Extrai texto de PDF: pdftotext → pdfplumber → OCR (Tesseract) para PDFs escaneados."""
+    # 1. pdftotext (mais fiel ao layout)
     try:
         result = subprocess.run(
             ['pdftotext', '-layout', path, '-'],
@@ -802,17 +803,45 @@ def extrair_texto_pdf(path: str) -> str:
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass  # pdftotext não instalado ou timeout — usa pdfplumber
+        pass
 
+    # 2. pdfplumber (funciona sem poppler)
+    text = ''
     try:
         import pdfplumber
-        text = ''
         with pdfplumber.open(path) as pdf:
             for page in pdf.pages:
                 text += (page.extract_text() or '') + '\n'
-        return text
+        if text.strip():
+            return text
     except Exception as e:
         raise RuntimeError(f'Não foi possível extrair texto do PDF: {e}')
+
+    # 3. OCR com Tesseract (PDF escaneado / baseado em imagem)
+    try:
+        import pytesseract
+        import pdfplumber
+        # Localiza o Tesseract (Windows ou PATH do sistema)
+        tess_win = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        if os.path.exists(tess_win):
+            pytesseract.pytesseract.tesseract_cmd = tess_win
+
+        ocr_text = ''
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                img = page.to_image(resolution=200).original
+                # 'por+eng' se disponível, senão 'eng'
+                try:
+                    ocr_text += pytesseract.image_to_string(img, lang='por+eng') + '\n'
+                except pytesseract.TesseractError:
+                    ocr_text += pytesseract.image_to_string(img, lang='eng') + '\n'
+        if ocr_text.strip():
+            logger.info("PDF escaneado: texto extraído via OCR (%d chars)", len(ocr_text))
+            return ocr_text
+    except Exception as e:
+        logger.warning("OCR falhou: %s", e)
+
+    return text  # vazio — deixa o parser lidar
 
 def detectar_origem(text: str) -> str:
     """Detecta agência/estado do documento — delega para pdf_parsers."""

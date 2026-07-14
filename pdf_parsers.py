@@ -19,6 +19,7 @@ Estados suportados via MAPEAMENTO (Classificação de Rebanho - Fichas.xlsm):
   TO_DECLARACAO  → GENERICO (4 faixas)
   PA_DECLARACAO  → GENERICO (4 faixas)
 """
+import os
 import re
 import subprocess
 
@@ -26,25 +27,51 @@ import subprocess
 # EXTRAÇÃO DE TEXTO
 # ─────────────────────────────────────────────
 def extrair_texto_pdf(path: str) -> str:
+    """Extrai texto de PDF: pdftotext → pdfplumber → OCR (Tesseract) para PDFs escaneados."""
+    # 1. pdftotext
     try:
         result = subprocess.run(
             ['pdftotext', '-layout', path, '-'],
-            capture_output=True, text=True
+            capture_output=True, text=True, timeout=30
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
+    # 2. pdfplumber
+    text = ''
     try:
         import pdfplumber
-        text = ''
         with pdfplumber.open(path) as pdf:
             for page in pdf.pages:
                 text += (page.extract_text() or '') + '\n'
-        return text
+        if text.strip():
+            return text
     except Exception as e:
         raise RuntimeError(f'Não foi possível extrair texto do PDF: {e}')
+
+    # 3. OCR com Tesseract (PDF baseado em imagem / escaneado)
+    try:
+        import pytesseract
+        import pdfplumber
+        tess_win = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        if os.path.exists(tess_win):
+            pytesseract.pytesseract.tesseract_cmd = tess_win
+        ocr_text = ''
+        with pdfplumber.open(path) as pdf:
+            for page in pdf.pages:
+                img = page.to_image(resolution=200).original
+                try:
+                    ocr_text += pytesseract.image_to_string(img, lang='por+eng') + '\n'
+                except Exception:
+                    ocr_text += pytesseract.image_to_string(img, lang='eng') + '\n'
+        if ocr_text.strip():
+            return ocr_text
+    except Exception:
+        pass
+
+    return text
 
 # ─────────────────────────────────────────────
 # DETECÇÃO DE ORIGEM
@@ -112,7 +139,9 @@ def detectar_origem(text: str) -> str:
     # — PA (ADEPARÁ — 4 faixas) —
     if ('ADEPAR' in up
             or 'AGÊNCIA DE DEFESA AGROPECUÁRIA DO ESTADO DO PARÁ' in up
-            or 'AGENCIA DE DEFESA AGROPECUARIA DO ESTADO DO PARA' in up):
+            or 'AGENCIA DE DEFESA AGROPECUARIA DO ESTADO DO PARA' in up
+            or 'SIGEAGRO' in up                          # sistema online PA
+            or 'SIGEAGRO.ADEPARA' in up):               # URL do sistema
         return 'ADEPARA_PA'
 
     return 'GENERICO'
@@ -1065,6 +1094,63 @@ def _buscar_qtd_rotulo(norm: str, rotulo: str) -> int:
     return int(m.group(1)) if m else 0
 
 
+def _meta_sigeagro(text: str, norm: str) -> dict:
+    """Extrai metadados do SIGEAGRO PA (incluindo texto OCR)."""
+    meta = {'fazenda': '', 'municipio': '', 'proprietario': '', 'cpf': '', 'ie': '', 'data_saldo': ''}
+
+    # Fazenda: "FAZENDA <NOME> & CNPJ" (separador: & # / @)
+    m = re.search(r'(FAZENDA\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s]+?)\s*[,\s]*[&#@/]\s*[\d]{6,}', text, re.I)
+    if m:
+        meta['fazenda'] = m.group(1).strip().rstrip(', ')[:60]
+    if not meta['fazenda']:
+        m = re.search(r'(FAZENDA\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s]+?)(?:\s*[/#\n]|\s{2,})', text, re.I)
+        if m:
+            meta['fazenda'] = m.group(1).strip()[:60]
+
+    # Data
+    m = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
+    if m:
+        meta['data_saldo'] = m.group(1)
+
+    # Área em HA — número antes de PROPRIETARI/ARRENDATARI/POSSEIRO
+    m = re.search(r'(\d{1,6}[,.]?\d{0,2})\s*\|?\s*(?:\[?\s*)?(?:PROPRIETARI|ARRENDATARI|POSSEIRO)', text, re.I)
+    if m:
+        meta['area_ha'] = m.group(1).replace(',', '.')
+
+    # Fase predominante
+    for fase in ('CICLO COMPLETO', 'ENGORDA', 'RECRIA', 'CRIA'):
+        if fase in text.upper():
+            meta['fase'] = fase
+            break
+
+    # Sistema predominante
+    for sist in ('CONFINAMENTO', 'PASTO'):
+        if sist in text.upper():
+            meta['sistema'] = sist
+            break
+
+    # Produtor + CPF do produtor (11 dígitos, não CNPJ de 14)
+    # Formato OCR: "NOME – CPF-11-dígitos" ou "NOME @ CPF"
+    m = re.search(
+        r'([A-Z][A-Z\s]{5,50})\s*[–\-@]\s*(\d{3}[\.\s]?\d{3}[\.\s]?\d{3}[\-\.]?\d{2})\b',
+        text, re.I
+    )
+    if m:
+        candidato = m.group(1).strip()
+        # Ignora linhas de menu/sistema (SIGEAGRO, Exploracoes, etc.)
+        ignorar = ('SIGEAGRO', 'INICIO', 'CADASTRO', 'PRODUCAO', 'RBIPA', 'EXPLORAC')
+        if not any(ign in candidato.upper() for ign in ignorar):
+            meta['proprietario'] = candidato[:80]
+            meta['cpf'] = re.sub(r'[^\d]', '', m.group(2))
+
+    # Total bovídeos — 3-6 dígitos após "BOVIDEOS" (pode estar na linha seguinte)
+    m = re.search(r'BOVID[EÉ]OS.{0,200}?(\d{3,6})', text, re.I | re.DOTALL)
+    if m:
+        meta['total_bovideos'] = int(m.group(1))
+
+    return meta
+
+
 def parsear_adepara_pa(text: str) -> dict:
     """
     Adaptado de modLeitorPA.bas.
@@ -1075,13 +1161,15 @@ def parsear_adepara_pa(text: str) -> dict:
     norm = _normalizar(text)
 
     # IdentificarModeloPA
-    if 'RAC' in norm or 'REGISTRO PARA ATUALIZACAO' in norm:
+    # Nota: 'RAC' sozinho é perigoso — aparece em 'EXPLORACOES', 'RASTREABILIDADE', etc.
+    if 'REGISTRO PARA ATUALIZACAO' in norm or re.search(r'\bRAC\b', norm):
         modelo = 'RAC'
     elif 'FICHA SANITARIA PROPRIEDADE RURAL' in norm:
         modelo = 'RESUMIDA'
     elif ('SIGEAGRO' in norm or 'GERENCIADOR DE ESPECIES' in norm
           or 'DETALHAMENTO DOS BOVINOS' in norm):
         modelo = 'SIGEAGRO'
+        meta = _meta_sigeagro(text, norm)
     else:
         modelo = 'GENERICO'
 
@@ -1110,24 +1198,53 @@ def parsear_adepara_pa(text: str) -> dict:
             if inicio < 0:
                 break
             prox = norm.find('DETALHAMENTO DOS BOVINOS', inicio + 10)
-            fim = norm.find('ADERE', inicio)
-            if fim < 0:
-                fim = norm.find('MOVIMENTACOES', inicio)
+            # Termina no próximo marcador (aceita OCR com G em vez de C: MOVIMENTAGCES)
+            fim = -1
+            for marcador in ('MOVIMENTA', 'ADERE', 'AUDITORIA', 'FICHAS SANITAR'):
+                p = norm.find(marcador, inicio + 20)
+                if p > 0 and (fim < 0 or p < fim):
+                    fim = p
             if fim < 0 or (prox > 0 and prox < fim):
-                fim = prox if prox > 0 else len(norm)
+                fim = prox if prox > 0 else inicio + 800  # limita a 800 chars
             bloco = text[inicio:fim]
+
+            # Tenta números em linhas puras (PDF digital)
             nums = _numeros_puros(bloco, 8)
-            if any(n > 0 for n in nums):
+            if any(n > 0 for n in nums) and len(nums) >= 4:
                 _aplicar_mapa8(animais, nums)
+            else:
+                # Fallback OCR: procura linha com múltiplos números após "CONTROLE POPULACIONAL"
+                # ou após a linha de cabeçalho M/F — última linha numérica do bloco
+                linhas_num = []
+                for linha in bloco.split('\n'):
+                    ns = [int(n) for n in re.findall(r'\b(\d{1,5})\b', linha)
+                          if 0 < int(n) <= 50_000]
+                    if len(ns) >= 3:
+                        linhas_num.append(ns)
+                if linhas_num:
+                    # Usa a linha com mais números, excluindo o total (última coluna SIGEAGRO)
+                    melhor = max(linhas_num, key=len)
+                    if len(melhor) >= 4:
+                        # Remove o último número se for ≥ soma de todos os outros
+                        # (é o total da linha, não uma contagem de faixa etária)
+                        soma_parcial = sum(melhor[:-1])
+                        if melhor[-1] >= soma_parcial * 0.9:
+                            melhor = melhor[:-1]
+                        _aplicar_mapa8(animais, melhor[:8])
             if prox < 0:
                 break
             pos = prox
 
     elif modelo == 'RESUMIDA':
-        # Formato resumido: busca padrão genérico
         pass  # cai no fallback
 
     if sum(animais.values()) == 0:
+        # Tenta usar o total de bovídeos do metadado para preencher como "acima de 36m"
+        total_bov = meta.get('total_bovideos', 0)
+        if total_bov > 0:
+            meta['total_bovideos_ocr'] = total_bov
+            # Sem composição — retorna metadados com total, sem distribuição por faixas
+            return _resultado(meta, animais)
         return parsear_generico(text)
 
     return _resultado(meta, animais)
