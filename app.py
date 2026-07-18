@@ -26,6 +26,7 @@ from pdf_parsers import (
     parsear_generico,
     parsear_iagro_ms, parsear_aged_ma, parsear_agrodefesa_go,
     parsear_adapec_to, parsear_adepara_pa,
+    parsear_go_declaracao_web,
     ORIGENS_GENERICAS, ORIGENS_INDEA,
 )
 
@@ -882,6 +883,8 @@ def api_ler_pdf():
             dados = parsear_iagro_ms(text)
         elif orig == 'AGED_MA':           # MA — modLeitorMA.bas
             dados = parsear_aged_ma(text)
+        elif orig == 'GO_DEC_WEB':         # GO declaração web
+            dados = parsear_go_declaracao_web(text)
         elif orig == 'AGRODEFESA_GO':     # GO ficha — modLeitorGOFicha.bas
             dados = parsear_agrodefesa_go(text)
         elif orig == 'ADAPEC_TO':         # TO — modLeitorTO.bas

@@ -110,6 +110,11 @@ def detectar_origem(text: str) -> str:
             or 'SALDO ATUAL DA EXPLORACAO' in up):
         return 'INDEA'
 
+    # — GO Declaração Rebanho via sistema web (4 faixas, 8 colunas M/F) —
+    if (re.search(r'UF/Munic[íi]pio:\s*GO/', text, re.I)
+            and re.search(r'DECLARA[CÇ][AÃ]O\s+REBANHO', text, re.I)):
+        return 'GO_DEC_WEB'
+
     # — GO (AGRODEFESA — 4 faixas, ficha cadastral, igual a MA) —
     if ('AGRODEFESA' in up
             or 'AGÊNCIA GOIANA DE DEFESA' in up
@@ -702,6 +707,76 @@ def parsear_declaracao_idaron(text: str) -> dict:
         'animais': animais,
         'valores': valores_lista,
     }
+
+# ─────────────────────────────────────────────
+# PARSER GO — Declaração Rebanho sistema web
+# ─────────────────────────────────────────────
+def parsear_go_declaracao_web(text: str) -> dict:
+    """
+    Parser para Declaração de Rebanho GO emitida pelo sistema web AGRODEFESA.
+
+    Tabela na seção 'DECLARAÇÃO REBANHO' → linha 'Existentes' com 8 colunas:
+    M 0-12m | F 0-12m | M 13-24m | F 13-24m | M 25-36m | F 25-36m | M 36m+ | F 36m+
+    """
+    animais = _animais_vazios()
+    fazenda = municipio = proprietario = cpf = data_saldo = ''
+
+    # Fazenda e produtor: "Nome: FAZENDA X   ...   Nome: PRODUTOR Y"
+    nomes = re.findall(
+        r'Nome:\s*([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ0-9\s\.\-]*?)(?=\s{3,}|Nome:|CPF|\n)',
+        text, re.I
+    )
+    if len(nomes) >= 1:
+        fazenda = nomes[0].strip()[:60]
+    if len(nomes) >= 2:
+        proprietario = nomes[1].strip()[:60]
+
+    m = re.search(r'CPF/CNPJ:\s*([\d]{11,14})', text, re.I)
+    if m:
+        cpf = m.group(1).strip()
+
+    m = re.search(r'UF/Munic[íi]pio:\s*GO/([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ\s\-]+?)(?:\s{2,}|\n|$)', text, re.I)
+    if m:
+        municipio = m.group(1).strip()
+
+    m = re.search(r'Data:\s*(\d{2}/\d{2}/\d{4})', text)
+    if m:
+        data_saldo = m.group(1)
+
+    # Extrai linha "Existentes" da seção "DECLARAÇÃO REBANHO" (não da seção "MORTES")
+    secao_m = re.search(r'DECLARAÇÃO REBANHO', text, re.I)
+    secao = text[secao_m.end():] if secao_m else text
+    ex_idx = secao.upper().find('EXISTENTES')
+    if ex_idx >= 0:
+        after_ex = secao[ex_idx:]
+        for line in after_ex.split('\n')[1:5]:
+            nums = [int(n) for n in re.findall(r'\d+', line)]
+            if len(nums) >= 8:
+                m0, f0 = nums[0], nums[1]
+                animais['f00_M'] = m0 // 2
+                animais['f05_M'] = m0 - m0 // 2
+                animais['f00_F'] = f0 // 2
+                animais['f05_F'] = f0 - f0 // 2
+                animais['f13_M'] = nums[2]
+                animais['f13_F'] = nums[3]
+                animais['f25_M'] = nums[4]
+                animais['f25_F'] = nums[5]
+                animais['fac_M'] = nums[6]
+                animais['fac_F'] = nums[7]
+                break
+
+    valores = _para_valores(animais)
+    return {
+        'fazenda':      fazenda,
+        'municipio':    municipio,
+        'proprietario': proprietario,
+        'cpf':          cpf,
+        'data_saldo':   data_saldo,
+        'total':        sum(valores),
+        'animais':      animais,
+        'valores':      valores,
+    }
+
 
 # ─────────────────────────────────────────────
 # PARSER GENÉRICO (fallback robusto)
