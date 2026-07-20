@@ -1342,10 +1342,14 @@ function _renderComparativo(fazendas){
   const panel=document.getElementById('comparativo-panel');
   const nProp=fazendas.filter(f=>!f.is_total_rebanho).length;
   const cols=[
-    {k:'novilha',  l:'Novilha', c:'var(--cy)'},
-    {k:'vaca',     l:'Vaca',    c:'var(--cy)'},
-    {k:'garrote',  l:'Garrote', c:'var(--am)'},
-    {k:'boi_gordo',l:'Boi G',  c:'var(--am)'},
+    {k:'bezerra',         l:'Bezerra',    c:'var(--cy)'},
+    {k:'bezerra_desmama', l:'Bez.Desm',   c:'var(--cy)'},
+    {k:'novilha',         l:'Novilha',    c:'var(--cy)'},
+    {k:'vaca',            l:'Vaca',       c:'var(--cy)'},
+    {k:'bezerro',         l:'Bezerro',    c:'var(--am)'},
+    {k:'bezerro_desmama', l:'Bez.Desm M', c:'var(--am)'},
+    {k:'garrote',         l:'Garrote',    c:'var(--am)'},
+    {k:'boi_gordo',       l:'Boi G',      c:'var(--am)'},
   ];
   const thStyle='padding:5px 8px;font-size:.62rem;letter-spacing:.8px;text-transform:uppercase;color:var(--mu);font-family:var(--fm);white-space:nowrap;border-bottom:1px solid var(--b)';
   const tdN='padding:5px 8px;text-align:right;font-family:var(--fn);font-size:.75rem;white-space:nowrap';
