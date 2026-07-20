@@ -941,6 +941,10 @@ def api_importar_ficha_excel():
         fazendas = parsear_ficha_excel(conteudo)
         if not fazendas:
             return jsonify({'erro': 'Nenhuma fazenda com animais encontrada na aba CONSOLIDADO'}), 400
+        uf = (request.form.get('uf') or '').strip().upper()
+        if uf:
+            for faz in fazendas:
+                faz.setdefault('uf', uf)
         return jsonify({'fazendas': fazendas, 'total_fazendas': len(fazendas)})
     except KeyError:
         return jsonify({'erro': 'Aba CONSOLIDADO não encontrada — verifique o formato do arquivo'}), 400

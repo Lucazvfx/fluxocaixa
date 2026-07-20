@@ -337,6 +337,19 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         <button class="btn-sm" onclick="window.location='/api/template/download'">⬇ Template</button>
         <button class="btn-sm" onclick="document.getElementById('insr-xlsx-inp').click()">📊 Ler Planilha</button>
         <input type="file" id="insr-xlsx-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerPlanilha(this.files[0]);this.value=''">
+        <select id="insr-uf-ficha" class="btn-sm" style="padding:2px 4px;cursor:pointer;font-size:.75rem">
+          <option value="">🗺 UF: Todas</option>
+          <option value="MT">MT</option>
+          <option value="RO">RO</option>
+          <option value="MS">MS</option>
+          <option value="GO">GO</option>
+          <option value="MA">MA</option>
+          <option value="TO">TO</option>
+          <option value="PA">PA</option>
+          <option value="MG">MG</option>
+          <option value="BA">BA</option>
+          <option value="SP">SP</option>
+        </select>
         <button class="btn-sm" onclick="document.getElementById('insr-ficha-inp').click()">📋 Ler Ficha</button>
         <input type="file" id="insr-ficha-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerFichaExcel(this.files[0]);this.value=''">
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
@@ -1298,6 +1311,8 @@ async function lerFichaExcel(file){
   showLoading('Lendo ficha de rebanho...');
   try{
     const fd=new FormData(); fd.append('arquivo',file);
+    const ufFicha=document.getElementById('insr-uf-ficha')?.value||'';
+    if(ufFicha) fd.append('uf',ufFicha);
     const res=await fetch('/api/importar-ficha-excel',{method:'POST',body:fd});
     const data=await res.json();
     if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler ficha',true); return; }
@@ -1341,6 +1356,7 @@ function _catDe(a){
 function _renderComparativo(fazendas){
   const panel=document.getElementById('comparativo-panel');
   const nProp=fazendas.filter(f=>!f.is_total_rebanho).length;
+  const hasUF = fazendas.some(f=>f.uf);
   const cols=[
     {k:'bezerra',         l:'Bezerra',    c:'var(--cy)'},
     {k:'bezerra_desmama', l:'Bez.Desm',   c:'var(--cy)'},
@@ -1357,8 +1373,9 @@ function _renderComparativo(fazendas){
 
   const header=`<tr>
     <th style="${thStyle};text-align:left">Fazenda</th>
+    ${hasUF?`<th style="${thStyle};text-align:center">UF</th>`:''}
     <th style="${thStyle};text-align:right">Total</th>
-    ${cols.map((c,i)=>`<th style="${thStyle};text-align:right;${i===2?'border-left:1px solid var(--b)':''}">${c.l}</th>`).join('')}
+    ${cols.map((c,i)=>`<th style="${thStyle};text-align:right;${i===4?'border-left:1px solid var(--b)':''}">${c.l}</th>`).join('')}
     <th style="${thStyle}"></th>
   </tr>`;
 
@@ -1370,6 +1387,7 @@ function _renderComparativo(fazendas){
     const totalStyle=isTR?`${tdN};color:var(--ve);font-weight:800`:`${tdN};color:var(--tx)`;
     return `<tr style="${bg}" id="comp-row-${idx}">
       <td style="${tdL}">${nome}</td>
+      ${hasUF?`<td style="${tdL};text-align:center;font-family:var(--fm);font-size:.68rem;color:var(--mu)">${f.uf||'—'}</td>`:''}
       <td style="${totalStyle}">${fN(f.total)}</td>
       ${cols.map((c,i)=>`<td style="${tdN};color:${c.c};${i===4?'border-left:1px solid var(--b)':''}">${fN(cat[c.k]||0)}</td>`).join('')}
       <td style="padding:4px 6px">
@@ -1558,10 +1576,14 @@ function renderParecer(data){
   const LBL={aprovar:'APROVAR',ressalva:'APROVAR COM RESSALVA',negar:'NEGAR'};
   const cor={aprovar:'#4ADE80',ressalva:'#FBBF24',negar:'#F87171'}[c.recomendacao]||'#8891A5';
   const capMax = c.capacidade_maxima;
+  const _vrLtv = (data.fluxo_gep||{}).valor_rebanho_ini || 0;
+  const _creditoLtv = +document.getElementById('credito_valor')?.value || 0;
+  const ltv = (_vrLtv > 0 && _creditoLtv > 0) ? (_creditoLtv / _vrLtv * 100) : null;
 
   // Veredicto em banner grande com faixa KPI
   const concl = c.recomendacao ? (() => {
-    const ncols = capMax > 0 ? 4 : 3;
+    const ncols = 3 + (capMax > 0 ? 1 : 0) + (ltv !== null ? 1 : 0);
+    const ltvCor = ltv <= 50 ? '#4ADE80' : ltv <= 80 ? '#FBBF24' : '#F87171';
     return `<div style="border-radius:12px;overflow:hidden;border:1px solid ${cor}33;margin-bottom:16px">
       <div style="background:${cor}15;padding:26px 24px 20px;text-align:center">
         <div style="font-family:var(--fn);font-weight:900;font-size:3.2rem;letter-spacing:-1px;line-height:1;color:${cor}">${LBL[c.recomendacao]||c.recomendacao}</div>
@@ -1572,6 +1594,10 @@ function renderParecer(data){
           <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">DSCR</div>
           <div style="font-family:var(--fn);font-weight:900;font-size:1.8rem;letter-spacing:-.5px;color:${cor}">${c.dscr}</div>
         </div>
+        ${ltv !== null ? `<div style="background:var(--c);padding:13px 14px;text-align:center">
+          <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">LTV</div>
+          <div style="font-family:var(--fn);font-weight:900;font-size:1.8rem;letter-spacing:-.5px;color:${ltvCor}">${ltv.toFixed(1)}%</div>
+        </div>` : ''}
         <div style="background:var(--c);padding:13px 14px;text-align:center">
           <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:2px;text-transform:uppercase;color:var(--mu);margin-bottom:4px">Parcela/Mês</div>
           <div style="font-family:var(--fn);font-weight:800;font-size:1.15rem;letter-spacing:-.5px">${fR(c.parcela_mensal)}</div>
@@ -1679,7 +1705,7 @@ function renderParecer(data){
           </div>`;
         }).join('')}
       </div>
-      <div style="margin-top:8px;font-size:.68rem;color:var(--mu)">DSCR ≥ 1,30 → Aprovar · 1,00–1,30 → Ressalva · &lt; 1,00 → Negar</div>
+      <div style="margin-top:8px;font-size:.68rem;color:var(--mu)">DSCR ≥ 1,30 → Aprovar · 1,00–1,30 → Ressalva · &lt; 1,00 → Negar &nbsp;·&nbsp; LTV ≤ 50% → baixo risco · 50–80% → atenção · &gt; 80% → alto risco</div>
     </div>` : '';
 
   return `<div class="card" style="margin-bottom:24px">
@@ -2459,7 +2485,8 @@ async function carregarCotacaoDia(){
     const svac=document.getElementById('cs-vaca'); if(svac) svac.textContent=fmtC(d.precos.vaca);
     const sbez=document.getElementById('cs-bez'); if(sbez) sbez.textContent=d.precos.bezerro>0?`R$ ${Math.round(d.precos.bezerro)}/cab`:'—';
     const f=document.getElementById('cot-fonte');
-    if(f) f.textContent = d.origem==='banco' ? 'CEPEA/ESALQ (boi) · Scot (vaca)' : 'referência (sem cotação salva ainda)';
+    const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    if(f) f.textContent = (d.origem==='banco' ? 'CEPEA/ESALQ (boi) · Scot (vaca)' : 'referência') + ` · atualizado ${hora}`;
     usarCotacaoDia();
     upd();
   }catch(e){}
