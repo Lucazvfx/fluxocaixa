@@ -370,6 +370,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="tsc" style="border-left:1px solid var(--g)22"><div class="tsc-l" style="color:var(--g)">Valor do Rebanho</div><div class="tsc-v" style="color:var(--g);font-size:1.1rem" id="t-val">—</div></div>
         </div>
         <div id="consist-panel" style="display:none;margin-top:16px"></div>
+        <div id="comparativo-panel" style="display:none;margin-top:16px"></div>
         <div style="margin-top:14px">
           <button class="btn-sm" onclick="toggleConds()" id="btn-conds" style="width:100%;justify-content:center">⚙ Condições de Classificação <span style="font-size:.65rem;opacity:.6">(opcional)</span></button>
           <div id="conds-wrap" style="display:none;margin-top:12px">
@@ -1347,37 +1348,101 @@ async function lerFichaExcel(file){
     const fazendas=data.fazendas||[];
     if(!fazendas.length){ showToast('Nenhuma fazenda encontrada na ficha.',true); return; }
 
-    // Se tem Total Rebanho (col J/K) e só uma fazenda individual, carrega direto
     const totalReb=fazendas.find(f=>f.is_total_rebanho);
     const porFazenda=fazendas.filter(f=>!f.is_total_rebanho);
 
-    if(porFazenda.length===0 && totalReb){
-      _carregarFichaFazenda(totalReb);
-      return;
-    }
+    // Uma única fazenda sem agregado → carrega direto
     if(porFazenda.length===1 && !totalReb){
       _carregarFichaFazenda(porFazenda[0]);
+      document.getElementById('comparativo-panel').style.display='none';
       return;
     }
 
-    // Múltiplas fazendas ou Total Rebanho + individuais → seletor
-    const wrap=document.getElementById('consist-panel');
-    wrap.style.display='block';
-    const botoes=fazendas.map((f,i)=>{
-      const destaque=f.is_total_rebanho
-        ?'background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);'
-        :'';
-      return `<button class="btn-sm" style="margin:4px 4px 4px 0;display:inline-flex;${destaque}"
-          onclick="_carregarFichaFazenda(window._fichaFazendas[${i}]);document.getElementById('consist-panel').style.display='none'">
-          ${f.is_total_rebanho?'∑ ':''}${f.fazenda}
-          <span style="opacity:.6;margin-left:6px">${fN(f.total)} cab.</span>
-        </button>`;
-    }).join('');
-    wrap.innerHTML=`<div style="font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:10px">Selecione a fazenda</div>${botoes}`;
+    // Múltiplas fazendas → painel comparativo
     window._fichaFazendas=fazendas;
-    showToast(`${fazendas.length} opções encontradas${totalReb?' (inclui Total Rebanho agregado)':''} — selecione uma.`);
+    _renderComparativo(fazendas);
+    // Carrega o Total Rebanho por padrão (ou a primeira fazenda individual)
+    _carregarFichaFazenda(totalReb||porFazenda[0]);
+    showToast(`${porFazenda.length} fazenda(s) carregadas`+(totalReb?' + Total Rebanho':''));
   }catch(e){ showToast('Erro ao ler ficha: '+e.message,true); }
   finally{ hideLoading(); }
+}
+
+function _catDe(a){
+  if(!a) return {bezerra:0,bezerra_desmama:0,novilha:0,vaca:0,bezerro:0,bezerro_desmama:0,garrote:0,boi_gordo:0};
+  return {
+    bezerra:         (a.f00_F||0)+(a.f05_F||0),
+    bezerra_desmama: a.f13_F||0,
+    novilha:         a.f25_F||0,
+    vaca:            a.fac_F||0,
+    bezerro:         (a.f00_M||0)+(a.f05_M||0),
+    bezerro_desmama: a.f13_M||0,
+    garrote:         a.f25_M||0,
+    boi_gordo:       a.fac_M||0,
+  };
+}
+
+function _renderComparativo(fazendas){
+  const panel=document.getElementById('comparativo-panel');
+  const nProp=fazendas.filter(f=>!f.is_total_rebanho).length;
+  const cols=[
+    {k:'bezerra',     l:'Bezerra',  c:'var(--cy)'},
+    {k:'bezerra_desmama',l:'Bez D',c:'var(--cy)'},
+    {k:'novilha',     l:'Novilha',  c:'var(--cy)'},
+    {k:'vaca',        l:'Vaca',     c:'var(--cy)'},
+    {k:'bezerro',     l:'Bezerro',  c:'var(--am)'},
+    {k:'bezerro_desmama',l:'Bez D', c:'var(--am)'},
+    {k:'garrote',     l:'Garrote',  c:'var(--am)'},
+    {k:'boi_gordo',   l:'Boi G',   c:'var(--am)'},
+  ];
+  const thStyle='padding:5px 8px;font-size:.62rem;letter-spacing:.8px;text-transform:uppercase;color:var(--mu);font-family:var(--fm);white-space:nowrap;border-bottom:1px solid var(--b)';
+  const tdN='padding:5px 8px;text-align:right;font-family:var(--fn);font-size:.75rem;white-space:nowrap';
+  const tdL='padding:5px 8px;font-size:.75rem;white-space:nowrap';
+
+  const header=`<tr>
+    <th style="${thStyle};text-align:left">Fazenda</th>
+    <th style="${thStyle};text-align:right">Total</th>
+    ${cols.map((c,i)=>`<th style="${thStyle};text-align:right;${i===4?'border-left:1px solid var(--b)':''}">${c.l}</th>`).join('')}
+    <th style="${thStyle}"></th>
+  </tr>`;
+
+  const rows=fazendas.map((f,idx)=>{
+    const cat=_catDe(f.animais);
+    const isTR=f.is_total_rebanho;
+    const bg=isTR?'background:rgba(74,222,128,.06);border-top:1px solid rgba(74,222,128,.2);border-bottom:1px solid rgba(74,222,128,.2);':'';
+    const nome=isTR?`<strong style="color:var(--ve)">∑ ${f.fazenda}</strong>`:f.fazenda;
+    const totalStyle=isTR?`${tdN};color:var(--ve);font-weight:800`:`${tdN};color:var(--tx)`;
+    return `<tr style="${bg}" id="comp-row-${idx}">
+      <td style="${tdL}">${nome}</td>
+      <td style="${totalStyle}">${fN(f.total)}</td>
+      ${cols.map((c,i)=>`<td style="${tdN};color:${c.c};${i===4?'border-left:1px solid var(--b)':''}">${fN(cat[c.k]||0)}</td>`).join('')}
+      <td style="padding:4px 6px">
+        <button class="btn-sm" style="padding:3px 10px;font-size:.68rem" onclick="window._selecionarComparativo(${idx})">→</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  panel.style.display='block';
+  panel.innerHTML=`
+    <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:8px">
+      Comparativo — ${nProp} propriedade${nProp>1?'s':''}
+      <span style="float:right;cursor:pointer;color:var(--mu)" onclick="document.getElementById('comparativo-panel').style.display='none'">✕</span>
+    </div>
+    <div style="overflow-x:auto;border-radius:8px;border:1px solid var(--b)">
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+        <thead>${header}</thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  window._selecionarComparativo=function(idx){
+    const f=window._fichaFazendas[idx];
+    _carregarFichaFazenda(f);
+    // Destaca linha selecionada
+    document.querySelectorAll('[id^="comp-row-"]').forEach(r=>r.style.outline='');
+    const row=document.getElementById('comp-row-'+idx);
+    if(row) row.style.outline='1px solid var(--ve)';
+  };
 }
 function _carregarFichaFazenda(f){
   setValsFromApi(f.valores);
