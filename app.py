@@ -204,9 +204,67 @@ def login():
         erro = 'E-mail ou senha incorretos.'
     return render_template('login.html', erro=erro)
 
-@app.route('/esqueci-senha')
+@app.route('/esqueci-senha', methods=['GET'])
 def esqueci_senha():
     return render_template('esqueci_senha.html')
+
+
+@app.route('/api/esqueci-senha', methods=['POST'])
+def api_esqueci_senha():
+    from services.email_service import enviar_reset_senha, smtp_configurado
+    dados = request.get_json(force=True, silent=True) or {}
+    email = (dados.get('email') or '').strip().lower()
+    if not email or '@' not in email:
+        return jsonify({'erro': 'Informe um e-mail válido.'}), 400
+
+    usuario = db.buscar_usuario_email(email)
+    # Não revela se o e-mail existe ou não (evita enumeração)
+    if usuario:
+        token = db.criar_token_reset(email)
+        if smtp_configurado():
+            enviar_reset_senha(email, usuario.get('nome', email), token)
+        else:
+            # Sem SMTP: loga o link para o admin copiar manualmente
+            app_url = os.environ.get('APP_URL', request.host_url.rstrip('/'))
+            link = f'{app_url}/redefinir-senha?token={token}'
+            logger.warning(f'[RESET] SMTP não configurado. Link manual para {email}: {link}')
+
+    return jsonify({'ok': True, 'mensagem': 'Se o e-mail estiver cadastrado, você receberá as instruções em breve.'})
+
+
+@app.route('/redefinir-senha', methods=['GET'])
+def redefinir_senha():
+    token = request.args.get('token', '').strip()
+    if not token:
+        return render_template('esqueci_senha.html', erro='Link inválido. Solicite um novo.')
+    email = db.validar_token_reset(token)
+    if not email:
+        return render_template('esqueci_senha.html', erro='Link expirado ou já utilizado. Solicite um novo.')
+    return render_template('redefinir_senha.html', token=token)
+
+
+@app.route('/api/redefinir-senha', methods=['POST'])
+def api_redefinir_senha():
+    dados = request.get_json(force=True, silent=True) or {}
+    token = (dados.get('token') or '').strip()
+    nova = (dados.get('nova_senha') or '').strip()
+    confirma = (dados.get('confirmar_senha') or '').strip()
+
+    if not token:
+        return jsonify({'erro': 'Token ausente.'}), 400
+    if len(nova) < 8:
+        return jsonify({'erro': 'A senha deve ter ao menos 8 caracteres.'}), 400
+    if nova != confirma:
+        return jsonify({'erro': 'As senhas não coincidem.'}), 400
+
+    email = db.validar_token_reset(token)
+    if not email:
+        return jsonify({'erro': 'Link expirado ou já utilizado. Solicite um novo.'}), 400
+
+    db.resetar_senha(email, nova)
+    db.consumir_token_reset(token)
+    return jsonify({'ok': True, 'mensagem': 'Senha redefinida com sucesso. Faça login.'})
+
 
 @app.route('/privacidade')
 def privacidade():

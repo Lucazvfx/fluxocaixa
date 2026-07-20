@@ -321,6 +321,66 @@ def buscar_usuario_id(user_id: int) -> dict | None:
         (user_id,), fetch='one'
     )
 
+
+# ── Reset de senha por token ────────────────────────────────────────────────
+
+def _ensure_reset_tokens_table():
+    _exec(f'''
+        CREATE TABLE IF NOT EXISTS reset_tokens (
+            token      TEXT PRIMARY KEY,
+            email      TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            used       INTEGER DEFAULT 0
+        )
+    ''', commit=True)
+
+
+def criar_token_reset(email: str) -> str:
+    """Gera um token seguro de 1h para reset de senha e salva no banco.
+
+    Invalida tokens anteriores do mesmo e-mail antes de criar o novo.
+    """
+    import secrets
+    _ensure_reset_tokens_table()
+    ph = _PH
+    token = secrets.token_urlsafe(32)
+    # Expirar tokens antigos do mesmo e-mail
+    _exec(f'UPDATE reset_tokens SET used=1 WHERE email={ph}', (email.lower(),), commit=True)
+    if _USE_PG:
+        _exec(
+            f"INSERT INTO reset_tokens (token, email, expires_at) VALUES ({ph},{ph}, NOW() + INTERVAL '1 hour')",
+            (token, email.lower()), commit=True,
+        )
+    else:
+        _exec(
+            f"INSERT INTO reset_tokens (token, email, expires_at) VALUES ({ph},{ph}, datetime('now','+1 hour'))",
+            (token, email.lower()), commit=True,
+        )
+    return token
+
+
+def validar_token_reset(token: str) -> str | None:
+    """Retorna o e-mail se o token for válido e não expirado, caso contrário None."""
+    _ensure_reset_tokens_table()
+    ph = _PH
+    if _USE_PG:
+        row = _exec(
+            f'SELECT email FROM reset_tokens WHERE token={ph} AND used=0 AND expires_at > NOW()',
+            (token,), fetch='one',
+        )
+    else:
+        row = _exec(
+            f"SELECT email FROM reset_tokens WHERE token={ph} AND used=0 AND expires_at > datetime('now')",
+            (token,), fetch='one',
+        )
+    return row['email'] if row else None
+
+
+def consumir_token_reset(token: str):
+    """Marca o token como usado após a senha ser redefinida."""
+    ph = _PH
+    _exec(f'UPDATE reset_tokens SET used=1 WHERE token={ph}', (token,), commit=True)
+
 def atualizar_perfil_consultoria(user_id: int, nome_consultoria: str, logo_base64: str):
     ph = _PH
     _exec(f'UPDATE usuarios SET nome_consultoria={ph}, logo_base64={ph} WHERE id={ph}',

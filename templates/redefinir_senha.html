@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recuperar Senha</title>
+  <title>Nova Senha</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#f4f7f6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
@@ -13,31 +13,35 @@
     label{display:block;font-size:.85rem;color:#555;margin-bottom:.3rem;font-weight:600}
     input{width:100%;padding:.65rem .8rem;border:1px solid #ddd;border-radius:6px;font-size:.95rem;outline:none;transition:border-color .2s}
     input:focus{border-color:#2980b9}
-    .btn{width:100%;padding:.75rem;background:#2980b9;color:white;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1rem;transition:background .2s}
-    .btn:hover{background:#2471a3}
+    .field{margin-bottom:1rem}
+    .btn{width:100%;padding:.75rem;background:#27ae60;color:white;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:.5rem;transition:background .2s}
+    .btn:hover{background:#219a52}
     .btn:disabled{background:#aaa;cursor:not-allowed}
     .msg{margin-top:1rem;padding:.7rem .9rem;border-radius:6px;font-size:.88rem;line-height:1.5}
     .msg.ok{background:#e8f5e9;color:#2e7d32;border-left:3px solid #4caf50}
     .msg.err{background:#fdecea;color:#c0392b;border-left:3px solid #e74c3c}
     .back{display:block;text-align:center;margin-top:1.25rem;color:#2980b9;text-decoration:none;font-size:.9rem}
     .back:hover{text-decoration:underline}
+    .hint{font-size:.8rem;color:#999;margin-top:.3rem}
   </style>
 </head>
 <body>
 <div class="card">
-  <h2>Recuperar Senha</h2>
-  <p class="sub">Informe seu e-mail de cadastro e enviaremos um link para criar uma nova senha.</p>
+  <h2>Criar nova senha</h2>
+  <p class="sub">Escolha uma senha forte para sua conta.</p>
 
-  {% if erro %}
-  <div class="msg err">{{ erro }}</div>
-  {% endif %}
-
-  <form id="form" onsubmit="enviar(event)">
-    <div style="margin-bottom:1rem">
-      <label for="email">E-mail</label>
-      <input type="email" id="email" name="email" placeholder="seu@email.com" required autofocus>
+  <form id="form" onsubmit="redefinir(event)">
+    <input type="hidden" id="token" value="{{ token }}">
+    <div class="field">
+      <label for="nova">Nova senha</label>
+      <input type="password" id="nova" name="nova_senha" placeholder="Mínimo 8 caracteres" required minlength="8" autofocus>
+      <p class="hint">Mínimo 8 caracteres</p>
     </div>
-    <button class="btn" id="btn" type="submit">Enviar instruções</button>
+    <div class="field">
+      <label for="confirma">Confirmar senha</label>
+      <input type="password" id="confirma" name="confirmar_senha" placeholder="Repita a senha" required minlength="8">
+    </div>
+    <button class="btn" id="btn" type="submit">Salvar nova senha</button>
   </form>
 
   <div id="msg" class="msg" style="display:none"></div>
@@ -45,39 +49,51 @@
 </div>
 
 <script>
-async function enviar(e){
+async function redefinir(e){
   e.preventDefault();
   const btn = document.getElementById('btn');
   const msgEl = document.getElementById('msg');
-  const email = document.getElementById('email').value.trim();
+  const nova = document.getElementById('nova').value;
+  const confirma = document.getElementById('confirma').value;
+  const token = document.getElementById('token').value;
+
+  if(nova !== confirma){
+    msgEl.className = 'msg err';
+    msgEl.textContent = 'As senhas não coincidem.';
+    msgEl.style.display = 'block';
+    return;
+  }
+
   btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  btn.textContent = 'Salvando...';
   msgEl.style.display = 'none';
+
   try{
-    const res = await fetch('/api/esqueci-senha', {
+    const res = await fetch('/api/redefinir-senha', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email})
+      body: JSON.stringify({token, nova_senha: nova, confirmar_senha: confirma})
     });
     const data = await res.json();
     if(data.ok){
       document.getElementById('form').style.display = 'none';
       msgEl.className = 'msg ok';
-      msgEl.textContent = data.mensagem;
+      msgEl.textContent = data.mensagem + ' Redirecionando...';
       msgEl.style.display = 'block';
+      setTimeout(()=>{ window.location.href = '/login'; }, 2000);
     } else {
       msgEl.className = 'msg err';
-      msgEl.textContent = data.erro || 'Erro ao processar. Tente novamente.';
+      msgEl.textContent = data.erro || 'Erro ao salvar. Tente novamente.';
       msgEl.style.display = 'block';
       btn.disabled = false;
-      btn.textContent = 'Enviar instruções';
+      btn.textContent = 'Salvar nova senha';
     }
   }catch(err){
     msgEl.className = 'msg err';
     msgEl.textContent = 'Erro de conexão. Tente novamente.';
     msgEl.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Enviar instruções';
+    btn.textContent = 'Salvar nova senha';
   }
 }
 </script>
