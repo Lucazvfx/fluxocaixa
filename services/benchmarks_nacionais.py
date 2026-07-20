@@ -24,9 +24,9 @@ PRENHEZ_FONTES = {
     "ASBIA": (65.0, 65.0),
 }
 
-# --- Taxa de natalidade, por fonte (PPTX slide 4) -----------------------------
+# --- Taxa de natalidade, por fonte (PPTX slide 4 + EMBRAPA CNPGC) -------------
 NATALIDADE_FONTES = {
-    "Embrapa": (55.0, 65.0),
+    "Embrapa": (65.0, 80.0),       # EMBRAPA CNPGC: adequado 65-75%, excelente >80%
     "Scot Consultoria": (60.0, 60.0),
     "CEPEA-USP": (55.0, 60.0),
     "ABCZ": (65.0, 75.0),
@@ -78,6 +78,163 @@ _MAP_DESEMBOLSO = {
     "RECRIA_ENGORDA": "RECRIA_ENGORDA",
     "CICLO_COMPLETO": "CICLO_COMPLETO",
 }
+
+# --- Benchmarks zootécnicos EMBRAPA CNPGC (Apostila Nelore + Doc 151 + Mais Precoce) ---
+# Estrutura: {indicador: {ciclo: (baixo, adequado_lo, adequado_hi, excelente)}}
+# "baixo" = abaixo disso é alerta; "excelente" = acima disso é ótimo
+EMBRAPA_ZOOTECNICO = {
+    "natalidade_pct": {
+        # Taxa de natalidade (%)
+        "CRIA":           (55.0, 65.0, 75.0, 80.0),
+        "CICLO_COMPLETO": (55.0, 65.0, 75.0, 80.0),
+        "RECRIA":         None,  # não se aplica
+        "ENGORDA":        None,
+    },
+    "desmama_pct": {
+        # Taxa de desmama (%)
+        "CRIA":           (50.0, 60.0, 72.0, 75.0),
+        "CICLO_COMPLETO": (50.0, 60.0, 72.0, 75.0),
+        "RECRIA":         None,
+        "ENGORDA":        None,
+    },
+    "desfrute_pct": {
+        # Taxa de desfrute (%)
+        "CRIA":           (15.0, 20.0, 30.0, 35.0),
+        "RECRIA":         (30.0, 35.0, 50.0, 55.0),
+        "ENGORDA":        (70.0, 80.0, 100.0, 120.0),
+        "CICLO_COMPLETO": (18.0, 25.0, 35.0, 45.0),
+    },
+    "lotacao_ua_ha": {
+        # Lotação (UA/ha)
+        "CRIA":           (0.3, 0.5, 1.0, 1.5),
+        "RECRIA":         (0.5, 1.0, 2.0, 3.0),
+        "ENGORDA":        (0.5, 1.5, 3.0, 4.0),
+        "CICLO_COMPLETO": (0.5, 1.0, 2.0, 2.5),
+    },
+    "gmd_g_dia": {
+        # Ganho médio diário (g/dia) — pastagem
+        "RECRIA":         (300.0, 400.0, 600.0, 700.0),
+        "ENGORDA":        (400.0, 700.0, 1000.0, 1200.0),
+        "CRIA":           None,
+        "CICLO_COMPLETO": (300.0, 400.0, 600.0, 700.0),
+    },
+    "gmd_conf_g_dia": {
+        # Ganho médio diário (g/dia) — confinamento
+        "ENGORDA":        (800.0, 1000.0, 1400.0, 1500.0),
+        "CICLO_COMPLETO": (800.0, 1000.0, 1400.0, 1500.0),
+        "CRIA":           None,
+        "RECRIA":         None,
+    },
+    "mortalidade_bezerros_pct": {
+        # Mortalidade pré-desmama (%) — menor é melhor
+        "CRIA":           (8.0, 6.0, 3.0, 2.0),   # invertido: alerta se > 8%
+        "CICLO_COMPLETO": (8.0, 6.0, 3.0, 2.0),
+        "RECRIA":         None,
+        "ENGORDA":        None,
+    },
+    "idade_abate_meses": {
+        # Idade ao abate (meses) — menor é melhor
+        "ENGORDA":        (42.0, 36.0, 30.0, 20.0),  # invertido
+        "CICLO_COMPLETO": (42.0, 36.0, 30.0, 20.0),
+        "CRIA":           None,
+        "RECRIA":         None,
+    },
+}
+
+# Composição típica de rebanho estabilizado (EMBRAPA CNPGC — sistema Nelore 256 cab.)
+COMPOSICAO_TIPICA_EMBRAPA = {
+    "vacas_pct":          32.8,   # matrizes adultas
+    "novilhas_repo_pct":  14.1,   # novilhas 1-3 anos (reposição)
+    "machos_sobreano_pct": 14.5,  # sobreanos / garrotes
+    "bezerros_pct":       31.3,   # bezerros e bezerras
+    "touros_pct":          1.6,
+}
+
+# Ciclos x categorias (EMBRAPA CNPGC) — quais categorias compõem cada ciclo
+CICLO_CATEGORIAS = {
+    "CRIA":   {
+        "principais": ["vaca", "bezerra", "bezerro"],
+        "secundarias": ["novilha"],
+        "descricao": "Matrizes + bezerros até desmama (0–7 m). Produto: bezerro desmamado 130–160 kg.",
+        "peso_saida_kg": (130, 160),
+        "desmama_meses": (6, 7),
+    },
+    "RECRIA": {
+        "principais": ["bezerra_desmama", "bezerro_desmama", "novilha", "garrote"],
+        "secundarias": [],
+        "descricao": "Pós-desmama até peso de entrada na engorda (7–30 m). Produto: garrote 300–380 kg.",
+        "peso_saida_kg": (300, 380),
+        "gmd_pastagem_g_dia": (300, 700),
+    },
+    "ENGORDA": {
+        "principais": ["garrote", "boi_gordo"],
+        "secundarias": ["vaca"],  # vaca de descarte
+        "descricao": "Terminação: garrote → boi gordo 450–600 kg. Confinamento: 60–110 dias.",
+        "peso_entrada_kg": (300, 360),
+        "peso_saida_kg": (450, 600),
+        "rendimento_carcaca_pct": (52, 57),
+    },
+    "CICLO_COMPLETO": {
+        "principais": ["vaca", "bezerra", "bezerro", "novilha", "garrote", "boi_gordo"],
+        "secundarias": ["bezerra_desmama", "bezerro_desmama"],
+        "descricao": "Cria + Recria + Engorda na mesma propriedade. Produto final: boi gordo 15–42 meses.",
+        "idade_abate_meta_meses": (15, 42),
+    },
+}
+
+FONTE_EMBRAPA = "EMBRAPA CNPGC — Apostila Nelore 2000 · Doc 151 · Plataforma Mais Precoce"
+
+
+def avaliar_zootecnico(modalidade: str, indicadores: dict) -> list[dict]:
+    """Avalia indicadores zootécnicos contra benchmarks EMBRAPA CNPGC.
+
+    Args:
+        modalidade: CRIA, RECRIA, ENGORDA ou CICLO_COMPLETO.
+        indicadores: dict com quaisquer chaves de EMBRAPA_ZOOTECNICO.
+
+    Returns:
+        Lista de avaliações, uma por indicador presente.
+    """
+    resultado = []
+    for ind_key, ciclos in EMBRAPA_ZOOTECNICO.items():
+        valor = indicadores.get(ind_key)
+        if valor is None:
+            continue
+        faixa = ciclos.get(modalidade)
+        if faixa is None:
+            continue
+        alerta, adeq_lo, adeq_hi, excelente = faixa
+        valor = float(valor)
+        # Indicadores onde menor é melhor (mortalidade, idade abate)
+        invertido = ind_key in ("mortalidade_bezerros_pct", "idade_abate_meses")
+        if invertido:
+            if valor <= excelente:
+                nivel = "excelente"
+            elif valor <= adeq_lo:
+                nivel = "adequado"
+            elif valor <= alerta:
+                nivel = "atencao"
+            else:
+                nivel = "baixo"
+        else:
+            if valor >= excelente:
+                nivel = "excelente"
+            elif valor >= adeq_lo:
+                nivel = "adequado"
+            elif valor >= alerta:
+                nivel = "atencao"
+            else:
+                nivel = "baixo"
+        resultado.append({
+            "indicador": ind_key,
+            "valor": round(valor, 2),
+            "nivel": nivel,
+            "faixa": {"alerta": alerta, "adequado": (adeq_lo, adeq_hi), "excelente": excelente},
+            "invertido": invertido,
+            "fonte": FONTE_EMBRAPA,
+        })
+    return resultado
+
 
 # --- COE R$/@ vendida — Campo Futuro / CNA Brasil (agosto 2025, Para) ---------
 # Paineis realizados em 3 municipios do PA. Unidade: R$/arroba VENDIDA.

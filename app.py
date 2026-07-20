@@ -36,7 +36,7 @@ from scraper import obter_precos_arroba
 
 from parsers.composicao_rebanho import ler_template
 from services.consistencia_rebanho import analisar_consistencia, analisar_consistencia_historica
-from services.benchmarks_nacionais import avaliar_nacional
+from services.benchmarks_nacionais import avaliar_nacional, avaliar_zootecnico, CICLO_CATEGORIAS
 from services.parecer_credito import montar_parecer
 from services.parecer_pdf import gerar_pdf_parecer
 from services.pesos_rebanho import arrobas_categorias
@@ -466,6 +466,21 @@ def api_classificar():
         'desembolso': _opt_float(data.get('desembolso_cab_mes')),
     })
 
+    # Avaliação zootécnica EMBRAPA CNPGC
+    _ind_zoo = {}
+    if ind_bench.get('natalidade') is not None:
+        _ind_zoo['natalidade_pct'] = ind_bench['natalidade']
+    if ind_bench.get('desfrute') is not None:
+        _ind_zoo['desfrute_pct'] = ind_bench['desfrute']
+    if _opt_float(data.get('mortalidade_pct')) is not None:
+        _ind_zoo['mortalidade_bezerros_pct'] = _opt_float(data.get('mortalidade_pct'))
+    if _opt_float(data.get('lotacao_ua_ha')) is not None:
+        _ind_zoo['lotacao_ua_ha'] = _opt_float(data.get('lotacao_ua_ha'))
+    if _opt_float(data.get('gmd_g_dia')) is not None:
+        _ind_zoo['gmd_g_dia'] = _opt_float(data.get('gmd_g_dia'))
+    avaliacao_embrapa = avaliar_zootecnico(result['tipo'], _ind_zoo)
+    ciclo_info = CICLO_CATEGORIAS.get(result['tipo'], {})
+
     # Salvar automaticamente no BD para futuros retreinamentos
     fazenda   = data.get('fazenda', '')
     municipio = data.get('municipio', '')
@@ -691,6 +706,8 @@ def api_classificar():
         'indicadores_benchmark': ind_bench,
         'benchmarks': benchmarks,
         'benchmarks_nacionais': painel_nacional,
+        'avaliacao_embrapa': avaliacao_embrapa,
+        'ciclo_info': ciclo_info,
         'breakeven_simples': breakeven,
         'consistencia': consistencia,
         'parecer': parecer,

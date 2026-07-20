@@ -352,7 +352,47 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
         </select>
         <button class="btn-sm" onclick="document.getElementById('insr-ficha-inp').click()">📋 Ler Ficha</button>
         <input type="file" id="insr-ficha-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerFichaExcel(this.files[0]);this.value=''">
+        <button class="btn-sm" onclick="toggleGuiaFicha(this)" title="Como preencher o Excel">?</button>
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
+      </div>
+    </div>
+    <!-- Guia de preenchimento do Excel CONSOLIDADO -->
+    <div id="guia-ficha-panel" style="display:none;margin:0 16px 12px;background:var(--surface-2);border:.5px solid var(--border-accent);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text-secondary)">
+      <div style="font-weight:600;color:var(--text-primary);margin-bottom:8px;font-size:13px">📋 Como preencher a planilha CONSOLIDADO antes de importar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Por fazenda (repetir cada bloco)</div>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--cy);font-size:11px">C14</td><td style="padding:3px 4px">Nome real da fazenda</td></tr>
+            <tr style="border-top:.5px solid var(--border)"><td style="padding:3px 0;font-family:monospace;color:var(--cy);font-size:11px">C16</td><td style="padding:3px 4px">Qtd Bezerra (fêmea 0–12m)</td></tr>
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--cy);font-size:11px">C17</td><td style="padding:3px 4px">Qtd Bezerra Desmama (13–24m)</td></tr>
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--cy);font-size:11px">C18</td><td style="padding:3px 4px">Qtd Novilha (25–36m)</td></tr>
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--cy);font-size:11px">C19</td><td style="padding:3px 4px">Qtd Vaca (&gt; 36m)</td></tr>
+            <tr style="border-top:.5px solid var(--border)"><td style="padding:3px 0;font-family:monospace;color:var(--am);font-size:11px">F16</td><td style="padding:3px 4px">Qtd Bezerro (macho 0–12m)</td></tr>
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--am);font-size:11px">F17</td><td style="padding:3px 4px">Qtd Bezerro Desmama (13–24m)</td></tr>
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--am);font-size:11px">F18</td><td style="padding:3px 4px">Qtd Garrote (25–36m)</td></tr>
+            <tr><td style="padding:3px 0;font-family:monospace;color:var(--am);font-size:11px">F19</td><td style="padding:3px 4px">Qtd Boi Gordo (&gt; 36m)</td></tr>
+          </table>
+          <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">Blocos: linhas 13–20, 22–29, 31–38... (9 linhas por fazenda)</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ciclo inferido após importar (EMBRAPA)</div>
+          <div style="line-height:1.9">
+            <span style="color:var(--cy)">●</span> <strong>CRIA</strong> — tem vacas + bezerros, sem garrote/boi gordo<br>
+            <span style="color:#93C5FD">●</span> <strong>RECRIA</strong> — garrote + novilha predominam, sem boi gordo<br>
+            <span style="color:#FCA5A5">●</span> <strong>ENGORDA</strong> — boi gordo + garrote predominam<br>
+            <span style="color:var(--text-accent)">●</span> <strong>CICLO COMPLETO</strong> — todas as categorias presentes
+          </div>
+          <div style="margin-top:10px;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Benchmarks EMBRAPA (referência)</div>
+          <div style="line-height:1.8;font-size:11px">
+            Natalidade ideal: <strong>&gt; 80%</strong> (adequado: 65–75%)<br>
+            Desfrute ciclo completo: <strong>&gt; 45%</strong> (adequado: 25–35%)<br>
+            Desfrute cria: <strong>&gt; 35%</strong> (média BR: 21,6%)<br>
+            Lotação meta: <strong>&gt; 1,7 UA/ha</strong> (média BR: 1,02 UA/ha)<br>
+            Idade abate ideal: <strong>&lt; 20 meses</strong> (trad.: 32–42m)
+          </div>
+          <div style="margin-top:6px;font-size:10px;color:var(--text-muted)">Fonte: EMBRAPA CNPGC · IBGE PPM 2023 · Inttegra 2025</div>
+        </div>
       </div>
     </div>
     <div class="cb" style="padding:0">
@@ -1138,6 +1178,7 @@ const EX={
 };
 function fillEx(t){const e=EX[t];setValsFromApi(e.v);document.getElementById('f_faz').value=e.faz;document.getElementById('f_mun').value=e.mun;document.getElementById('f_prop').value=e.prop;}
 function clearAll(){FAIXAS.forEach(f=>{document.getElementById(f.key+'_F').value=0;document.getElementById(f.key+'_M').value=0});upd();renderConsistencia(null)}
+function toggleGuiaFicha(btn){const p=document.getElementById('guia-ficha-panel');const show=p.style.display==='none';p.style.display=show?'block':'none';btn.style.background=show?'var(--border-accent)':''}
 
 // ================== CLASSIFICAR ==================
 let lastRegistroId=null;
@@ -1317,7 +1358,7 @@ async function lerFichaExcel(file){
     const data=await res.json();
     if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler ficha',true); return; }
     const fazendas=data.fazendas||[];
-    if(!fazendas.length){ showToast('Nenhuma fazenda encontrada na ficha.',true); return; }
+    if(!fazendas.length){ showToast('Planilha sem dados. Preencha as quantidades nas colunas C (fêmeas) e F (machos) do CONSOLIDADO antes de importar. Clique em ? para ver o guia.',true); return; }
 
     const totalReb=fazendas.find(f=>f.is_total_rebanho);
     const porFazenda=fazendas.filter(f=>!f.is_total_rebanho);
