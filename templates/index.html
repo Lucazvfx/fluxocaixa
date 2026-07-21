@@ -1872,9 +1872,8 @@ function renderResult(data){
         </div>
       </div>
       <div class="cb">
-        <div id="fp-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--rs);overflow:hidden;margin-bottom:14px"></div>
-        <div id="fp-chart" style="overflow-x:auto"></div>
-        <div id="fp-note" style="font-family:var(--fm);font-size:.62rem;color:var(--mu);margin-top:6px;text-align:center"></div>
+        <div id="fp-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b);border:1px solid var(--b);border-radius:var(--rs);overflow:hidden;margin-bottom:8px"></div>
+        <div id="fp-note" style="font-family:var(--fm);font-size:.62rem;color:var(--mu);margin-top:2px;text-align:center"></div>
       </div>
     </div>
 
@@ -2220,14 +2219,13 @@ function updateDesembolsoInfo(){
 const _FP_DUR_DEFAULT={CRIA:12,RECRIA:8,ENGORDA:4,CICLO_COMPLETO:24};
 
 function renderFluxoProjetado(){
-  const chartEl=document.getElementById('fp-chart');
-  if(!chartEl) return;
+  const kpiEl=document.getElementById('fp-kpis');
+  if(!kpiEl) return;
   const durEl=document.getElementById('fp-dur');
   const dur=Math.max(1,Math.min(36,parseInt(durEl?.value)||12));
   const d=calcCiclo();
   if(d.totReb===0){
-    chartEl.innerHTML='<div style="color:var(--mu);font-family:var(--fm);font-size:.72rem;padding:24px;text-align:center">Configure o rebanho nos Cenários para gerar a projeção.</div>';
-    document.getElementById('fp-kpis').innerHTML='';
+    kpiEl.innerHTML='';
     document.getElementById('fp-note').innerHTML='';
     return;
   }
@@ -2253,73 +2251,6 @@ function renderFluxoProjetado(){
     ['Resultado',fR(res),res>=0?'cg':'cr'],
     ['ROI/ciclo',(roi>=0?'+':'')+roi.toFixed(1)+'%',roi>=0?'cg':'cr'],
   ].map(([l,v,c])=>`<div class="pjc"><div class="pjc-l">${l}</div><div class="pjc-v ${c}">${v}</div></div>`).join('');
-  // SVG chart
-  const W=660,H=220,pl=72,pr=16,pt=24,pb=34;
-  const cW=W-pl-pr,cH=H-pt-pb;
-  const accums=meses.map(m=>m.acum);
-  const minAc=Math.min(...accums,0);
-  const maxAc=Math.max(...accums,0);
-  const yMax=Math.max(recCiclo,maxAc)*1.12||100;
-  const yMin=minAc*1.12||-100;
-  const yRange=yMax-yMin;
-  const toY=v=>pt+cH*(1-(v-yMin)/yRange);
-  const zY=toY(0);
-  const bStep=cW/dur;
-  const bw=Math.min(bStep*0.52,30);
-  const skipLabel=dur>18?Math.ceil(dur/12):1;
-  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:360px;max-height:240px">`;
-  // Grid + Y labels
-  for(let i=0;i<=4;i++){
-    const v=yMin+(yRange)*i/4;
-    const gy=toY(v);
-    svg+=`<line x1="${pl}" y1="${gy.toFixed(1)}" x2="${W-pr}" y2="${gy.toFixed(1)}" stroke="#8891A518" stroke-width="1"/>`;
-    const lbl=Math.abs(v)<yRange*0.015?'0':fR(v).replace('R$ ','').replace('R$','');
-    svg+=`<text x="${pl-4}" y="${(gy+3).toFixed(1)}" text-anchor="end" font-size="8.5" fill="#8891A5" font-family="monospace">${lbl}</text>`;
-  }
-  // Zero dashed
-  svg+=`<line x1="${pl}" y1="${zY.toFixed(1)}" x2="${W-pr}" y2="${zY.toFixed(1)}" stroke="#8891A555" stroke-width="1" stroke-dasharray="4,3"/>`;
-  // Bars + line points
-  let linePts='';
-  meses.forEach((f,i)=>{
-    const cx=pl+i*bStep+bStep/2;
-    // Cost bar below zero
-    const cbY=toY(-f.cm);
-    if(cbY>zY) svg+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${zY.toFixed(1)}" width="${bw.toFixed(1)}" height="${(cbY-zY).toFixed(1)}" fill="#EF44448A" rx="2"/>`;
-    // Revenue bar above zero (last month)
-    if(f.ent>0){
-      const rtY=toY(f.ent);
-      if(zY>rtY) svg+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${rtY.toFixed(1)}" width="${bw.toFixed(1)}" height="${(zY-rtY).toFixed(1)}" fill="#22C55E90" rx="2"/>`;
-      svg+=`<text x="${cx.toFixed(1)}" y="${(rtY-5).toFixed(1)}" text-anchor="middle" font-size="8" fill="#22C55E" font-family="monospace">${fR(f.ent).replace('R$ ','R$')}</text>`;
-    }
-    // Accumulated line
-    const ay=toY(f.acum);
-    linePts+=`${i===0?'M':'L'}${cx.toFixed(1)},${ay.toFixed(1)} `;
-    // Month label
-    if(f.m===1||f.m===dur||f.m%skipLabel===0)
-      svg+=`<text x="${cx.toFixed(1)}" y="${(H-pb+14).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="#8891A5" font-family="monospace">M${f.m}</text>`;
-  });
-  svg+=`<path d="${linePts.trim()}" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  // Dots
-  meses.forEach((f,i)=>{
-    const cx=pl+i*bStep+bStep/2;
-    const ay=toY(f.acum);
-    const isLast=i===dur-1;
-    svg+=`<circle cx="${cx.toFixed(1)}" cy="${ay.toFixed(1)}" r="${isLast?4:2.5}" fill="${f.acum>=0?'#22C55E':'#EF4444'}" stroke="white" stroke-width="1.5"/>`;
-    if(isLast){
-      const lbl=(res>=0?'+':'')+fR(res).replace('R$ ','R$');
-      svg+=`<text x="${cx.toFixed(1)}" y="${(ay+(res>=0?-8:14)).toFixed(1)}" text-anchor="middle" font-size="8" fill="${res>=0?'#22C55E':'#EF4444'}" font-family="monospace">${lbl}</text>`;
-    }
-  });
-  // Legend
-  svg+=`<line x1="${pl+4}" y1="${pt+9}" x2="${pl+20}" y2="${pt+9}" stroke="#38BDF8" stroke-width="2"/>`;
-  svg+=`<circle cx="${pl+12}" cy="${pt+9}" r="2.5" fill="#22C55E" stroke="white" stroke-width="1"/>`;
-  svg+=`<text x="${pl+24}" y="${pt+13}" font-size="8.5" fill="#8891A5" font-family="monospace">Saldo acum.</text>`;
-  svg+=`<rect x="${pl+112}" y="${pt+4}" width="10" height="10" fill="#EF44448A" rx="1"/>`;
-  svg+=`<text x="${pl+126}" y="${pt+13}" font-size="8.5" fill="#8891A5" font-family="monospace">Custo/mês</text>`;
-  svg+=`<rect x="${pl+206}" y="${pt+4}" width="10" height="10" fill="#22C55E90" rx="1"/>`;
-  svg+=`<text x="${pl+220}" y="${pt+13}" font-size="8.5" fill="#8891A5" font-family="monospace">Receita</text>`;
-  svg+='</svg>';
-  chartEl.innerHTML=svg;
   // Note
   const nEl=document.getElementById('fp-note');
   if(nEl){
