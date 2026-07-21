@@ -1240,6 +1240,7 @@ async function classificar(){
     lastVals=v;
     window.lastTipo=data.tipo||data.classificacao||'CICLO_COMPLETO';
     lastRegistroId=data.registro_id||null;
+    _sugerirPresetCusto(window.lastTipo);
     renderResult(data);
     renderConsistencia(data.consistencia);
     showTab('resultado',null);
@@ -2117,9 +2118,50 @@ function aplicarPresetDesembolso(perfil){
   COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+k); if(el) el.value=p[k][idx];});
   recalcCiclo();
 }
+
+// Auto-sugerir preset ao classificar. Só aplica se o Geral estiver zerado.
+function _sugerirPresetCusto(tipo){
+  const mod=PERFIL_DESEMBOLSO[tipo]?tipo:'CICLO_COMPLETO';
+  const camposGeral=COMP_DESEMB.map(k=>parseFloat(document.getElementById('cd-'+k)?.value)||0);
+  const geralVazio=camposGeral.every(v=>v===0);
+  if(geralVazio){
+    const p=PERFIL_DESEMBOLSO[mod];
+    COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+k); if(el) el.value=p[k][0];});
+    recalcCiclo();
+  }
+  _atualizarLabelPreset(tipo);
+}
+
+// Atualiza o rótulo dos botões Média/Top para mostrar qual ciclo eles aplicam.
+const _NOME_CICLO={CRIA:'Cria',RECRIA:'Recria',ENGORDA:'Engorda',CICLO_COMPLETO:'CC'};
+function _atualizarLabelPreset(tipo){
+  const label=_NOME_CICLO[tipo]||'CC';
+  const mod=PERFIL_DESEMBOLSO[tipo]?tipo:'CICLO_COMPLETO';
+  const totMedia=COMP_DESEMB.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][0]||0),0);
+  const totTop  =COMP_DESEMB.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][1]||0),0);
+  const bMedia=document.querySelector('button[onclick="aplicarPresetDesembolho(\'media\')"],button[onclick*="aplicarPresetDesembolso(\'media\')"]');
+  const bTop  =document.querySelector('button[onclick*="aplicarPresetDesembolso(\'top\')"]');
+  if(bMedia) bMedia.textContent=`Média ${label} (R$${totMedia.toFixed(0)})`;
+  if(bTop)   bTop.textContent  =`Top ${label} (R$${totTop.toFixed(0)})`;
+}
+
 function updateDesembolsoInfo(){
   const el=document.getElementById('s-desemb-info'); if(!el) return;
-  el.textContent=`Total ${fR(desembolsoTotalMensal())}/cab·mês  ≈  ${fR(custoArrobaDerivado())}/@·ano (usa o rebanho declarado na aba de entrada)`;
+  const total=desembolsoTotalMensal();
+  const tipo=window.lastTipo||'CICLO_COMPLETO';
+  const mod=PERFIL_DESEMBOLSO[tipo]?tipo:'CICLO_COMPLETO';
+  const refMedia=COMP_DESEMB.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][0]||0),0);
+  const refTop  =COMP_DESEMB.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][1]||0),0);
+  const nomeC=_NOME_CICLO[tipo]||'CC';
+  let comparacao='';
+  if(total>0){
+    if(total<=refTop)        comparacao='<span style="color:#27ae60">✓ abaixo do top GEP</span>';
+    else if(total<=refMedia) comparacao='<span style="color:#e67e22">~ entre top e média GEP</span>';
+    else                     comparacao='<span style="color:#e74c3c">↑ acima da média GEP</span>';
+  }
+  el.innerHTML=`<span>Seu custo: <b>${fR(total)}/cab·mês</b> ≈ <b>${fR(custoArrobaDerivado())}/@·ano</b></span>`
+    +`<span style="margin-left:10px;color:var(--mu)">Ref GEP ${nomeC}: Média <b>${fR(refMedia)}</b> · Top <b>${fR(refTop)}</b></span>`
+    +(comparacao?` <span style="margin-left:6px">${comparacao}</span>`:'');
 }
 
 function calcCiclo(){
