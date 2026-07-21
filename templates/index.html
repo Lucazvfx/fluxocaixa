@@ -531,7 +531,7 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <div class="cb"><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><div class="field"><label>Peso Boi (@)</label><input type="number" id="s-boi-arr" value="18" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Matriz (@)</label><input type="number" id="s-mat-arr" value="14" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Peso Bezerra (@)</label><input type="number" id="s-bez-arr" value="7" step="0.5" min="0" oninput="recalcCiclo()"></div><div class="field"><label>Preço Arroba (R$)</label><input type="number" id="s-preco-arr" value="350" min="0" oninput="recalcCiclo()"></div></div><div id="s-preco-bez-info" style="margin-top:12px;background:var(--c2);border:1px solid var(--b);border-radius:var(--rs);padding:10px 14px;font-family:var(--fm);font-size:.7rem;color:var(--sb)"></div></div>
         </div>
         <div class="card"><div class="ch"><div class="ct"><div class="cd" style="background:var(--pu)"></div>Estrutura de Custo (Desembolso · R$/cab/mês)</div>
-          <div style="display:flex;gap:6px"><button class="btn-sm" onclick="aplicarPresetDesembolso('media')">Média</button><button class="btn-sm" onclick="aplicarPresetDesembolso('top')">Top Rentáveis</button></div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn-sm" onclick="aplicarPresetDesembolso('media')">Média</button><button class="btn-sm" onclick="aplicarPresetDesembolso('top')">Top Rentáveis</button><button class="btn-sm" onclick="aplicarPresetFamiliar()" title="Produtor familiar: sem mão de obra formal e administração, maquinas reduzido" style="border-color:var(--am);color:var(--am)">Familiar</button></div></div>
           <div class="cb">
             <!-- Abas por fase -->
             <div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--b);padding-bottom:8px">
@@ -2111,11 +2111,40 @@ function pesoMedioArrobaRebanho(){
   return arrobas/tot;
 }
 function custoArrobaDerivado(){const pm=pesoMedioArrobaRebanho(); if(pm<=0) return 0; return desembolsoTotalMensal()*12/pm;}
+// Preset para produtor familiar: sem mão de obra formal/administração, máquinas reduzido
+const PERFIL_FAMILIAR={
+  CRIA:          {insumos:25.53,mao_obra:0,administracao:0,maquinas:5.00,pastagem:11.97,infraestrutura:8.00,taxas_impostos:2.66,outros:0},
+  RECRIA:        {insumos:30.50,mao_obra:0,administracao:0,maquinas:5.00,pastagem:18.40,infraestrutura:7.00,taxas_impostos:2.60,outros:0},
+  ENGORDA:       {insumos:85.20,mao_obra:0,administracao:0,maquinas:8.00,pastagem:15.80,infraestrutura:10.00,taxas_impostos:5.40,outros:0},
+  CICLO_COMPLETO:{insumos:44.92,mao_obra:0,administracao:0,maquinas:7.00,pastagem:14.29,infraestrutura:10.00,taxas_impostos:3.66,outros:0},
+};
+function aplicarPresetFamiliar(){
+  const tipo=window.lastTipo||'CICLO_COMPLETO';
+  const p=PERFIL_FAMILIAR[tipo]||PERFIL_FAMILIAR['CICLO_COMPLETO'];
+  COMP_DESEMB.forEach(k=>{
+    const el=document.getElementById('cd-'+k);
+    const na=document.getElementById('na-cd-'+k);
+    if(!el) return;
+    if(p[k]===0){
+      // marcar N/A
+      if(na){na.checked=true; toggleNA(na,'cd-'+k);}
+      else {el.value='0'; el.disabled=true; el.style.opacity='0.35'; el.style.background='var(--c2)';}
+    } else {
+      if(na&&na.checked){na.checked=false; toggleNA(na,'cd-'+k);}
+      el.value=p[k];
+    }
+  });
+  recalcCiclo();
+}
 function aplicarPresetDesembolso(perfil){
   let tipo=window.lastTipo||'CICLO_COMPLETO';
   let mod=PERFIL_DESEMBOLSO[tipo]?tipo:'CICLO_COMPLETO';
   const idx=perfil==='media'?0:1; const p=PERFIL_DESEMBOLSO[mod];
-  COMP_DESEMB.forEach(k=>{const el=document.getElementById('cd-'+k); if(el) el.value=p[k][idx];});
+  COMP_DESEMB.forEach(k=>{
+    const na=document.getElementById('na-cd-'+k);
+    if(na&&na.checked){na.checked=false; toggleNA(na,'cd-'+k);}
+    const el=document.getElementById('cd-'+k); if(el) el.value=p[k][idx];
+  });
   recalcCiclo();
 }
 
@@ -2150,17 +2179,21 @@ function updateDesembolsoInfo(){
   const total=desembolsoTotalMensal();
   const tipo=window.lastTipo||'CICLO_COMPLETO';
   const mod=PERFIL_DESEMBOLSO[tipo]?tipo:'CICLO_COMPLETO';
-  const refMedia=COMP_DESEMB.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][0]||0),0);
-  const refTop  =COMP_DESEMB.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][1]||0),0);
   const nomeC=_NOME_CICLO[tipo]||'CC';
+  // Comparação parcial: excluir da referência os componentes marcados N/A
+  const ativos=COMP_DESEMB.filter(k=>!document.getElementById('cd-'+k)?.disabled);
+  const nAtivos=ativos.length, nTot=COMP_DESEMB.length;
+  const refMedia=ativos.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][0]||0),0);
+  const refTop  =ativos.reduce((s,k)=>s+(PERFIL_DESEMBOLSO[mod][k][1]||0),0);
+  const parcial =nAtivos<nTot?` <span style="color:var(--mu);font-size:.65rem">(${nAtivos}/${nTot})</span>`:'';
   let comparacao='';
-  if(total>0){
+  if(total>0&&refMedia>0){
     if(total<=refTop)        comparacao='<span style="color:#27ae60">✓ abaixo do top GEP</span>';
     else if(total<=refMedia) comparacao='<span style="color:#e67e22">~ entre top e média GEP</span>';
     else                     comparacao='<span style="color:#e74c3c">↑ acima da média GEP</span>';
   }
   el.innerHTML=`<span>Seu custo: <b>${fR(total)}/cab·mês</b> ≈ <b>${fR(custoArrobaDerivado())}/@·ano</b></span>`
-    +`<span style="margin-left:10px;color:var(--mu)">Ref GEP ${nomeC}: Média <b>${fR(refMedia)}</b> · Top <b>${fR(refTop)}</b></span>`
+    +`<span style="margin-left:10px;color:var(--mu)">Ref GEP ${nomeC}${parcial}: Média <b>${fR(refMedia)}</b> · Top <b>${fR(refTop)}</b></span>`
     +(comparacao?` <span style="margin-left:6px">${comparacao}</span>`:'');
 }
 
