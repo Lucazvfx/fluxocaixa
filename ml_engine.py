@@ -350,10 +350,10 @@ def classificar(
     p_bez_h = bezerros_0_24 / total
 
     indice_ciclo = (
-        int(p_matrizes_h > 0.15) +
+        int(p_matrizes_h > 0.18) +
         int(p_mac_13_24_h > 0.10) +
-        int(p_bois_h > 0.01) +
-        int(p_bez_h > 0.10)
+        int(p_bois_h > 0.12) +   # exige ≥12% de garrote/boi gordo para contar como engorda
+        int(p_bez_h > 0.12)
     )
 
     feat = extrair_features(v, taxa_natalidade, _bois_v, _bez_v).reshape(1, -1)
@@ -373,12 +373,12 @@ def classificar(
     elif intensidade_engorda < 0.1:
         ml_idx = int(probs.argmax())
         ml_tipo = TIPOS[ml_idx]
-        if ml_tipo == 'ENGORDA':
+        if ml_tipo in ('ENGORDA', 'CICLO_COMPLETO'):
             tipo = 'CRIA' if probs[0] >= probs[1] else 'RECRIA'
             explicacao.append(
-                f"Regra híbrida: intensidade_engorda={intensidade_engorda:.3f} < 0.1 → ENGORDA descartada"
+                f"Regra híbrida: intensidade_engorda={intensidade_engorda:.3f} < 0.1 → {ml_tipo} descartado"
             )
-            explicacao.append(f"ML sugeria ENGORDA; substituído por {tipo}")
+            explicacao.append(f"ML sugeria {ml_tipo}; substituído por {tipo}")
         else:
             tipo = ml_tipo
             explicacao.append(
