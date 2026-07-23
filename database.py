@@ -608,21 +608,21 @@ def listar(limit: int = 60, user_id: int = None) -> list:
 
 def stats(user_id: int = None) -> dict:
     ph = _PH
-    sql_tot = 'SELECT COUNT(*) as n FROM registros'
-    sql_conf = 'SELECT COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL'
-    sql_tipo = 'SELECT class_conf, COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL GROUP BY class_conf'
-    
-    params = []
     if user_id is not None:
-        sql_tot += f' WHERE user_id={ph}'
-        sql_conf += f' AND user_id={ph}'
-        sql_tipo = sql_tipo.replace('GROUP BY', f' AND user_id={ph} GROUP BY')
-        params.append(user_id)
-        
-    total = (_exec(sql_tot, tuple(params), fetch='one') or {}).get('n', 0)
-    conf = (_exec(sql_conf, tuple(params), fetch='one') or {}).get('n', 0)
-    rows = _exec(sql_tipo, tuple(params), fetch='all') or []
-    
+        sql_tot  = f'SELECT COUNT(*) as n FROM registros WHERE user_id={ph}'
+        sql_conf = f'SELECT COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL AND user_id={ph}'
+        sql_tipo = f'SELECT class_conf, COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL AND user_id={ph} GROUP BY class_conf'
+        params = (user_id,)
+    else:
+        sql_tot  = 'SELECT COUNT(*) as n FROM registros'
+        sql_conf = 'SELECT COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL'
+        sql_tipo = 'SELECT class_conf, COUNT(*) as n FROM registros WHERE class_conf IS NOT NULL GROUP BY class_conf'
+        params = ()
+
+    total = (_exec(sql_tot,  params, fetch='one') or {}).get('n', 0)
+    conf  = (_exec(sql_conf, params, fetch='one') or {}).get('n', 0)
+    rows  = _exec(sql_tipo,  params, fetch='all') or []
+
     return {
         'total':       int(total),
         'confirmados': int(conf),

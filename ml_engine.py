@@ -244,11 +244,12 @@ def treinar_modelo():
 
     print(f"Treinando com {len(X)} amostras e {X.shape[1]} features.")
 
+    _pipeline_cv = _build_model()
+    cv_acc = cross_val_score(_pipeline_cv, X, y, cv=3, scoring='accuracy')
+    cv_f1  = cross_val_score(_pipeline_cv, X, y, cv=3, scoring='f1_macro')
+
     _pipeline = _build_model()
     _pipeline.fit(X, y)
-
-    cv_acc = cross_val_score(_pipeline, X, y, cv=3, scoring='accuracy')
-    cv_f1  = cross_val_score(_pipeline, X, y, cv=3, scoring='f1_macro')
     result = {
         'accuracy_mean': round(float(cv_acc.mean()), 4),
         'accuracy_std':  round(float(cv_acc.std()),  4),
@@ -576,10 +577,16 @@ def calcular_ano(
     _mort_adulto  = mort_adulto_pct  if mort_adulto_pct  is not None else mort_pct
     _mort_bezerra = mort_bezerra_pct if mort_bezerra_pct is not None else min(mort_pct * _RAZAO_MORT_BEZERRA, 0.25)
 
-    mortes_mat      = round(matrizes * _mort_adulto)
-    mortes_bois_tot = round(bois * _mort_adulto)
-    mortes_jovens   = round((femeas_024 + machos_024) * _mort_adulto)
-    mortes_bezerros = round(bezerros * _mort_bezerra)
+    def _mortes(n, taxa):
+        """Arredonda mortalidade mas garante mínimo 1 quando n > 0 e taxa > 0."""
+        if n <= 0 or taxa <= 0:
+            return 0
+        return max(1, round(n * taxa))
+
+    mortes_mat      = _mortes(matrizes, _mort_adulto)
+    mortes_bois_tot = _mortes(bois, _mort_adulto)
+    mortes_jovens   = _mortes(femeas_024 + machos_024, _mort_adulto)
+    mortes_bezerros = _mortes(bezerros, _mort_bezerra)
     mortes          = mortes_mat + mortes_bois_tot + mortes_jovens + mortes_bezerros
 
     mat_prox       = max(matrizes + aumento - mortes_mat, 0)
@@ -985,6 +992,15 @@ def simular_cenario(
     bois       = float(va[7]+va[9])
     total_ini  = float(va.sum())
 
+    _fases_informadas = [
+        c for c, orig in [
+            (_custo_cria,    custo_arroba_cria),
+            (_custo_recria,  custo_arroba_recria),
+            (_custo_engorda, custo_arroba_engorda),
+        ] if orig is not None
+    ]
+    _custo_completo = sum(_fases_informadas) / len(_fases_informadas) if _fases_informadas else custo_arroba
+
     anos_proj = []
     for yr in range(1, anos + 1):
         r = calcular_ano(
@@ -995,7 +1011,7 @@ def simular_cenario(
             venda_bez_pct=venda_bez_pct/100,
             mort_pct=mort,
             preco_arroba=preco_arroba * m['preco'],
-            custo_arroba=sum(c for c in [_custo_cria, _custo_recria, _custo_engorda]) / 3,
+            custo_arroba=_custo_completo,
             peso_boi=peso_boi,
             peso_vaca=peso_vaca,
             peso_bezerra=peso_arroba,
