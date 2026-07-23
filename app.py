@@ -1084,6 +1084,18 @@ def api_template_download():
     )
 
 
+@app.route('/api/ficha/download', methods=['GET'])
+@login_required
+def api_ficha_download():
+    """Baixa o template XLSM de CONSOLIDADO preenchido com exemplo."""
+    return send_file(
+        os.path.join(app.static_folder, 'ficha_consolidado_exemplo.xlsm'),
+        mimetype='application/vnd.ms-excel.sheet.macroEnabled.12',
+        as_attachment=True,
+        download_name='ficha_consolidado_exemplo.xlsm',
+    )
+
+
 @app.route('/api/importar-ficha-excel', methods=['POST'])
 @login_required
 def api_importar_ficha_excel():

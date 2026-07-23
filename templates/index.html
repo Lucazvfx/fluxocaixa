@@ -350,7 +350,8 @@ main{max-width:1340px;margin:0 auto;padding:44px 36px 120px;position:relative;z-
           <option value="BA">BA</option>
           <option value="SP">SP</option>
         </select>
-        <button class="btn-sm" onclick="document.getElementById('insr-ficha-inp').click()">📋 Ler Ficha</button>
+        <button class="btn-sm" onclick="window.location='/api/ficha/download'" title="Baixar planilha CONSOLIDADO com exemplo preenchido">⬇ Baixar Ficha</button>
+        <button class="btn-sm" onclick="document.getElementById('insr-ficha-inp').click()">📋 Importar Ficha</button>
         <input type="file" id="insr-ficha-inp" accept=".xlsx,.xlsm" style="display:none" onchange="lerFichaExcel(this.files[0]);this.value=''">
         <button class="btn-sm" onclick="toggleGuiaFicha(this)" title="Como preencher o Excel">?</button>
         <button class="btn-sm" onclick="clearAll()">✕ Limpar</button>
@@ -1359,7 +1360,7 @@ async function lerFichaExcel(file){
     const data=await res.json();
     if(!res.ok||data.erro){ showToast(data.erro||'Falha ao ler ficha',true); return; }
     const fazendas=data.fazendas||[];
-    if(!fazendas.length){ showToast('Planilha sem dados. Preencha as quantidades nas colunas C (fêmeas) e F (machos) do CONSOLIDADO antes de importar. Clique em ? para ver o guia.',true); return; }
+    if(!fazendas.length){ showToast('Ficha sem dados. Baixe o exemplo com ⬇ Baixar Ficha, preencha as quantidades e importe novamente.',true); return; }
 
     const totalReb=fazendas.find(f=>f.is_total_rebanho);
     const porFazenda=fazendas.filter(f=>!f.is_total_rebanho);
