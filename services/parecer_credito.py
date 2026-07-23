@@ -87,7 +87,7 @@ def avaliar_capacidade_pagamento(
 
 def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
                    consistencia, financeiro, geracao_caixa_anual, credito,
-                   fluxo_gep=None, sensibilidade=None) -> dict:
+                   fluxo_gep=None, sensibilidade=None, shap_explicacao=None) -> dict:
     def _f(v, default=0.0):
         try: return float(v or default)
         except (TypeError, ValueError): return default
@@ -111,7 +111,8 @@ def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
 
     return {
         'secoes': ['identificacao', 'composicao', 'indicadores',
-                   'consistencia', 'financeiro', 'fluxo_gep', 'sensibilidade', 'conclusao'],
+                   'consistencia', 'financeiro', 'fluxo_gep', 'sensibilidade',
+                   'shap_explicacao', 'conclusao'],
         'identificacao': identificacao,
         'composicao': composicao,
         'indicadores': {'valores': indicadores, 'benchmarks': benchmarks},
@@ -119,5 +120,6 @@ def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
         'financeiro': financeiro,
         'fluxo_gep': fluxo_gep,
         'sensibilidade': sensibilidade,
+        'shap_explicacao': shap_explicacao or {},
         'conclusao': conclusao,
     }

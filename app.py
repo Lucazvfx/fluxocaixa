@@ -19,6 +19,7 @@ from ml_engine import (
     treinar_modelo, classificar, calcular_indicadores,
     simular_cenario, carregar_modelo, CENARIOS,
     avaliar_benchmarks, extrair_indicadores_benchmark, calcular_breakeven_simples,
+    explicar_shap,
 )
 import database as db
 
@@ -772,6 +773,13 @@ def api_classificar():
             ),
         })
 
+    # SHAP — explicabilidade regulatória (CMN 4.966/2021 / Marco Legal IA)
+    shap_explicacao = {}
+    try:
+        shap_explicacao = explicar_shap(v, result['tipo'])
+    except Exception as _e_shap:
+        logger.warning(f'SHAP falhou (não crítico): {_e_shap}')
+
     parecer = montar_parecer(
         identificacao={'fazenda': fazenda, 'municipio': municipio,
                        'proprietario': data.get('proprietario', '')},
@@ -781,7 +789,8 @@ def api_classificar():
         geracao_caixa_anual=geracao_caixa_anual,
         credito=credito_inputs,
         fluxo_gep=fluxo_gep,
-        sensibilidade=sensibilidade)
+        sensibilidade=sensibilidade,
+        shap_explicacao=shap_explicacao)
 
     # Persiste no histórico da fazenda apenas quando há fazenda e solicitação.
     fazenda_id = data.get('fazenda_id')
@@ -807,6 +816,7 @@ def api_classificar():
         'custo_desembolso': custo_desembolso,
         'valores': v,
         'registro_id': registro_id,
+        'shap_explicacao': shap_explicacao,
     })
 
 @app.route('/api/precos/live', methods=['GET'])

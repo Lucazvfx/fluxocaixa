@@ -30,6 +30,39 @@ _MODEL_PATH = os.path.join(os.path.dirname(__file__), 'gestao_model.pkl')
 _CSV_PATH = os.path.join(os.path.dirname(__file__), 'dataset_sintetico_bovino.csv')
 TIPOS = ['CRIA', 'RECRIA', 'ENGORDA', 'CICLO_COMPLETO']
 
+# Nomes legíveis das 40 features geradas por extrair_features()
+# Ordem exata: norm[0-9] | p_agregados[10-13] | por_cat[14-19] |
+#              sinais[20-27] | flags[28-34] | producao[35-39]
+FEATURE_NAMES = [
+    # 0-9: proporção de cada faixa etária / total
+    'Fêmeas 0-5m / total',        'Machos 0-5m / total',
+    'Fêmeas 5-13m / total',       'Machos 5-13m / total',
+    'Fêmeas 13-25m / total',      'Machos 13-25m / total',
+    'Futuras matrizes 25-36m',    'Garrotes 25-36m',
+    'Matrizes adultas / total',   'Bois adultos / total',
+    # 10-13: grupos agregados
+    'Fêmeas jovens % total',      'Machos jovens % total',
+    'Matrizes % total',           'Bois % total',
+    # 14-19: por categoria / total
+    'Bezerras 0-5m / total',      'Bezerros 0-5m / total',
+    'Bezerros (0-24m) / total',   'Novilhas recria / total',
+    'Garrotes recria / total',    'Jovens recria / total',
+    # 20-27: sinais escalados e razões
+    'Intensidade matrizes (×5)',  'Intensidade bois (×5)',
+    'Intensidade mac. jovens (×5)','Intensidade bezerros (×5)',
+    'Razão touro:matriz',         'Razão matriz:touro',
+    'Razão macho:fêmea jovem',    'Razão fêmea jovem:matriz',
+    # 28-34: flags binárias de composição
+    'Flag matrizes >8%',          'Flag bois adultos >10%',
+    'Flag machos recria >12%',    'Flag bezerros >20%',
+    'Flag perfil engorda',        'Flag perfil cria',
+    'Score ciclo completo',
+    # 35-39: indicadores de produção
+    'Produção esperada / total',  'Eficiência reprodutiva',
+    'Transição garrote→adulto',   'Intensidade de engorda',
+    'Intensidade de cria',
+]
+
 # Parâmetros padrão por ciclo de produção
 # (branch 9318087 — útil para simular_cenario com defaults por ciclo)
 PARAMS_POR_CICLO = {
@@ -456,7 +489,94 @@ def classificar(
 
 
 # ==================================================================
-# 5b. CICLOS MISTOS (pós-processamento)
+# 5b. SHAP — Explicabilidade (CMN 4.966/2021 / Marco Legal IA)
+# ==================================================================
+def explicar_shap(
+    v: list,
+    tipo_classificado: str,
+    top_n: int = 8,
+) -> dict:
+    """
+    Retorna os principais fatores que explicam a classificação via SHAP.
+
+    Conformidade: CMN 4.966/2021 (modelos internos de risco) e
+    PL 2.338/2023 — Marco Legal da IA (sistemas de alto risco).
+
+    Para cada estimador do ensemble (RF, GB, XGB, LGB) calcula SHAP values
+    via TreeExplainer e devolve a média ponderada. Os valores representam a
+    contribuição de cada característica do rebanho para a probabilidade da
+    classe classificada (positivo = aumenta, negativo = reduz).
+
+    Retorna dict vazio se shap não estiver instalado ou se o cálculo falhar.
+    """
+    if _pipeline is None:
+        return {}
+    try:
+        import shap as _shap
+    except ImportError:
+        return {'erro': 'shap não instalado — execute: pip install shap'}
+
+    scaler = _pipeline.named_steps['scaler']
+    voting = _pipeline.named_steps['model']
+
+    feat = extrair_features(v).reshape(1, -1)
+    feat_scaled = scaler.transform(feat)
+
+    if tipo_classificado not in TIPOS:
+        return {}
+    classe_idx = TIPOS.index(tipo_classificado)
+
+    contribs = []
+    for _, est in voting.estimators_:
+        try:
+            exp = _shap.TreeExplainer(est)
+            sv = exp.shap_values(feat_scaled)
+            # RF / GB multi-classe: list[n_classes][1, n_features]
+            if isinstance(sv, list):
+                if len(sv) > classe_idx:
+                    arr = np.asarray(sv[classe_idx])
+                    contribs.append(arr.flatten())
+            elif isinstance(sv, np.ndarray):
+                if sv.ndim == 3:
+                    # XGB: (1, n_features, n_classes)
+                    contribs.append(sv[0, :, classe_idx])
+                elif sv.ndim == 2:
+                    contribs.append(sv[0])
+        except Exception:
+            continue
+
+    if not contribs:
+        return {}
+
+    media = np.mean(contribs, axis=0)
+    total_abs = float(np.abs(media).sum()) or 1.0
+
+    fatores = sorted(
+        [
+            {
+                'feature':    FEATURE_NAMES[i],
+                'shap':       round(float(media[i]), 4),
+                'importancia_pct': round(abs(float(media[i])) / total_abs * 100, 1),
+                'direcao':    'positivo' if media[i] > 0 else 'negativo',
+            }
+            for i in range(len(media))
+            if abs(media[i]) > 1e-6
+        ],
+        key=lambda x: abs(x['shap']),
+        reverse=True,
+    )[:top_n]
+
+    return {
+        'classe':        tipo_classificado,
+        'fatores':       fatores,
+        'n_estimadores': len(contribs),
+        'metodo':        'SHAP TreeExplainer — média do ensemble',
+        'conformidade':  'CMN 4.966/2021 · Marco Legal IA (Lei 2.338/2023)',
+    }
+
+
+# ==================================================================
+# 5c. CICLOS MISTOS (pós-processamento)
 # ==================================================================
 _PARES_VALIDOS = {
     ('CRIA',    'RECRIA'),

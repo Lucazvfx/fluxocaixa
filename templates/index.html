@@ -1813,6 +1813,39 @@ function renderResult(data){
       </div>
     </div>
 
+    ${(()=>{
+      const shapData=data.shap_explicacao||{};
+      const fatores=shapData.fatores||[];
+      if(!fatores.length) return '';
+      const maxPct=Math.max(...fatores.map(f=>f.importancia_pct),1);
+      return `<div class="card" style="margin-bottom:24px">
+        <div class="ch"><div class="ct"><div class="cd" style="background:${col}"></div>
+          Fatores da Classificação (SHAP)
+          <span style="font-family:var(--fm);font-size:.56rem;opacity:.4;margin-left:8px;letter-spacing:.5px">CMN 4.966/2021</span>
+        </div></div>
+        <div class="cb">
+          <div style="font-family:var(--fm);font-size:.6rem;letter-spacing:.5px;opacity:.5;margin-bottom:16px;text-transform:uppercase">
+            Por que <b style="color:${col};opacity:1">${TL[tipo]}</b>? — fatores mais determinantes
+          </div>
+          ${fatores.map(f=>{
+            const pos=f.direcao==='positivo';
+            const cor=pos?'#4ADE80':'#F87171';
+            const w=Math.round(f.importancia_pct/maxPct*100);
+            return `<div class="cbar">
+              <div class="cbar-l" style="width:180px;text-transform:none;font-size:.58rem;opacity:.8">${f.feature}</div>
+              <div class="cbar-t" style="height:8px">
+                <div class="cbar-f" data-w="${w}" style="background:${cor};width:0%"></div>
+              </div>
+              <div class="cbar-p" style="width:56px;color:${cor}">${pos?'+':'−'}${f.importancia_pct}%</div>
+            </div>`;
+          }).join('')}
+          <div style="font-family:var(--fm);font-size:.5rem;opacity:.28;margin-top:14px;line-height:1.6">
+            ${shapData.metodo||''}<br>${shapData.conformidade||''}
+          </div>
+        </div>
+      </div>`;
+    })()}
+
     ${renderParecer(data)}
 
     <div class="sstrip" style="grid-template-columns:repeat(${_vr>0?7:6},1fr)">

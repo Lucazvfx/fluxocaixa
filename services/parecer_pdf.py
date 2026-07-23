@@ -195,6 +195,42 @@ def gerar_pdf_parecer(parecer: dict, branding: dict | None = None) -> bytes:
         story.append(ts)
         story.append(Spacer(1, 4))
 
+    shap = parecer.get('shap_explicacao') or {}
+    fatores = shap.get('fatores') or []
+    if fatores:
+        story.append(Paragraph('Explicabilidade da Classificação (SHAP)', ss['SecaoTitulo']))
+        story.append(Paragraph(
+            f"Classe classificada: <b>{shap.get('classe', '—')}</b> · "
+            f"{shap.get('metodo', '')}",
+            ss['Subtitulo']))
+        story.append(Spacer(1, 4))
+        linhas_shap = [['Característica do Rebanho', 'Contribuição', 'Impacto']]
+        for f in fatores:
+            sinal = '▲' if f.get('direcao') == 'positivo' else '▼'
+            cor_txt = '+' if f.get('direcao') == 'positivo' else '−'
+            linhas_shap.append([
+                f.get('feature', '—'),
+                f"{cor_txt}{abs(f.get('shap', 0)):.4f}",
+                f"{sinal} {f.get('importancia_pct', 0):.1f}%",
+            ])
+        ts = Table(linhas_shap, colWidths=[9*cm, 3.5*cm, 3.5*cm])
+        _shap_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#EEEEEE')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DDDDDD')),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ]
+        for i, f in enumerate(fatores, start=1):
+            bg = colors.HexColor('#E8F5E9') if f.get('direcao') == 'positivo' else colors.HexColor('#FFEBEE')
+            _shap_style.append(('BACKGROUND', (0, i), (-1, i), bg))
+        ts.setStyle(TableStyle(_shap_style))
+        story.append(ts)
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(
+            f'<i>Conformidade: {shap.get("conformidade", "")}. '
+            'Valores positivos aumentam e negativos reduzem a probabilidade da classe.</i>',
+            ss['Subtitulo']))
+
     conclusao = parecer.get('conclusao') or {}
     story.append(Paragraph('Conclusão — Capacidade de Pagamento', ss['SecaoTitulo']))
     rec = conclusao.get('recomendacao')
