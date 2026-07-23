@@ -1167,18 +1167,15 @@ BENCHMARKS_RO = {
     'desfrute': {
         'label': 'Desfrute do Rebanho',
         'unidade': '%',
-        # Fonte: material GEP Araguaia — Parâmetros Técnicos por Modalidade
-        # Pecuária ("Desfrute Médio" por modalidade). Cada faixa usa o
-        # intervalo típico da modalidade como referência abaixo/médio/bom;
-        # valores acima do teto são tratados como excelente (giro muito
-        # acima da média, o que também pode sinalizar descapitalização
-        # se não for uma opção deliberada de giro rápido).
-        # Desfrute = Total vendido no ano / Rebanho total × 100
+        # Fontes: GEP Araguaia + Scot Consultoria (jul/2026).
+        # Scot Consultoria: CRIA bom >35%, CICLO_COMPLETO bom >45%,
+        # RECRIA/ENGORDA bom >55%/100%. Média nacional: 18,9%.
+        # Desfrute = Total vendido no ano / Rebanho total × 100.
         'faixas_por_ciclo': {
-            'CRIA':            {'abaixo': 18.0, 'medio': 24.0, 'bom': 30.0},
+            'CRIA':            {'abaixo': 18.0, 'medio': 25.0, 'bom': 35.0},
             'RECRIA':          {'abaixo': 35.0, 'medio': 45.0, 'bom': 55.0},
             'ENGORDA':         {'abaixo': 80.0, 'medio': 100.0, 'bom': 120.0},
-            'CICLO_COMPLETO':  {'abaixo': 20.0, 'medio': 30.0, 'bom': 40.0},
+            'CICLO_COMPLETO':  {'abaixo': 20.0, 'medio': 32.0, 'bom': 45.0},
         },
         'inverso': False,
     },
@@ -1238,11 +1235,11 @@ def avaliar_benchmarks(ciclo: str, indicadores: dict) -> list:
 # informar 'desfrute_pct' (memorial: mesma lógica do §14, evitar default
 # que mascare a ausência de dado real).
 _DEFAULTS_BENCHMARK = {
-    'mortalidade':    5.0,
+    'mortalidade':    3.0,   # médio — 5% colocava todo produtor sem dado na faixa "abaixo"
     'desmama':        72.0,
     'rend_carcaca':   52.0,
     'ganho_peso_arr': 0.55,
-    'natalidade':     75.0,
+    'natalidade':     75.0,  # tecnificada (BeefPoint/EMBRAPA: 76% referência; nacional: 55%)
 }
 
 

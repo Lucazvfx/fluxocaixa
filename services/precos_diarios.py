@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 
 FATOR_BEZERRA = 0.90        # bezerra = bezerro × 0,90 (desconto da fêmea)
-BEZERRO_REF = 3000.0        # R$/cabeça — referência de mercado (CEPEA/desmama), editável
+BEZERRO_REF = 3400.0        # R$/cabeça — CEPEA MS média jul/2026 (~R$3.379); atualizar safra a safra
 
 # Faixas de sanidade por categoria (rejeita valor absurdo pego de outra seção).
 FAIXA_ARROBA = (100.0, 600.0)     # boi/vaca R$/@
