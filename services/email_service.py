@@ -9,10 +9,13 @@ Configuração via variáveis de ambiente:
 """
 from __future__ import annotations
 import os
+import re
 import smtplib
 import logging
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +32,9 @@ def _smtp_configurado() -> bool:
 
 def enviar_email(destinatario: str, assunto: str, html: str, texto: str = '') -> bool:
     """Envia um e-mail HTML. Retorna True em caso de sucesso."""
+    if not _EMAIL_RE.match(destinatario or ''):
+        logger.error(f'Endereço de e-mail inválido: {destinatario!r}')
+        return False
     if not _smtp_configurado():
         logger.warning('SMTP não configurado (SMTP_USER/SMTP_PASS ausentes). E-mail não enviado.')
         return False
