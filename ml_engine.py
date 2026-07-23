@@ -338,11 +338,17 @@ def classificar(
     bois_25_36 = va[7]
     bezerros_0_24 = va[0] + va[1] + va[2] + va[3] + va[4] + va[5]
 
+    # Bois_v para features ML: usa garrotes como proxy quando não informado
     _bois_v = bois_vendidos if bois_vendidos is not None else float(bois_25_36)
     _bez_v = bezerros_vendidos if bezerros_vendidos is not None else (bezerros_0_24 * 0.3)
 
     producao_esperada = matrizes * taxa_natalidade
-    intensidade_engorda = _bois_v / total
+
+    # Para a regra híbrida: só conta vendas reais confirmadas.
+    # Garrotes de reprodução não são vendas de engorda — usar 0 como default
+    # evita falsos positivos de CICLO_COMPLETO em fazendas CRIA com touros.
+    _bois_v_regra = bois_vendidos if bois_vendidos is not None else 0.0
+    intensidade_engorda = _bois_v_regra / total
     intensidade_cria = _bez_v / total
 
     p_matrizes_h = matrizes / total
@@ -363,10 +369,12 @@ def classificar(
 
     explicacao = []
 
-    if indice_ciclo >= 4:
+    if indice_ciclo >= 4 and intensidade_engorda > 0.05:
+        # Exige também intensidade_engorda > 5% confirmada pelo usuário;
+        # touros de serviço (sem bois_vendidos informado) não ativam esta regra.
         tipo = 'CICLO_COMPLETO'
         confianca = max(prob_dict.get('CICLO_COMPLETO', 0.0), 85.0)
-        explicacao.append(f"Regra híbrida ativada: indice_ciclo={indice_ciclo}/4 → ciclo_completo")
+        explicacao.append(f"Regra híbrida ativada: indice_ciclo={indice_ciclo}/4 + engorda={intensidade_engorda:.1%} → ciclo_completo")
         explicacao.append(
             f"p_matrizes={p_matrizes_h:.2%}, p_mac_13_24={p_mac_13_24_h:.2%}, "
             f"p_bois={p_bois_h:.2%}, p_bez={p_bez_h:.2%}"
@@ -389,10 +397,27 @@ def classificar(
         confianca = round(float(probs[TIPOS.index(tipo)]) * 100, 1)
     else:
         ml_idx = int(probs.argmax())
-        tipo = TIPOS[ml_idx]
+        ml_tipo = TIPOS[ml_idx]
         confianca = round(float(probs[ml_idx]) * 100, 1)
-        explicacao.append("Classificação via modelo ML (ensemble RF+GB)")
-        explicacao.append(f"Confiança do modelo: {confianca}%")
+
+        # Guarda de segurança: ML votou CICLO_COMPLETO com indice_ciclo fraco.
+        # indice_ciclo ≤ 1 significa que a composição do rebanho não tem as
+        # 4 características simultâneas; provável fazenda de CRIA bem estruturada
+        # com touros de serviço sendo confundida com ciclo completo.
+        if ml_tipo == 'CICLO_COMPLETO' and indice_ciclo <= 1:
+            alt_idx = int(np.argsort(probs)[-2])  # segunda opção do ML
+            tipo = TIPOS[alt_idx] if TIPOS[alt_idx] != 'CICLO_COMPLETO' else (
+                'CRIA' if p_matrizes_h > 0.18 else 'RECRIA'
+            )
+            confianca = round(float(probs[TIPOS.index(tipo)]) * 100, 1)
+            explicacao.append(
+                f"Guarda CICLO_COMPLETO: indice_ciclo={indice_ciclo}/4 insuficiente "
+                f"→ revertido para {tipo}"
+            )
+        else:
+            tipo = ml_tipo
+            explicacao.append("Classificação via modelo ML (ensemble RF+GB)")
+        explicacao.append(f"Confiança: {confianca}%")
 
     explicacao.append(
         f"Variáveis chave — matrizes={matrizes:.0f}, bois_25_36={bois_25_36:.0f}, "
@@ -992,14 +1017,24 @@ def simular_cenario(
     bois       = float(va[7]+va[9])
     total_ini  = float(va.sum())
 
-    _fases_informadas = [
-        c for c, orig in [
-            (_custo_cria,    custo_arroba_cria),
-            (_custo_recria,  custo_arroba_recria),
-            (_custo_engorda, custo_arroba_engorda),
-        ] if orig is not None
+    # Custo médio PONDERADO por cabeças em cada fase — não simples média aritmética.
+    # Exemplo: 150 cab em CRIA (R$40/@) + 50 cab em ENGORDA (R$120/@)
+    # → ponderado = R$60/@ vs. média simples = R$80/@ (erro de 33%).
+    _n_cria    = matrizes + femeas_024  # matrizes + fêmeas em crescimento
+    _n_recria  = machos_024             # machos em fase de recria
+    _n_engorda = bois                   # garrotes e bois adultos
+
+    _pesos_fase = [
+        (_custo_cria,    custo_arroba_cria,    _n_cria),
+        (_custo_recria,  custo_arroba_recria,  _n_recria),
+        (_custo_engorda, custo_arroba_engorda, _n_engorda),
     ]
-    _custo_completo = sum(_fases_informadas) / len(_fases_informadas) if _fases_informadas else custo_arroba
+    _fases_w = [(c, n) for c, orig, n in _pesos_fase if orig is not None and n > 0]
+    if _fases_w:
+        _total_n_fases = sum(n for _, n in _fases_w)
+        _custo_completo = sum(c * n for c, n in _fases_w) / _total_n_fases
+    else:
+        _custo_completo = custo_arroba
 
     anos_proj = []
     for yr in range(1, anos + 1):
