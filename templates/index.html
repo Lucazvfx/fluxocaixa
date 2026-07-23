@@ -1710,6 +1710,25 @@ function renderParecer(data){
         </div>
       </div>
       <div style="margin-top:8px;font-size:.7rem;color:var(--mu)">Variação de estoque = riqueza criada pelo crescimento do rebanho — não é caixa, mas é valor real do ativo.</div>
+      ${(()=>{
+        if(!gep.custo_por_cabeca) return '';
+        const mc = gep.margem_por_cabeca>=0 ? '#4ADE80' : '#F87171';
+        const kpis=[
+          {l:'Custo/cabeça · ano',      v:fR(gep.custo_por_cabeca),        c:'var(--sb)'},
+          {l:'Receita/animal vendido',   v:fR(gep.receita_por_cab_vendida), c:'#4ADE80'},
+          {l:'Margem operac./cabeça',    v:fR(gep.margem_por_cabeca),       c:mc},
+          ...(gep.receita_por_matriz ? [{l:'Receita/matriz',v:fR(gep.receita_por_matriz),c:'#22D3EE'}] : []),
+        ];
+        return `<div style="margin-top:12px;border-top:1px solid var(--b);padding-top:10px">
+          <div style="font-family:var(--fm);font-size:.52rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:8px">Custo &amp; Receita por Cabeça — Ano 1 (Cenário Conservador)</div>
+          <div style="display:grid;grid-template-columns:repeat(${kpis.length},1fr);gap:8px">
+            ${kpis.map(k=>`<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;border:1px solid var(--b)">
+              <div style="font-family:var(--fm);font-size:.52rem;color:var(--mu);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">${k.l}</div>
+              <div style="font-family:var(--fn);font-weight:800;font-size:1.05rem;color:${k.c}">${k.v}</div>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      })()}
     </div>` : '';
 
   // Sensibilidade de preço — 3 cards lado a lado
@@ -1750,10 +1769,46 @@ function renderParecer(data){
       <div style="margin-top:8px;font-size:.68rem;color:var(--mu)">DSCR ≥ 1,30 → Aprovar · 1,00–1,30 → Ressalva · &lt; 1,00 → Negar &nbsp;·&nbsp; LTV ≤ 50% → baixo risco · 50–80% → atenção · &gt; 80% → alto risco</div>
     </div>` : '';
 
+  // Sensibilidade de custo — 3 cards (−20% / base / +20%)
+  const sensCusto = data.sensibilidade_custo || [];
+  const sensCustoHtml = sensCusto.length ? `
+    <div style="margin-top:16px">
+      <div style="font-family:var(--fn);font-size:.68rem;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Sensibilidade de Custo — Cenário Conservador</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${sensCusto.map(s=>{
+          const isDown=s.variacao_pct<0, isUp=s.variacao_pct>0, isBase=s.variacao_pct===0;
+          const sc=isDown?'#4ADE80':isUp?'#F87171':'var(--sb)';
+          const rc=SREC[s.recomendacao]||'var(--mu)';
+          const rl=SLBL[s.recomendacao]||'—';
+          const icon=isDown?'▼':isUp?'▲':'●';
+          return `<div style="border-radius:10px;border:1px solid ${isBase?'var(--b2)':'var(--b)'};background:var(--c2);padding:16px;position:relative;overflow:hidden">
+            ${isBase?`<div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--b2)"></div>`:''}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-family:var(--fm);font-size:.58rem;letter-spacing:1px;text-transform:uppercase;color:${sc}">${icon} custo ${s.variacao_pct>0?'+':''}${s.variacao_pct}%</span>
+              ${isBase?`<span style="font-family:var(--fm);font-size:.48rem;padding:2px 6px;border-radius:3px;background:var(--b);color:var(--mu);letter-spacing:1px">BASE</span>`:''}
+            </div>
+            <div style="font-family:var(--fn);font-weight:900;font-size:1.5rem;letter-spacing:-.5px;color:${rc};line-height:1;margin-bottom:2px">${rl||'—'}</div>
+            <div style="font-family:var(--fm);font-size:.62rem;color:var(--mu);margin-bottom:12px">DSCR <strong style="color:${rc};font-size:.78rem">${s.dscr??'—'}</strong></div>
+            <div style="border-top:1px solid var(--b);padding-top:10px;display:grid;gap:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-family:var(--fm);font-size:.58rem;color:var(--mu)">Custo/@</span>
+                <span style="font-family:var(--fm);font-size:.78rem;color:${sc};font-weight:500">${fR(s.custo_arroba)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-family:var(--fm);font-size:.58rem;color:var(--mu)">Caixa/ano</span>
+                <span style="font-family:var(--fm);font-size:.78rem">${fR(s.geracao_caixa)}</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:8px;font-size:.68rem;color:var(--mu)">Simula impacto de variação no custo operacional (seca, insumos, mão de obra) mantendo o preço de venda constante.</div>
+    </div>` : '';
+
   return `<div class="card" style="margin-bottom:24px">
     <div class="ch"><div class="ct"><div class="cd" style="background:${cor}"></div>Parecer de Crédito</div>
       <button class="btn-sm" onclick="baixarPdfParecer(window._lastParecer)">⬇ Baixar PDF</button></div>
-    <div class="cb" style="display:grid;gap:0">${concl}${fluxoGep}${sensHtml}</div>
+    <div class="cb" style="display:grid;gap:0">${concl}${fluxoGep}${sensHtml}${sensCustoHtml}</div>
   </div>`;
 }
 

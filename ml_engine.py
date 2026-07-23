@@ -862,7 +862,9 @@ def _simular_cria(
 
         # Receita: bezerros vendidos + descarte de matrizes (ambos geram caixa na cria)
         receita   = vez_vendidos * preco_bz + descarte_mat * _preco_vaca_cab
-        custo     = (matrizes * peso_matriz + fem_recria * peso_bezerra) * custo_arroba
+        # Custo inclui touros de serviço (1:30 matrizes, pesam como bois)
+        _touros_cria = max(round(matrizes / 30.0), 1) if matrizes > 0 else 0
+        custo     = (matrizes * peso_matriz + fem_recria * peso_bezerra + _touros_cria * PESO_BOI_ARR) * custo_arroba
         resultado = receita - custo
 
         anos_proj.append({

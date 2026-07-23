@@ -737,6 +737,19 @@ def api_classificar():
         fluxo_gep['coe_benchmark']    = None
         fluxo_gep['arrobas_vendidas'] = None
 
+    # ── KPIs de custo por cabeça ──────────────────────────────────────────────
+    _total_reb   = sum(_va)
+    _n_vend_gep  = float(_ano1.get('vendidos', 0) or 1)
+    _mat_ini_gep = _va[6] + _va[8]
+    fluxo_gep['custo_por_cabeca']       = round(fluxo_gep['custo_operacional'] / max(_total_reb, 1), 2)
+    fluxo_gep['receita_por_cab_vendida'] = round(fluxo_gep['receita_vendas'] / _n_vend_gep, 2)
+    fluxo_gep['margem_por_cabeca']       = round(fluxo_gep['resultado_operacional'] / max(_total_reb, 1), 2)
+    fluxo_gep['total_rebanho']           = int(_total_reb)
+    fluxo_gep['n_vendidos_ano1']         = int(_n_vend_gep)
+    if result.get('tipo') in ('CRIA', 'CICLO_COMPLETO') and _mat_ini_gep > 0:
+        fluxo_gep['receita_por_matriz'] = round(fluxo_gep['receita_vendas'] / _mat_ini_gep, 2)
+        fluxo_gep['n_matrizes']         = int(_mat_ini_gep)
+
     credito_inputs = {k: data.get(k) for k in
                       ('credito_valor', 'prazo_meses', 'juros_aa',
                        'carencia_meses', 'dividas_mensais')}
@@ -770,6 +783,38 @@ def api_classificar():
                 'aprovar'  if _dscr_s and _dscr_s >= 1.30 else
                 'ressalva' if _dscr_s and _dscr_s >= 1.00 else
                 'negar'    if _dscr_s is not None else None
+            ),
+        })
+
+    # ── Sensibilidade de custo: −20% / base / +20% ──────────────────────────
+    # Simula o impacto de variação no custo operacional (seca, insumos, mão de obra).
+    sensibilidade_custo = []
+    def _custo_s(chave, fator):
+        base = _custo_fase(chave)
+        return round(base * fator, 4) if base is not None else None
+    for _fator_c in (0.80, 1.00, 1.20):
+        _ca_s = custo_arroba * _fator_c
+        _cx_c = simular_cenario(
+            v, 'conservador', ciclo=result['tipo'],
+            preco_arroba=preco_boi or float(data.get('preco', 320)),
+            custo_arroba=_ca_s,
+            custo_arroba_cria=_custo_s('custo_arroba_cria', _fator_c),
+            custo_arroba_recria=_custo_s('custo_arroba_recria', _fator_c),
+            custo_arroba_engorda=_custo_s('custo_arroba_engorda', _fator_c),
+            preco_boi_arr=preco_boi, preco_vaca_arr=preco_vaca,
+            preco_bezerra_cab=preco_bezerra, preco_bezerro_cab=preco_bezerro,
+        )
+        _gc_c = _cx_c['anos'][0]['resultado']
+        _dscr_c = round(_gc_c / _servico_base, 2) if _servico_base > 0 else None
+        sensibilidade_custo.append({
+            'variacao_pct': round((_fator_c - 1) * 100),
+            'custo_arroba': round(_ca_s, 2),
+            'geracao_caixa': round(_gc_c, 2),
+            'dscr': _dscr_c,
+            'recomendacao': (
+                'aprovar'  if _dscr_c and _dscr_c >= 1.30 else
+                'ressalva' if _dscr_c and _dscr_c >= 1.00 else
+                'negar'    if _dscr_c is not None else None
             ),
         })
 
@@ -813,6 +858,7 @@ def api_classificar():
         'parecer': parecer,
         'fluxo_gep': fluxo_gep,
         'sensibilidade': sensibilidade,
+        'sensibilidade_custo': sensibilidade_custo,
         'custo_desembolso': custo_desembolso,
         'valores': v,
         'registro_id': registro_id,
