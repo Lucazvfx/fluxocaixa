@@ -11,6 +11,8 @@ from functools import wraps
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, flash, send_from_directory, send_file, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from ml_engine import (
@@ -55,12 +57,34 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
+
+# ── Session cookie hardening ──────────────────────────────────────────────────
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+
+# ── Security headers via after_request ───────────────────────────────────────
+@app.after_request
+def _set_security_headers(response):
+    response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    return response
+
 _secret_key = os.environ.get('SECRET_KEY')
 if not _secret_key:
     if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT'):
         raise RuntimeError('SECRET_KEY não definida em produção — defina a variável de ambiente.')
     _secret_key = 'boviml-dev-secret-local'
 app.secret_key = _secret_key
+
+# ── Rate limiting (proteção contra força bruta) ───────────────────────────────
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],          # sem limite global — só endpoints sensíveis
+    storage_uri='memory://',
+)
 
 # ── Controle de acesso: administradores ───────────────────────────────────────
 # Defina ADMIN_EMAILS no Railway (ex.: "voce@email.com"). Só admins acessam
@@ -195,6 +219,7 @@ if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
 
 # ── Auth routes ─────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute; 30 per hour")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -215,6 +240,7 @@ def esqueci_senha():
 
 
 @app.route('/api/esqueci-senha', methods=['POST'])
+@limiter.limit("5 per hour")
 def api_esqueci_senha():
     from services.email_service import enviar_reset_senha, smtp_configurado
     dados = request.get_json(force=True, silent=True) or {}

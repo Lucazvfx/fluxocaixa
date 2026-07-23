@@ -536,7 +536,7 @@ def calcular_indicadores(v: list) -> dict:
         'pct_matrizes':    round(matrizes/total*100, 1),
         'pct_mac_adultos': round(bois/total*100, 1),
         'ratio_fm':        round(tot_fem/max(tot_mac, 1), 2),
-        'bezerros_est':    int(matrizes * 0.75),
+        'bezerros_est':    int(matrizes * NATALIDADE_PCT),
     }
 
 # ==================================================================

@@ -81,10 +81,17 @@ else:
 
     _DB_PATH = os.path.join(os.path.dirname(__file__), 'gestao.db')
 
+    @contextmanager
     def get_conn():
-        conn = sqlite3.connect(_DB_PATH)
+        conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     def _exec(sql, params=(), fetch=None, commit=False):
         with get_conn() as conn:

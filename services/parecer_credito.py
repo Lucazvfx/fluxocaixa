@@ -88,13 +88,20 @@ def avaliar_capacidade_pagamento(
 def montar_parecer(*, identificacao, composicao, indicadores, benchmarks,
                    consistencia, financeiro, geracao_caixa_anual, credito,
                    fluxo_gep=None, sensibilidade=None) -> dict:
+    def _f(v, default=0.0):
+        try: return float(v or default)
+        except (TypeError, ValueError): return default
+    def _i(v, default=0):
+        try: return int(float(v or default))
+        except (TypeError, ValueError): return default
+
     conclusao = avaliar_capacidade_pagamento(
         geracao_caixa_anual=geracao_caixa_anual,
-        credito_valor=float(credito.get('credito_valor') or 0),
-        prazo_meses=int(credito.get('prazo_meses') or 0),
-        juros_aa=float(credito.get('juros_aa') or 0),
-        carencia_meses=int(credito.get('carencia_meses') or 0),
-        dividas_mensais=float(credito.get('dividas_mensais') or 0))
+        credito_valor=_f(credito.get('credito_valor')),
+        prazo_meses=_i(credito.get('prazo_meses')),
+        juros_aa=_f(credito.get('juros_aa')),
+        carencia_meses=_i(credito.get('carencia_meses')),
+        dividas_mensais=_f(credito.get('dividas_mensais')))
 
     erros = (consistencia or {}).get('resumo', {}).get('erros', 0)
     if erros and conclusao['recomendacao'] == 'aprovar':

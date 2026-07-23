@@ -3,6 +3,27 @@ import re
 import asyncio
 import importlib
 import math
+import logging
+import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+logger = logging.getLogger(__name__)
+
+
+def _session_com_retry() -> requests.Session:
+    """Session com retry automático para falhas transitórias (5xx, timeouts)."""
+    s = requests.Session()
+    retry = Retry(
+        total=3,
+        backoff_factor=1.0,          # 1s, 2s, 4s entre tentativas
+        status_forcelist={500, 502, 503, 504},
+        allowed_methods={"GET"},
+        raise_on_status=False,
+    )
+    s.mount('https://', HTTPAdapter(max_retries=retry))
+    s.mount('http://',  HTTPAdapter(max_retries=retry))
+    return s
 
 def extrair_valores_especificos(texto, praca_alvo):
     """
@@ -28,10 +49,19 @@ def _obter_via_agrobr():
         return None
 
     try:
-        # datasets é assíncrono conforme documentação
         datasets = agrobr.datasets
-        # Executa a coroutine e obtém um DataFrame pandas
-        df = asyncio.run(datasets.preco_diario('boi'))
+        # asyncio.run() cria event loop próprio — seguro em thread sem loop ativo
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            # Já há um event loop: executa via thread executor para não bloquear
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                df = ex.submit(asyncio.run, datasets.preco_diario('boi')).result(timeout=15)
+        else:
+            df = asyncio.run(datasets.preco_diario('boi'))
         import pandas as pd
         if not isinstance(df, pd.DataFrame) or df.empty:
             return None
@@ -67,9 +97,10 @@ def _obter_via_agrobr():
 
 
 _HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-_DEFAULTS = {'boi': 328.0, 'vaca': 308.0, 'boi_china': 340.0}
-_URL_BOI_NA = "https://www.noticiasagricolas.com.br/cotacoes/boi-gordo"
-_URL_VACA_SCOT = "https://www.scotconsultoria.com.br/cotacoes/vaca-gorda/?ref=smnb"
+_DEFAULTS = {'boi': 342.0, 'vaca': 308.0, 'boi_china': 355.0}
+_URL_BOI_NA     = "https://www.noticiasagricolas.com.br/cotacoes/boi-gordo"
+_URL_VACA_SCOT  = "https://www.scotconsultoria.com.br/cotacoes/vaca-gorda/?ref=smnb"
+_URL_BEZ_CEPEA  = "https://cepea.org.br/br/indicador/bezerro.aspx"
 
 
 def obter_precos_arroba():
@@ -84,7 +115,7 @@ def obter_precos_arroba():
     cai para último salvo → default quando a fonte falha.
     """
     from services.precos_diarios import (
-        parse_boi_na, parse_vaca_scot, bezerra_de, valido,
+        parse_boi_na, parse_vaca_scot, parse_bezerro_cepea, bezerra_de, valido,
         FAIXA_BEZERRO, BEZERRO_REF,
     )
     try:
@@ -95,13 +126,14 @@ def obter_precos_arroba():
 
     # ── BOI — Notícias Agrícolas (CEPEA/ESALQ) ──
     boi, fonte_boi = 0.0, ''
+    sess = _session_com_retry()
     try:
-        html = requests.get(_URL_BOI_NA, headers=_HEADERS, timeout=20).text
+        html = sess.get(_URL_BOI_NA, headers=_HEADERS, timeout=20).text
         boi = parse_boi_na(html)
         if boi:
             fonte_boi = 'CEPEA/ESALQ (Notícias Agrícolas)'
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f'[Scraper] Falha ao buscar boi: {e}')
     if not boi:
         boi = float(ultimo.get('boi') or 0) or _DEFAULTS['boi']
         fonte_boi = 'último salvo' if ultimo.get('boi') else 'default'
@@ -109,26 +141,36 @@ def obter_precos_arroba():
     # ── VACA — Scot ──
     vaca, fonte_vaca = 0.0, ''
     try:
-        html = requests.get(_URL_VACA_SCOT, headers=_HEADERS, timeout=20).text
+        html = sess.get(_URL_VACA_SCOT, headers=_HEADERS, timeout=20).text
         vaca = parse_vaca_scot(html)
         if vaca:
             fonte_vaca = 'Scot Consultoria'
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f'[Scraper] Falha ao buscar vaca: {e}')
     if not vaca:
         vaca = float(ultimo.get('vaca') or 0) or _DEFAULTS['vaca']
         fonte_vaca = 'último salvo' if ultimo.get('vaca') else 'default'
 
-    # ── BEZERRO — último salvo (analista) ou referência; BEZERRA derivada ──
-    bezerro = float(ultimo.get('bezerro') or 0)
+    # ── BEZERRO — CEPEA (indicador oficial) → último salvo → referência ──
+    bezerro, fonte_bezerro = 0.0, ''
+    try:
+        html_bez = sess.get(_URL_BEZ_CEPEA, headers=_HEADERS, timeout=20).text
+        bezerro = parse_bezerro_cepea(html_bez)
+        if bezerro:
+            fonte_bezerro = 'CEPEA/ESALQ (bezerro)'
+    except Exception as e:
+        logger.warning(f'[Scraper] Falha ao buscar bezerro CEPEA: {e}')
     if not valido(bezerro, *FAIXA_BEZERRO):
-        bezerro = BEZERRO_REF
+        bezerro = float(ultimo.get('bezerro') or 0)
+        fonte_bezerro = 'último salvo' if valido(bezerro, *FAIXA_BEZERRO) else 'referência'
+        if not valido(bezerro, *FAIXA_BEZERRO):
+            bezerro = BEZERRO_REF
     bezerra = bezerra_de(bezerro)
 
     boi_china = float(ultimo.get('boi_china') or 0) or _DEFAULTS['boi_china']
-    fonte = f'boi: {fonte_boi}; vaca: {fonte_vaca}; bezerro: referência/editável'
-    print(f"[Cotação] boi {boi} ({fonte_boi}) | vaca {vaca} ({fonte_vaca}) | "
-          f"bezerro {bezerro} | bezerra {bezerra}")
+    fonte = f'boi: {fonte_boi}; vaca: {fonte_vaca}; bezerro: {fonte_bezerro}'
+    logger.info(f"[Cotação] boi {boi} ({fonte_boi}) | vaca {vaca} ({fonte_vaca}) | "
+                f"bezerro {bezerro} ({fonte_bezerro}) | bezerra {bezerra}")
     return {'boi': boi, 'vaca': vaca, 'boi_china': boi_china,
             'bezerro': bezerro, 'bezerra': bezerra, 'fonte': fonte}
 

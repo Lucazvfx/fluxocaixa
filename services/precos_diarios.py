@@ -4,9 +4,9 @@ O download HTTP fica no `scraper.py`; aqui só transformamos HTML → número, p
 que o parsing seja testável com HTML fixo (sem depender de rede/site no ar).
 
 Fontes: boi = indicador CEPEA/ESALQ republicado pela Notícias Agrícolas;
-vaca = Scot Consultoria (praça de referência nacional). Bezerro não tem fonte
-diária gratuita confiável → default de referência editável; bezerra = bezerro
-× fator (fêmea ~5–10% abaixo do macho por @/kg).
+vaca = Scot Consultoria (praça de referência nacional);
+bezerro = CEPEA/ESALQ indicador de bezerro (cepea.org.br/br/indicador/bezerro.aspx);
+bezerra = bezerro × fator (fêmea ~10% abaixo do macho).
 """
 from __future__ import annotations
 import re
@@ -60,6 +60,28 @@ def parse_vaca_scot(html: str) -> float:
     for cand in re.findall(r'(\d{2,3},\d{2})', texto):
         v = _num(cand)
         if valido(v, *FAIXA_ARROBA):
+            return v
+    return 0.0
+
+
+def parse_bezerro_cepea(html: str) -> float:
+    """Extrai o indicador CEPEA do bezerro (R$/cabeça, desmamado, MS).
+
+    Âncora na tabela de indicadores da página do CEPEA: busca o primeiro
+    valor monetário plausível para R$/cabeça após remover tags HTML.
+    Retorna 0.0 se não achar ou valor fora da faixa de sanidade.
+    """
+    texto = re.sub(r'<[^>]+>', ' ', html)
+    # Valores de bezerro: tipicamente 1.000 a 6.000 R$/cab
+    # Formato: "1.234,56" ou "2.300,00"
+    for cand in re.findall(r'(\d{1,2}\.\d{3},\d{2})', texto):
+        v = _num(cand)
+        if valido(v, *FAIXA_BEZERRO):
+            return v
+    # Fallback: valor sem separador de milhar (ex: "2350,00")
+    for cand in re.findall(r'(\d{3,4},\d{2})', texto):
+        v = _num(cand)
+        if valido(v, *FAIXA_BEZERRO):
             return v
     return 0.0
 
