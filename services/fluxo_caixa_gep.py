@@ -139,7 +139,7 @@ def calcular_fluxo_gep(
     dscr        = None
     if servico_divida_anual > 0:
         fluxo_livre = resultado_operacional - servico_divida_anual
-        dscr = round(resultado_operacional / servico_divida_anual, 2) if resultado_operacional > 0 else 0.0
+        dscr = round(resultado_operacional / servico_divida_anual, 2)
 
     return {
         'receita_vendas':         round(receita_caixa, 2),

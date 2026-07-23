@@ -54,13 +54,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'boviml-dev-secret-2026')  # Em produção, sempre defina via env
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RAILWAY_ENVIRONMENT'):
+        raise RuntimeError('SECRET_KEY não definida em produção — defina a variável de ambiente.')
+    _secret_key = 'boviml-dev-secret-local'
+app.secret_key = _secret_key
 
 # ── Controle de acesso: administradores ───────────────────────────────────────
 # Defina ADMIN_EMAILS no Railway (ex.: "voce@email.com"). Só admins acessam
 # /admin, onde criam as contas dos usuários. O cadastro público fica desativado.
 import secrets as _secrets
-from functools import wraps
 
 _ADMIN_EMAILS = {
     e.strip().lower()
@@ -129,8 +134,8 @@ def garantir_admins():
         if existente is None:
             senha = senha_inicial or gerar_senha()
             db.criar_usuario(email, email.split('@')[0], senha)
-            origem = 'ADMIN_SENHA_INICIAL' if senha_inicial else senha
-            logger.warning(f"[ADMIN] Conta criada para {email} | senha: {origem}")
+            origem_label = 'ADMIN_SENHA_INICIAL' if senha_inicial else 'gerada automaticamente'
+            logger.warning(f"[ADMIN] Conta criada para {email} (senha {origem_label} — anote antes do próximo restart)")
         elif resetar and senha_inicial:
             db.resetar_senha(email, senha_inicial)
             logger.warning(f"[ADMIN] Senha redefinida para {email} (ADMIN_RESET_SENHA).")
@@ -180,13 +185,13 @@ def rotina_diaria_cotacoes():
     except Exception as e:
         logger.error(f"❌ [Scraper] Erro na rotina: {e}", exc_info=True)
 
-# Configura e inicia o agendador de tarefas
-scheduler = BackgroundScheduler(daemon=True)
-scheduler.add_job(rotina_diaria_cotacoes, 'cron', hour=8, minute=0)  # Roda todo dia às 08h00
-scheduler.start()
-
-# Opcional: Roda uma vez assim que o servidor liga para garantir que a tabela não fica vazia
-rotina_diaria_cotacoes()
+# Em modo debug, o Reloader do Flask inicia o processo duas vezes — só inicia o
+# scheduler no processo filho (WERKZEUG_RUN_MAIN=true) ou fora do debug.
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.add_job(rotina_diaria_cotacoes, 'cron', hour=8, minute=0)
+    scheduler.start()
+    rotina_diaria_cotacoes()
 
 # ── Auth routes ─────────────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
@@ -227,7 +232,7 @@ def api_esqueci_senha():
             # Sem SMTP: loga o link para o admin copiar manualmente
             app_url = os.environ.get('APP_URL', request.host_url.rstrip('/'))
             link = f'{app_url}/redefinir-senha?token={token}'
-            logger.warning(f'[RESET] SMTP não configurado. Link manual para {email}: {link}')
+            logger.warning(f'[RESET] SMTP não configurado. Token de reset gerado para {email} (acesse /admin para gerenciar senhas)')
 
     return jsonify({'ok': True, 'mensagem': 'Se o e-mail estiver cadastrado, você receberá as instruções em breve.'})
 
@@ -383,6 +388,8 @@ def api_empresa_ativa_get():
 @login_required
 def api_empresa_ativa_post():
     empresa_id = (request.json or {}).get('empresa_id')
+    if not isinstance(empresa_id, int):
+        return jsonify({'erro': 'empresa_id inválido'}), 400
     if not db.usuario_pertence_a_empresa(current_user.id, empresa_id):
         return jsonify({'erro': 'Você não pertence a essa empresa'}), 403
     session['empresa_ativa_id'] = empresa_id
@@ -487,8 +494,8 @@ def index():
 def api_classificar():
     data = request.json
     v = data.get('valores', [])
-    if len(v) != 10 or sum(v) < 10:
-        return jsonify({'erro': 'Envie 10 valores (fêmeas e machos por faixa) com total >= 10'}), 400
+    if len(v) != 10 or not all(isinstance(x, (int, float)) and x >= 0 for x in v) or sum(v) < 10:
+        return jsonify({'erro': 'Envie 10 valores >= 0 (fêmeas e machos por faixa) com total >= 10'}), 400
 
     kwargs = {}
     if 'taxa_natalidade' in data:
@@ -690,8 +697,8 @@ def api_classificar():
     _arr_machos = float(_ano1.get('machos_024_vendidos',
                         _ano1.get('machos_vendidos', 0))) * 10.67
     _arrobas_reais = _arr_bois + _arr_vacas + _arr_bezv + _arr_machos
-    if _arrobas_reais <= 0 and _preco_boi_ref > 0 and _ano1.get('receita', 0) > 0:
-        _arrobas_reais = _ano1['receita'] / _preco_boi_ref  # fallback RECRIA/ENGORDA
+    if _arrobas_reais <= 0 and result.get('tipo') in ('RECRIA', 'ENGORDA') and _preco_boi_ref > 0 and _ano1.get('receita', 0) > 0:
+        _arrobas_reais = _ano1['receita'] / _preco_boi_ref
 
     if _arrobas_reais > 0:
         _coe_calc = fluxo_gep['custo_operacional'] / _arrobas_reais
@@ -777,6 +784,7 @@ def api_classificar():
     })
 
 @app.route('/api/precos/live', methods=['GET'])
+@login_required
 def api_precos_live():
     """Cotação mais recente por categoria (boi/vaca R$/@, bezerro/bezerra R$/cab).
 
@@ -856,7 +864,7 @@ def api_estimativa_valor():
     if preco_arroba == 0.0:
         return jsonify({"erro": "Cotação indisponível no banco de dados."}), 503
 
-    peso_carcaca_arrobas = peso_vivo / 30.0
+    peso_carcaca_arrobas = peso_vivo * 0.52 / 15.0  # 52% rendimento de carcaça, 15 kg/@
     valor_estimado = peso_carcaca_arrobas * preco_arroba
 
     return jsonify({

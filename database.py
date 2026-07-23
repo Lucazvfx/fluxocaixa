@@ -47,6 +47,9 @@ if _USE_PG:
         conn = psycopg2.connect(_DATABASE_URL)
         try:
             yield conn
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
@@ -400,6 +403,7 @@ def listar_usuarios() -> list:
 
 def remover_usuario(user_id: int):
     ph = _PH
+    _exec(f'DELETE FROM empresa_membros WHERE user_id={ph}', (user_id,), commit=True)
     _exec(f'DELETE FROM usuarios WHERE id={ph}', (user_id,), commit=True)
 
 # ─────────────────────────────────────────────
@@ -586,15 +590,18 @@ def listar(limit: int = 60, user_id: int = None) -> list:
     if user_id is not None:
         sql += f' WHERE user_id={ph}'
         params.append(user_id)
-    
+
     sql += f' ORDER BY created_at DESC LIMIT {ph}'
     params.append(limit)
-    
+
     rows = _exec(sql, tuple(params), fetch='all') or []
     result = []
     for r in rows:
         d = dict(r)
-        d['valores'] = json.loads(d['valores'])
+        try:
+            d['valores'] = json.loads(d['valores']) if isinstance(d['valores'], str) else (d['valores'] or [])
+        except Exception:
+            d['valores'] = []
         d['created_at'] = str(d.get('created_at', ''))
         result.append(d)
     return result
